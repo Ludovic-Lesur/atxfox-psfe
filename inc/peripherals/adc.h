@@ -12,8 +12,12 @@
 
 // ADC_INx channels.
 #define ADC_BANDGAP_CHANNEL			9
-#define ADC_VOLTAGE_SENSE_CHANNEL	8
-#define ADC_CURRENT_SENSE_CHANNEL	0
+#define ADC_ATX_VOLTAGE_CHANNEL		8
+#define ADC_ATX_CURRENT_CHANNEL		0
+// Bandgap voltage in mV.
+#define ADC_BANDGAP_VOLTAGE_MV		2048
+// ADC full scale result on 12-bits.
+#define ADC_FULL_SCALE_12BITS		4095
 
 /*** ADC functions ***/
 

@@ -8,7 +8,8 @@
 #include "adc.h"
 
 #include "adc_reg.h"
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "rcc_reg.h"
 #include "tim.h"
 
@@ -24,9 +25,9 @@ void ADC1_Init(void) {
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 
 	/* Configure analog GPIOs */
-	RCC -> IOPENR |= (0b11 << 0); // IOPxEN='1'.
-	GPIOA -> MODER |= (0b11 << 0); // Select analog mode.
-	GPIOB -> MODER |= (0b1111 << 0); // Select analog mode.
+	GPIO_Configure(GPIO_BANDGAP, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_VOLTAGE_SENSE, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_CURRENT_SENSE, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
 
 	/* Disable ADC before configure it */
 	ADC1 -> CR = 0; // ADEN='0'.

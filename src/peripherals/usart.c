@@ -7,7 +7,8 @@
 
 #include "usart.h"
 
-#include "gpio_reg.h"
+#include "gpio.h"
+#include "mapping.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
@@ -137,11 +138,8 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	RCC -> IOPENR |= (0b11 << 0); // IOPxEN='1'.
-	GPIOA -> AFRH &= 0xFFFFF00F; // Reset bits 4-11.
-	GPIOA -> AFRH |= (4 << 4) | (4 << 8); // Select AF4.
-	GPIOA -> MODER &= ~(0b1111 << 18); // Reset bits 18-21.
-	GPIOA -> MODER |= (0b1010 << 18); // Select alternate function.
+	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').

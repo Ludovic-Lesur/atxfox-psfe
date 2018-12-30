@@ -76,7 +76,7 @@ unsigned int TIM22_GetSeconds(void) {
  * @return:	Number of milliseconds ellapsed since start-up.
  */
 unsigned int TIM22_GetMilliseconds(void) {
-	return ((TIM22 -> CNT)*1000 + (TIM21 -> CNT));
+	return (((TIM22 -> CNT) * 1000) + (TIM21 -> CNT));
 }
 
 /* DELAY FUNCTION.
