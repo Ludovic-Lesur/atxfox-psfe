@@ -19,6 +19,18 @@
 
 /*** LCD local functions ***/
 
+/* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN DECIMAL VALUE.
+ * @param value:	Value to convert (0 to 9).
+ * @return:			None.
+ */
+char LCD_DecimalToAscii(unsigned char value) {
+	char ascii_code = 0;
+	if (value < 10) {
+		ascii_code = value + '0';
+	}
+	return ascii_code;
+}
+
 /* CREATE A PULSE ON ENABLE SIGNAL TO WRITE LCD REGISTERS.
  * @param:	None.
  * @return:	None.
@@ -124,4 +136,70 @@ void LCD_Print(unsigned char row, unsigned char column, char* string, unsigned c
 void LCD_Clear(void) {
 	LCD_Command(0x01);
 	TIM22_WaitMilliseconds(2);
+}
+
+/* PRINT A VALUE ON 5 DIGITS.
+ * @param value:	(value * 1000) to print.
+ * @return:			None.
+ */
+void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int value) {
+
+	/* Local variables */
+	unsigned char u1, u2, u3, u4, u5;
+	unsigned char d1, d2, d3;
+	char value_string[5] = {0};
+
+	/* Convert value to message */
+	if (value < 10000) {
+		// Format = u.ddd
+		u1 = (value) / (1000);
+		d1 = (value - (u1 * 1000)) / (100);
+		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
+		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
+		value_string[0] = LCD_DecimalToAscii(u1);
+		value_string[1] = '.';
+		value_string[2] = LCD_DecimalToAscii(d1);
+		value_string[3] = LCD_DecimalToAscii(d2);
+		value_string[4] = LCD_DecimalToAscii(d3);
+	}
+	else if (value < 100000) {
+		// Format = uu.dd
+		u1 = (value) / (10000);
+		u2 = (value - (u1 * 10000)) / (1000);
+		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
+		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
+		value_string[0] = LCD_DecimalToAscii(u1);
+		value_string[1] = LCD_DecimalToAscii(u2);
+		value_string[2] = '.';
+		value_string[3] = LCD_DecimalToAscii(d1);
+		value_string[4] = LCD_DecimalToAscii(d2);
+	}
+	else if (value < 1000000) {
+		// Format = uuu.d
+		u1 = (value) / (100000);
+		u2 = (value - (u1 * 100000)) / (10000);
+		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
+		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
+		value_string[0] = LCD_DecimalToAscii(u1);
+		value_string[1] = LCD_DecimalToAscii(u2);
+		value_string[2] = LCD_DecimalToAscii(u3);
+		value_string[3] = '.';
+		value_string[4] = LCD_DecimalToAscii(d1);
+	}
+	else {
+		// Format = uuuuu
+		u1 = (value) / (10000000);
+		u2 = (value - (u1 * 10000000)) / (1000000);
+		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
+		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
+		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
+		value_string[0] = LCD_DecimalToAscii(u1);
+		value_string[1] = LCD_DecimalToAscii(u2);
+		value_string[2] = LCD_DecimalToAscii(u3);
+		value_string[3] = LCD_DecimalToAscii(u4);
+		value_string[4] = LCD_DecimalToAscii(u5);
+	}
+
+	/* Print value */
+	LCD_Print(row, column, value_string, 5);
 }
