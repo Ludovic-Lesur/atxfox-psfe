@@ -147,18 +147,20 @@ void TRCS_Init(void) {
  * @param bypass_status:	Bypass switch status.
  * @return:					None.
  */
-void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, unsigned char bypass) {
+void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 
 	/* Get raw current sense */
-	unsigned int adc_result_12bits = 0;
-	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_result_12bits);
+	unsigned int adc_bandgap_result_12bits = 0;
+	ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
+	unsigned int adc_channel_result_12bits = 0;
+	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
 
 	/* Convert ADC result to µA */
-	unsigned long long num = adc_result_12bits;
-	num *= supply_voltage_mv;
+	unsigned long long num = adc_channel_result_12bits;
+	num *= ADC_BANDGAP_VOLTAGE_MV;
 	num *= 1000000;
 	unsigned int resistor_mohm = trcs_resistor_mohm_table[TRCS_BOARD_NUMBER - 1][trcs_ctx.trcs_current_range - 1]; // (-1 tp skip TRCS_RANGE_NONE).
-	unsigned long long den = ADC_FULL_SCALE_12BITS;
+	unsigned long long den = adc_bandgap_result_12bits;
 	den *= TRCS_AD8219_VOLTAGE_GAIN;
 	den *= resistor_mohm;
 	(*trcs_current_ua) = (num) / (den);
@@ -179,12 +181,12 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, un
 	// High range state.
 	case TRCS_STATE_HIGH:
 		// Check last ADC result.
-		if ((adc_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) || (bypass != 0)) {
+		if ((adc_channel_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) || (bypass != 0)) {
 			// Current is too high and there is no higher range -> switch board off.
 			trcs_ctx.trcs_state = TRCS_STATE_OFF;
 			TRCS_SetRange(TRCS_RANGE_NONE);
 		}
-		if (adc_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
+		if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
 			// Middle Range must be confirmed.
 			trcs_ctx.trcs_state = TRCS_STATE_CONFIRM_MIDDLE;
 		}
@@ -193,7 +195,7 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, un
 	// Middle range confirmation state.
 	case TRCS_STATE_CONFIRM_MIDDLE:
 		// Check ADC result as much as required.
-		if (adc_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
+		if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
 			// Middle range must be confirmed.
 			trcs_ctx.trcs_range_down_counter++;
 			if (trcs_ctx.trcs_range_down_counter >= TRCS_RANGE_SWITCH_CONFIRMATION) {
@@ -220,12 +222,12 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, un
 		}
 		else {
 			// Check last ADC result.
-			if (adc_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
+			if (adc_channel_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
 				// Current is too high -> switch to high range
 				trcs_ctx.trcs_state = TRCS_STATE_HIGH;
 				TRCS_SetRange(TRCS_RANGE_HIGH);
 			}
-			if (adc_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
+			if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
 				// Low Range must be confirmed.
 				trcs_ctx.trcs_state = TRCS_STATE_CONFIRM_LOW;
 			}
@@ -236,7 +238,7 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, un
 	// Low range confirmation state.
 	case TRCS_STATE_CONFIRM_LOW:
 		// Check ADC result as much as required.
-		if (adc_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
+		if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
 			// Low range must be confirmed.
 			trcs_ctx.trcs_range_down_counter++;
 			if (trcs_ctx.trcs_range_down_counter >= TRCS_RANGE_SWITCH_CONFIRMATION) {
@@ -263,7 +265,7 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, un
 		}
 		else {
 			// Check last ADC result.
-			if (adc_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
+			if (adc_channel_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
 				// Current is too high -> switch to high range
 				trcs_ctx.trcs_state = TRCS_STATE_HIGH;
 				TRCS_SetRange(TRCS_RANGE_HIGH);

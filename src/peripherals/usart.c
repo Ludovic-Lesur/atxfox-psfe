@@ -123,8 +123,8 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, PullUp);
+	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, PullUp);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
@@ -135,7 +135,7 @@ void USART2_Init(void) {
 
 	/* Enable transmitter and receiver */
 	USART2 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
-	USART2 -> CR1 |= (0b1 << 5); // (RXNEIE = '1').
+	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
 
 	/* Enable peripheral */
 	USART2 -> CR1 |= (0b1 << 0);
@@ -157,7 +157,7 @@ void USART2_Send(unsigned char* tx_data, unsigned char tx_data_length) {
 	}
 	// Enable interrupt.
 #ifdef USE_TXE_INTERRUPT
-	USART2 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
+	USART2 -> CR1 |= (0b1 << 7); // TXEIE='1'.
 #endif
 	NVIC_EnableInterrupt(IT_USART2);
 }

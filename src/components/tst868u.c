@@ -11,7 +11,6 @@
 
 /*** TST868U local macros ***/
 
-#define TST868U_UPLINK_FRAME_MAX_LENGTH_BYTES	12
 #define TST868U_RX_BUFFER_LENGTH_BYTES			32
 // Separator character.
 #define TST868U_COMMAND_SEPARATOR				';'
@@ -30,23 +29,61 @@ static volatile TST868U_Context tst868u_ctx;
 
 /*** TST868U functions ***/
 
-/* RETRIEVE SIGFOX MODEM ID.
- * @param sigfox_id:	Byte array that will contain device ID.
- * @return:				None.
+/* PING THE TST868U MODULE.
+ * @param:	None.
+ * @return:	None.
  */
-void TST868U_GetSigfoxId(unsigned char sigfox_id[TST868U_SIGFOX_ID_LENGTH_BYTES]) {
+void TST868U_Ping(void) {
 
 	/* Build AT command */
 	unsigned char at_command[5];
 	at_command[0] = 0x00;
 	at_command[1] = 'S';
 	at_command[2] = 'F';
-	at_command[3] = 'p';
+	at_command[3] = 'P';
 	at_command[4] = TST868U_COMMAND_SEPARATOR;
+
+	/* Send command through UART (OK; or KO;) */
 	USART2_Send(at_command, 5);
 
+	/* Wait for response */
+	while (tst868u_ctx.separator_received == 0);
+	tst868u_ctx.separator_received = 0;
+}
+
+/* RETRIEVE SIGFOX MODEM ID.
+ * @param sigfox_id:	Byte array that will contain device ID.
+ * @return:				None.
+ */
+void TST868U_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
+
+	/* Build AT command */
+	unsigned char at_command[6];
+	at_command[0] = 0x00;
+	at_command[1] = 'S';
+	at_command[2] = 'F';
+	at_command[3] = 'I';
+	at_command[4] = 'D';
+	at_command[5] = TST868U_COMMAND_SEPARATOR;
+
+	/* Send command through UART */
+	USART2_Send(at_command, 6);
+
+	/* Wait for response (OK; or KO;) */
+	while (tst868u_ctx.separator_received == 0);
+	tst868u_ctx.separator_received = 0;
+
 	/* Read device ID */
-	//while (tst868u_ctx.separator_received == 0);
+	sigfox_id[0] = 0x00;
+	sigfox_id[1] = 0x00;
+	if ((tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx - 3] == 'O') && (tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx - 2] == 'K')) {
+		sigfox_id[2] = tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx - 5];
+		sigfox_id[3] = tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx - 4];
+	}
+	else {
+		sigfox_id[2] = 0x00;
+		sigfox_id[3] = 0x00;
+	}
 }
 
 /* SEND A BIT OVER SIGFOX NETWORK.
@@ -64,20 +101,16 @@ void TST868U_SendByte(unsigned char uplink_byte) {
 	at_command[4] = uplink_byte;
 	at_command[5] = TST868U_COMMAND_SEPARATOR;
 
-	/* Send command through UART */
+	/* Send command through UART (OK; or KO;) */
 	USART2_Send(at_command, 6);
-}
 
-/* SEND A FRAME OVER SIGFOX NETWORK.
- * @param uplink_data:			Byte array to send.
- * @param uplink_data_length:	Number of bytes to send.
- * @return:						None.
- */
-void TST868U_SendFrame(unsigned char* uplink_data, unsigned char uplink_data_length) {
-	// Check parameter.
-	if (uplink_data_length <= TST868U_UPLINK_FRAME_MAX_LENGTH_BYTES) {
+	/* Wait for response */
+	while (tst868u_ctx.separator_received == 0);
+	tst868u_ctx.separator_received = 0;
 
-	}
+	/* Wait for transmission to complete (SENT;) */
+	while (tst868u_ctx.separator_received == 0);
+	tst868u_ctx.separator_received = 0;
 }
 
 /* STORE A NEW BYTE IN RX COMMAND BUFFER.
@@ -87,7 +120,7 @@ void TST868U_SendFrame(unsigned char* uplink_data, unsigned char uplink_data_len
 void TST868U_FillRxBuffer(unsigned char rx_byte) {
 	tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx] = rx_byte;
 	// Set flag if required.
-	if (tst868u_ctx.rx_buf[tst868u_ctx.rx_buf_idx] == TST868U_COMMAND_SEPARATOR) {
+	if (rx_byte == TST868U_COMMAND_SEPARATOR) {
 		tst868u_ctx.separator_received = 1;
 	}
 	// Increment index.

@@ -11,7 +11,7 @@
 /*** TRCS functions ***/
 
 void TRCS_Init(void);
-void TRCS_Task(unsigned int* trcs_current_ua, unsigned int supply_voltage_mv, unsigned char bypass_status);
+void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass_status);
 void TRCS_Off(void);
 
 #endif /* TRCS_H */

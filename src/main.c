@@ -17,14 +17,14 @@
 
 /*** Main macros ***/
 
-// Power supply selection.
-#define ATX_3V3
-//#define ATX_5V
-//#define ATX_12V
-
+// Resistor divider factor used for voltage measurement.
+#define PSFE_RESISTOR_DIVIDER_FACTOR	2
 // ON/OFF threshold voltages.
-#define PSFE_ON_VOLTAGE_THRESHOLD_MV	3100
-#define PSFE_OFF_VOLTAGE_THRESHOLD_MV	2900
+#define PSFE_ON_VOLTAGE_THRESHOLD_MV	3300
+#define PSFE_OFF_VOLTAGE_THRESHOLD_MV	3200
+
+// Voltage threshold.
+#define PSFE_OPEN_VOLTAGE_THRESHOLD_MV	100
 
 /*** Main structures ***/
 
@@ -44,6 +44,8 @@ typedef enum {
 typedef struct {
 	PSFE_State psfe_state;
 	unsigned char psfe_init_done;
+	unsigned char psfe_no_input_previous_status;
+	unsigned char psfe_no_input_current_status;
 	unsigned char psfe_bypass_previous_status;
 	unsigned char psfe_bypass_current_status;
 	unsigned int psfe_supply_voltage_mv;
@@ -51,24 +53,14 @@ typedef struct {
 	unsigned int psfe_atx_current_ua;
 	unsigned int psfe_display_seconds_count;
 	unsigned int psfe_log_seconds_count;
+	unsigned char psfe_sigfox_id[SIGFOX_ID_LENGTH_BYTES];
 } PSFE_Context;
 
 /*** Main global variables ***/
 
 static PSFE_Context psfe_ctx;
 
-/*** Main functionS ***/
-
-/* CALIBRATE ADC WITH EXTERNAL BANDGAP.
- * @param:	None.
- * @return:	None.
- */
-static void PSFE_ComputeSupplyVoltage(void) {
-	unsigned int adc_result_12bits = 0;
-	// Compute effective supply voltage.
-	ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_result_12bits);
-	psfe_ctx.psfe_supply_voltage_mv = (ADC_BANDGAP_VOLTAGE_MV * ADC_FULL_SCALE_12BITS) / (adc_result_12bits);
-}
+/*** Main function ***/
 
 /* MAIN FUNCTION.
  * @param:	None.
@@ -92,8 +84,11 @@ int main(void) {
 	TRCS_Init();
 
 	/* Init context and global variables */
-	unsigned int adc_result_12bits = 0;
+	unsigned int adc_channel_result_12bits = 0;
+	unsigned int adc_bandgap_result_12bits = 0;
 	psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
+	psfe_ctx.psfe_no_input_current_status = 0;
+	psfe_ctx.psfe_no_input_previous_status = 0;
 	psfe_ctx.psfe_bypass_current_status = 0;
 	psfe_ctx.psfe_bypass_previous_status = 0;
 	psfe_ctx.psfe_init_done = 0;
@@ -102,7 +97,6 @@ int main(void) {
 	psfe_ctx.psfe_atx_current_ua = 0;
 	psfe_ctx.psfe_display_seconds_count = 0;
 	psfe_ctx.psfe_log_seconds_count = 0;
-	unsigned char tst868u_id[TST868U_SIGFOX_ID_LENGTH_BYTES];
 
 	/* Main loop */
 	while (1) {
@@ -112,7 +106,7 @@ int main(void) {
 
 		/* Supply voltage monitoring */
 		case PSFE_STATE_SUPPLY_VOLTAGE_MONITORING:
-			PSFE_ComputeSupplyVoltage();
+			ADC_GetSupplyVoltageMv(&psfe_ctx.psfe_supply_voltage_mv);
 			// Power-off detection.
 			if (psfe_ctx.psfe_supply_voltage_mv < PSFE_OFF_VOLTAGE_THRESHOLD_MV) {
 				psfe_ctx.psfe_state = PSFE_STATE_OFF;
@@ -130,11 +124,11 @@ int main(void) {
 
 		/* Power-off */
 		case PSFE_STATE_OFF:
-			// Display OFF on LCD screen.
+			// Send Sigfox message and display OFF on LCD screen.
 			if (psfe_ctx.psfe_init_done != 0) {
 				TRCS_Off();
 				LCD_Clear();
-				LCD_Print(0, 2, "OFF", 3);
+				TST868U_SendByte(0x00);
 			}
 			// Update flag.
 			psfe_ctx.psfe_init_done = 0;
@@ -144,17 +138,18 @@ int main(void) {
 
 		/* Init */
 		case PSFE_STATE_INIT:
+			// Print project name and HW/SW versions.
+			LCD_Print(0, 0, "  PSFE  ", 8);
+			LCD_Print(1, 0, " HW 1.0 ", 8);
+			TIM22_WaitMilliseconds(2000);
 			// Print Sigfox device ID.
-			TST868U_GetSigfoxId(tst868u_id);
+			TST868U_Ping();
+			TST868U_GetSigfoxId(psfe_ctx.psfe_sigfox_id);
+			LCD_Print(0, 0, " SFX ID ", 8);
+			LCD_PrintSigfoxId(1, psfe_ctx.psfe_sigfox_id);
 			// Send START message through Sigfox.
 			TST868U_SendByte(0x01);
-			TST868U_SendByte(0x46);
-			// Print project name and HW/SW versions.
-			LCD_Print(0, 2, "PSFE", 4);
-			LCD_Print(1, 1, "HW 1.0", 6);
-			TIM22_WaitMilliseconds(2000);
 			// Print units.
-			LCD_Clear();
 			LCD_Print(0, 0, "       V", 8);
 			LCD_Print(1, 0, "      mA", 8);
 			// Update flag.
@@ -173,19 +168,17 @@ int main(void) {
 		/* Analog measurements */
 		case PSFE_STATE_VOLTAGE_MEASURE:
 			// Compute effective ATX output voltage.
-			ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &adc_result_12bits);
-#ifdef ATX_3V3
-			// Resistor divider = (*2).
-			psfe_ctx.psfe_atx_voltage_mv = 2 * ((adc_result_12bits * psfe_ctx.psfe_supply_voltage_mv) / (ADC_FULL_SCALE_12BITS));
-#endif
-#ifdef ATX_5V
-			// Resistor divider = (*2).
-			psfe_ctx.psfe_atx_voltage_mv = 2 * ((adc_result_12bits * psfe_ctx.psfe_supply_voltage_mv) / (ADC_FULL_SCALE_12BITS));
-#endif
-#ifdef ATX_12v
-			// Resistor divider = (*6).
-			psfe_ctx.psfe_atx_voltage_mv = 6 * ((adc_result_12bits * psfe_ctx.psfe_supply_voltage_mv) / (ADC_FULL_SCALE_12BITS));
-#endif
+			ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
+			ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &adc_channel_result_12bits);
+			// Compensate resistor divider.
+			psfe_ctx.psfe_atx_voltage_mv = PSFE_RESISTOR_DIVIDER_FACTOR * ((adc_channel_result_12bits * ADC_BANDGAP_VOLTAGE_MV) / (adc_bandgap_result_12bits));
+			// Detect open state.
+			if (psfe_ctx.psfe_atx_voltage_mv < PSFE_OPEN_VOLTAGE_THRESHOLD_MV) {
+				psfe_ctx.psfe_no_input_current_status = 1;
+			}
+			else {
+				psfe_ctx.psfe_no_input_current_status = 0;
+			}
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_CURRENT_MEASURE;
 			break;
@@ -193,7 +186,7 @@ int main(void) {
 		/* Update current range according to previous measure */
 		case PSFE_STATE_CURRENT_MEASURE:
 			// Use TRCS board.
-			TRCS_Task(&psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_supply_voltage_mv, psfe_ctx.psfe_bypass_current_status);
+			TRCS_Task(&psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_DISPLAY;
 			break;
@@ -202,7 +195,19 @@ int main(void) {
 		case PSFE_STATE_DISPLAY:
 			if (TIM22_GetSeconds() > psfe_ctx.psfe_display_seconds_count) {
 				// Voltage display.
-				LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_atx_voltage_mv);
+				if (psfe_ctx.psfe_no_input_current_status == 0) {
+					if (psfe_ctx.psfe_no_input_previous_status != 0) {
+						LCD_Print(0, 0, "       V", 8);
+						psfe_ctx.psfe_no_input_previous_status = 0;
+					}
+					LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_atx_voltage_mv);
+				}
+				else {
+					if (psfe_ctx.psfe_no_input_previous_status == 0) {
+						LCD_Print(0, 0, "NO INPUT", 8);
+						psfe_ctx.psfe_no_input_previous_status = 1;
+					}
+				}
 				// Current display.
 				if (psfe_ctx.psfe_bypass_current_status == 0) {
 					if (psfe_ctx.psfe_bypass_previous_status != 0) {
@@ -217,7 +222,6 @@ int main(void) {
 						psfe_ctx.psfe_bypass_previous_status = 1;
 					}
 				}
-				// TBD.
 				psfe_ctx.psfe_display_seconds_count = TIM22_GetSeconds();
 			}
 			// Compute next state.
@@ -230,7 +234,6 @@ int main(void) {
 				// TBD.
 				psfe_ctx.psfe_log_seconds_count = TIM22_GetSeconds();
 			}
-
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
 			break;
@@ -241,13 +244,5 @@ int main(void) {
 			break;
 		}
 	}
-
 	return 0;
 }
-
-/*** Error management ***/
-#if (((defined ATX_3V3) && (defined ATX_5V)) || \
-	((defined ATX_3V3) && (defined ATX_12V)) || \
-	((defined ATX_5V) && (defined ATX_12V)))
-#error "Only one power supply must be selected: ATX_3V3, ATX_5V or ATX_12V"
-#endif

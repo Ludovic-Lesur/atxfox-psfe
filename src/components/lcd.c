@@ -23,10 +23,27 @@
  * @param value:	Value to convert (0 to 9).
  * @return:			None.
  */
-char LCD_DecimalToAscii(unsigned char value) {
+static char LCD_DecimalToAscii(unsigned char value) {
 	char ascii_code = 0;
 	if (value < 10) {
 		ascii_code = value + '0';
+	}
+	return ascii_code;
+}
+
+/* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN HEXADECIMAL VALUE.
+ * @param value:	Value to convert (0 to 15).
+ * @return:			None.
+ */
+static char LCD_HexadecimalToAscii(unsigned char value) {
+	char ascii_code = 0;
+	if (value < 10) {
+		ascii_code = value + '0';
+	}
+	else {
+		if (value < 16) {
+			ascii_code = value + 'A' - 10;
+		}
 	}
 	return ascii_code;
 }
@@ -136,6 +153,24 @@ void LCD_Print(unsigned char row, unsigned char column, char* string, unsigned c
 void LCD_Clear(void) {
 	LCD_Command(0x01);
 	TIM22_WaitMilliseconds(2);
+}
+
+/* PRINT A SIGFOX DEVICE ID.
+ * @param sigfox_id:	ID to print.
+ * @return:				None.
+ */
+void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
+
+	/* Build corresponding string */
+	char sigfox_id_string[2 * SIGFOX_ID_LENGTH_BYTES];
+	unsigned char byte_idx = 0;
+	for (byte_idx=0 ; byte_idx<SIGFOX_ID_LENGTH_BYTES ; byte_idx++) {
+		sigfox_id_string[2 * byte_idx] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0xF0) >> 4);
+		sigfox_id_string[2 * byte_idx + 1] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0x0F) >> 0);
+	}
+
+	/* Print ID */
+	LCD_Print(row, 0, sigfox_id_string, (2 * SIGFOX_ID_LENGTH_BYTES));
 }
 
 /* PRINT A VALUE ON 5 DIGITS.
