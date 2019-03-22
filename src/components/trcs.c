@@ -27,19 +27,21 @@
 
 #define TRCS_RANGE_SWITCH_CONFIRMATION		10		// Number of valid measures to validate a range switch operation.
 
-#define TRCS_AD8219_VOLTAGE_GAIN			60
+#define TRCS_AD8219_VOLTAGE_GAIN			60		// AD8219 voltage gain = 60 V/V.
+
+#define TRCS_CURRENT_BUFFER_LENGTH			32		// Current buffer.
 
 const unsigned int trcs_resistor_mohm_table[TRCS_NUMBER_OF_BOARDS][TRCS_NUMBER_OF_RANGES] = {
-	{50000, 500, 5}, // Board 1.0.1
-	{50000, 500, 5}, // Board 1.0.2
-	{50000, 500, 5}, // Board 1.0.3
-	{50000, 500, 5}, // Board 1.0.4
-	{50000, 500, 5}, // Board 1.0.5
-	{50000, 500, 5}, // Board 1.0.6
-	{50000, 500, 5}, // Board 1.0.7
-	{50000, 500, 5}, // Board 1.0.8
-	{50000, 500, 5}, // Board 1.0.9
-	{50000, 500, 5}  // Board 1.0.10
+	{52000, 510, 6}, // Board 1.0.1 - calibrated.
+	{52000, 510, 5}, // Board 1.0.2 - calibrated.
+	{53000, 510, 6}, // Board 1.0.3 - calibrated.
+	{51000, 510, 6}, // Board 1.0.4 - calibrated.
+	{53000, 530, 6}, // Board 1.0.5 - calibrated.
+	{53000, 520, 6}, // Board 1.0.6 - calibrated.
+	{50000, 500, 5}, // Board 1.0.7 - calibrated.
+	{53000, 540, 7}, // Board 1.0.8 - calibrated.
+	{52000, 520, 6}, // Board 1.0.9 - calibrated.
+	{50000, 500, 5}  // Board 1.0.10 - calibrated.
 };
 
 /*** TRCS local structures ***/
@@ -65,6 +67,9 @@ typedef struct {
 	TRCS_State trcs_state;
 	unsigned char trcs_range_up_counter;
 	unsigned char trcs_range_down_counter;
+	unsigned int trcs_current_ua_buf[TRCS_CURRENT_BUFFER_LENGTH];
+	unsigned char trcs_current_ua_buf_idx;
+	unsigned int trcs_average_current_ua;
 } TRCS_Context;
 
 /*** TRCS local global variables ***/
@@ -122,6 +127,23 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 	TIM22_WaitMilliseconds(TRCS_RANGE_STABILIZATION_TIME_MS);
 }
 
+/* COMPUTE THE AVERAGE CURRENT OF THE BUFFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void TRCS_ComputeAverage(void) {
+
+	/* Compute sum */
+	unsigned int sum = 0;
+	unsigned char idx = 0;
+	for (idx=0 ; idx<TRCS_CURRENT_BUFFER_LENGTH ; idx++) {
+		sum += trcs_ctx.trcs_current_ua_buf[idx];
+	}
+
+	/* Compute average */
+	trcs_ctx.trcs_average_current_ua = sum / TRCS_CURRENT_BUFFER_LENGTH;
+}
+
 /*** TRCS functions ***/
 
 /* INIT ALL GPIOs CONTROLLING RANGE RELAYS.
@@ -134,6 +156,10 @@ void TRCS_Init(void) {
 	trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
 	trcs_ctx.trcs_state = TRCS_STATE_OFF;
 	trcs_ctx.trcs_range_down_counter = 0;
+	unsigned char idx = 0;
+	for (idx=0 ; idx<TRCS_CURRENT_BUFFER_LENGTH ; idx++) trcs_ctx.trcs_current_ua_buf[idx] = 0;
+	trcs_ctx.trcs_current_ua_buf_idx = 0;
+	trcs_ctx.trcs_average_current_ua = 0;
 
 	/* Init GPIOs */
 	GPIO_Configure(GPIO_TRCS_RANGE_LOW, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
@@ -163,7 +189,17 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 	unsigned long long den = adc_bandgap_result_12bits;
 	den *= TRCS_AD8219_VOLTAGE_GAIN;
 	den *= resistor_mohm;
-	(*trcs_current_ua) = (num) / (den);
+
+	/* Store result in buffer */
+	trcs_ctx.trcs_current_ua_buf[trcs_ctx.trcs_current_ua_buf_idx] = (num) / (den);
+	trcs_ctx.trcs_current_ua_buf_idx++;
+	if (trcs_ctx.trcs_current_ua_buf_idx >= TRCS_CURRENT_BUFFER_LENGTH) {
+		trcs_ctx.trcs_current_ua_buf_idx = 0;
+	}
+
+	/* Compute and return average */
+	TRCS_ComputeAverage();
+	(*trcs_current_ua) = trcs_ctx.trcs_average_current_ua;
 
 	/* Perform state machine */
 	switch (trcs_ctx.trcs_state) {
