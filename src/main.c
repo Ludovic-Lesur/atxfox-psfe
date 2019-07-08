@@ -10,6 +10,7 @@
 #include "lcd.h"
 #include "mapping.h"
 #include "rcc.h"
+#include "td1208.h"
 #include "tim.h"
 #include "trcs.h"
 #include "tst868u.h"
@@ -18,13 +19,18 @@
 /*** Main macros ***/
 
 // Resistor divider factor used for voltage measurement.
-#define PSFE_RESISTOR_DIVIDER_FACTOR	2
+#define PSFE_RESISTOR_DIVIDER_FACTOR			2
 // ON/OFF threshold voltages.
-#define PSFE_ON_VOLTAGE_THRESHOLD_MV	3300
-#define PSFE_OFF_VOLTAGE_THRESHOLD_MV	3200
+#define PSFE_ON_VOLTAGE_THRESHOLD_MV			3300
+#define PSFE_OFF_VOLTAGE_THRESHOLD_MV			3200
 
 // Voltage threshold.
-#define PSFE_OPEN_VOLTAGE_THRESHOLD_MV	100
+#define PSFE_OPEN_VOLTAGE_THRESHOLD_MV			100
+
+// Log.
+#define PSFE_UART_LOG_PERIOD_SECONDS			2
+#define PSFE_SIGFOX_LOG_PERIOD_SECONDS			600
+#define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	6
 
 /*** Main structures ***/
 
@@ -52,8 +58,11 @@ typedef struct {
 	unsigned int psfe_atx_voltage_mv;
 	unsigned int psfe_atx_current_ua;
 	unsigned int psfe_display_seconds_count;
-	unsigned int psfe_log_seconds_count;
+	unsigned int psfe_log_uart_next_time_seconds;
+	unsigned int psfe_log_sigfox_next_time_seconds;
 	unsigned char psfe_sigfox_id[SIGFOX_ID_LENGTH_BYTES];
+	unsigned char psfe_sigfox_uplink_data[PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES];
+	signed char psfe_mcu_temperature_degrees;
 } PSFE_Context;
 
 /*** Main global variables ***/
@@ -96,7 +105,8 @@ int main(void) {
 	psfe_ctx.psfe_atx_voltage_mv = 0;
 	psfe_ctx.psfe_atx_current_ua = 0;
 	psfe_ctx.psfe_display_seconds_count = 0;
-	psfe_ctx.psfe_log_seconds_count = 0;
+	psfe_ctx.psfe_log_uart_next_time_seconds = PSFE_UART_LOG_PERIOD_SECONDS;
+	psfe_ctx.psfe_log_sigfox_next_time_seconds = PSFE_SIGFOX_LOG_PERIOD_SECONDS;
 
 	/* Main loop */
 	while (1) {
@@ -128,7 +138,13 @@ int main(void) {
 			if (psfe_ctx.psfe_init_done != 0) {
 				TRCS_Off();
 				LCD_Clear();
+#ifdef PSFE_SIGFOX_TST868U
 				TST868U_SendByte(0x00);
+#endif
+#ifdef PSFE_SIGFOX_TD1208
+				TD1208_SendBit(0);
+#endif
+
 			}
 			// Update flag.
 			psfe_ctx.psfe_init_done = 0;
@@ -139,16 +155,28 @@ int main(void) {
 		/* Init */
 		case PSFE_STATE_INIT:
 			// Print project name and HW/SW versions.
-			LCD_Print(0, 0, "  PSFE  ", 8);
+			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
 			TIM22_WaitMilliseconds(2000);
 			// Print Sigfox device ID.
+#ifdef PSFE_SIGFOX_TST868U
 			TST868U_Ping();
 			TST868U_GetSigfoxId(psfe_ctx.psfe_sigfox_id);
+#endif
+#ifdef PSFE_SIGFOX_TD1208
+			TD1208_DisableEcho();
+			TD1208_GetSigfoxId(psfe_ctx.psfe_sigfox_id);
+#endif
 			LCD_Print(0, 0, " SFX ID ", 8);
 			LCD_PrintSigfoxId(1, psfe_ctx.psfe_sigfox_id);
 			// Send START message through Sigfox.
+#ifdef PSFE_SIGFOX_TST868U
 			TST868U_SendByte(0x01);
+#endif
+#ifdef PSFE_SIGFOX_TD1208
+			TD1208_SendBit(1);
+#endif
+			TIM22_WaitMilliseconds(2000);
 			// Print units.
 			LCD_Print(0, 0, "       V", 8);
 			LCD_Print(1, 0, "      mA", 8);
@@ -160,7 +188,7 @@ int main(void) {
 
 		/* Get bypass switch status */
 		case PSFE_STATE_BYPASS:
-			psfe_ctx.psfe_bypass_current_status = GPIO_Read(GPIO_BYPASS);
+			psfe_ctx.psfe_bypass_current_status = GPIO_Read(&GPIO_BYPASS);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_VOLTAGE_MEASURE;
 			break;
@@ -230,9 +258,32 @@ int main(void) {
 
 		/* Send voltage and current on UART */
 		case PSFE_STATE_LOG:
-			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_seconds_count) {
+			// UART.
+			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_uart_next_time_seconds) {
 				// TBD.
-				psfe_ctx.psfe_log_seconds_count = TIM22_GetSeconds();
+				// Update next time.
+				psfe_ctx.psfe_log_uart_next_time_seconds += PSFE_UART_LOG_PERIOD_SECONDS;
+			}
+			// Sigfox.
+			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_sigfox_next_time_seconds) {
+				// Get MCU temperature.
+				ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
+				// Build data.
+				psfe_ctx.psfe_sigfox_uplink_data[0] = (psfe_ctx.psfe_atx_voltage_mv & 0x0000FF00) >> 8;
+				psfe_ctx.psfe_sigfox_uplink_data[1] = (psfe_ctx.psfe_atx_voltage_mv & 0x000000FF) >> 0;
+				psfe_ctx.psfe_sigfox_uplink_data[2] = (psfe_ctx.psfe_atx_current_ua & 0x00FF0000) >> 16;
+				psfe_ctx.psfe_sigfox_uplink_data[3] = (psfe_ctx.psfe_atx_current_ua & 0x0000FF00) >> 8;
+				psfe_ctx.psfe_sigfox_uplink_data[4] = (psfe_ctx.psfe_atx_current_ua & 0x000000FF) >> 0;
+				psfe_ctx.psfe_sigfox_uplink_data[5] = psfe_ctx.psfe_mcu_temperature_degrees;
+				// Send data.
+#ifdef PSFE_SIGFOX_TST868U
+				// TBD.
+#endif
+#ifdef PSFE_SIGFOX_TD1208
+				TD1208_SendFrame(psfe_ctx.psfe_sigfox_uplink_data, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
+#endif
+				// Update next time.
+				psfe_ctx.psfe_log_sigfox_next_time_seconds += PSFE_SIGFOX_LOG_PERIOD_SECONDS;
 			}
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;

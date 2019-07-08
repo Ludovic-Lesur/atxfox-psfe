@@ -13,6 +13,21 @@
 #include "rcc_reg.h"
 #include "tim.h"
 
+/*** ADC local macros ***/
+
+#define ADC_TIMEOUT_SECONDS	5
+
+/*** ADC local structures ***/
+
+typedef struct {
+	unsigned int adc_supply_voltage_mv;
+	signed char adc_mcu_temperature_degrees;
+} ADC_Context;
+
+/*** ADC local global variables ***/
+
+static ADC_Context adc_ctx;
+
 /*** ADC functions ***/
 
 /* INIT ADC1 PERIPHERAL.
@@ -21,13 +36,17 @@
  */
 void ADC1_Init(void) {
 
+	/* Init context */
+	adc_ctx.adc_supply_voltage_mv = 3300;
+	adc_ctx.adc_mcu_temperature_degrees = 0;
+
 	/* Enable peripheral clock */
 	RCC -> APB2ENR |= (0b1 << 9); // ADCEN='1'.
 
 	/* Configure analog GPIOs */
-	GPIO_Configure(GPIO_BANDGAP, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_VOLTAGE_SENSE, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_CURRENT_SENSE, Analog, OpenDrain, LowSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_BANDGAP, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_VOLTAGE_SENSE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_CURRENT_SENSE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Disable ADC before configure it */
 	ADC1 -> CR = 0; // ADEN='0'.
@@ -61,7 +80,7 @@ void ADC1_Init(void) {
  */
 void ADC_GetSupplyVoltageMv(unsigned int* supply_voltage_mv) {
 
-	/* Select ADC_IN17 input channel*/
+	/* Select ADC_IN17 input channel */
 	ADC1 -> CHSELR = 0;
 	ADC1 -> CHSELR |= (0b1 << 17);
 
@@ -71,11 +90,53 @@ void ADC_GetSupplyVoltageMv(unsigned int* supply_voltage_mv) {
 
 	/* Read raw supply voltage */
 	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
-	while (((ADC1 -> ISR) & (0b1 << 2)) == 0); // Wait end of conversion ('EOC='1').
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((ADC1 -> ISR) & (0b1 << 2)) == 0) {
+		// Wait end of conversion ('EOC='1') or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) return;
+	}
 	unsigned int raw_supply_voltage_12bits = (ADC1 -> DR);
 
 	/* Compute temperature according to MCU factory calibration (see p.301 of RM0377 datasheet) */
-	(*supply_voltage_mv) = (VREFINT_VCC_CALIB_MV * VREFINT_CAL) / (raw_supply_voltage_12bits);
+	adc_ctx.adc_supply_voltage_mv = (VREFINT_VCC_CALIB_MV * VREFINT_CAL) / (raw_supply_voltage_12bits);
+	(*supply_voltage_mv) = adc_ctx.adc_supply_voltage_mv;
+}
+
+/* COMPUTE MCU TEMPERATURE THANKS TO INTERNAL VOLTAGE REFERENCE.
+ * @param:	None.
+ * @return:	None.
+ */
+void ADC_GetMcuTemperature(signed char* mcu_temperature_degrees) {
+
+	/* Select ADC_IN18 input channel*/
+	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
+	ADC1 -> CHSELR |= (0b1 << 18);
+
+	/* Set sampling time (see p.89 of STM32L031x4/6 datasheet) */
+	ADC1 -> SMPR |= (0b111 << 0); // Sampling time for temperature sensor must be greater than 10us, 160.5*(1/ADCCLK) = 20us for ADCCLK = SYSCLK/2 = 8MHz;
+
+	/* Wake-up temperature sensor */
+	ADC1 -> CCR |= (0b1 << 23); // TSEN='1'.
+	TIM22_WaitMilliseconds(1); // Wait al least 10µs (see p.89 of STM32L031x4/6 datasheet).
+
+	/* Read raw temperature */
+	ADC1 -> CR |= (0b1 << 2); // ADSTART='1'.
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (((ADC1 -> ISR) & (0b1 << 2)) == 0) {
+		// Wait end of conversion ('EOC='1') or timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + ADC_TIMEOUT_SECONDS)) return;
+	}
+	int raw_temp_sensor_12bits = (ADC1 -> DR);
+
+	/* Compute temperature according to MCU factory calibration (see p.301 and p.847 of RM0377 datasheet) */
+	int raw_temp_calib_mv = (raw_temp_sensor_12bits * adc_ctx.adc_supply_voltage_mv) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
+	int temp_calib_degrees = raw_temp_calib_mv * ((int)(TS_CAL2_TEMP-TS_CAL1_TEMP));
+	temp_calib_degrees = (temp_calib_degrees) / ((int)(TS_CAL2 - TS_CAL1));
+	adc_ctx.adc_mcu_temperature_degrees = temp_calib_degrees + TS_CAL1_TEMP;
+	(*mcu_temperature_degrees) = adc_ctx.adc_mcu_temperature_degrees;
+
+	/* Switch temperature sensor off */
+	ADC1 -> CCR &= ~(0b1 << 23); // TSEN='0'.
 }
 
 /* PERFORM INTERNAL ADC MEASUREMENTS.

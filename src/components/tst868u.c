@@ -103,14 +103,6 @@ void TST868U_SendByte(unsigned char uplink_byte) {
 
 	/* Send command through UART (OK; or KO;) */
 	USART2_Send(at_command, 6);
-
-	/* Wait for response */
-	while (tst868u_ctx.separator_received == 0);
-	tst868u_ctx.separator_received = 0;
-
-	/* Wait for transmission to complete (SENT;) */
-	while (tst868u_ctx.separator_received == 0);
-	tst868u_ctx.separator_received = 0;
 }
 
 /* STORE A NEW BYTE IN RX COMMAND BUFFER.

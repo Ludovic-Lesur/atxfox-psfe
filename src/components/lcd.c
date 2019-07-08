@@ -54,9 +54,9 @@ static char LCD_HexadecimalToAscii(unsigned char value) {
  */
 void LCD_EnablePulse(void) {
 	// Pulse width > 300ns.
-	GPIO_Write(GPIO_LCD_E, 1);
+	GPIO_Write(&GPIO_LCD_E, 1);
 	TIM22_WaitMilliseconds(2);
-	GPIO_Write(GPIO_LCD_E, 0);
+	GPIO_Write(&GPIO_LCD_E, 0);
 }
 
 /* SEND A COMMAND TO LCD SCREEN.
@@ -70,7 +70,7 @@ void LCD_Command(unsigned char lcd_command) {
 	GPIOA -> ODR |= (lcd_command << 1);
 
 	/* Send command */
-	GPIO_Write(GPIO_LCD_RS, 0);
+	GPIO_Write(&GPIO_LCD_RS, 0);
 	LCD_EnablePulse();
 }
 
@@ -85,7 +85,7 @@ void LCD_Data(unsigned char lcd_data) {
 	GPIOA -> ODR |= (lcd_data << 1);
 
 	/* Send command */
-	GPIO_Write(GPIO_LCD_RS, 1);
+	GPIO_Write(&GPIO_LCD_RS, 1);
 	LCD_EnablePulse();
 }
 
@@ -94,19 +94,19 @@ void LCD_Data(unsigned char lcd_data) {
 void LCD_Init(void) {
 
 	/* Init GPIOs */
-	GPIO_Configure(GPIO_LCD_E, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_RS, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB0, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB1, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB2, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB3, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB4, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB5, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB6, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_LCD_DB7, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_LCD_E, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_RS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB0, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB1, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB2, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB3, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB4, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB5, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB6, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 
 	/* Initialization sequence */
-	GPIO_Write(GPIO_LCD_E, 0);
+	GPIO_Write(&GPIO_LCD_E, 0);
 	TIM22_WaitMilliseconds(100);
 	LCD_Command(0x30);
 	TIM22_WaitMilliseconds(30);

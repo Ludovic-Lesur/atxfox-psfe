@@ -23,6 +23,7 @@
 
 void ADC1_Init(void);
 void ADC_GetSupplyVoltageMv(unsigned int* supply_voltage_mv);
+void ADC_GetMcuTemperature(signed char* mcu_temperature_degrees);
 void ADC1_GetChannel12Bits(unsigned char channel, unsigned int* channel_result_12bits);
 
 #endif /* ADC_H */

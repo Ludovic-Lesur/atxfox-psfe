@@ -12,6 +12,7 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "td1208.h"
 #include "tim.h"
 #include "tst868u.h"
 #include "usart_reg.h"
@@ -72,7 +73,12 @@ void USART2_IRQHandler(void) {
 	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
 		// Store incoming byte in command buffer.
 		unsigned char rx_byte = USART2 -> RDR;
+#ifdef PSFE_SIGFOX_TST868U
 		TST868U_FillRxBuffer(rx_byte);
+#endif
+#ifdef PSFE_SIGFOX_TD1208
+		TD1208_FillRxBuffer(rx_byte);
+#endif
 	}
 
 	/* Overrun error interrupt */
@@ -123,8 +129,8 @@ void USART2_Init(void) {
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 
 	/* Configure TX and RX GPIOs */
-	GPIO_Configure(GPIO_USART2_TX, AlternateFunction, PushPull, LowSpeed, PullUp);
-	GPIO_Configure(GPIO_USART2_RX, AlternateFunction, PushPull, LowSpeed, PullUp);
+	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_UP);
+	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_UP);
 
 	/* Configure peripheral */
 	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').

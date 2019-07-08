@@ -8,33 +8,35 @@
 #ifndef MAPPING_H
 #define MAPPING_H
 
+#include "gpio.h"
+
 /*** MCU mapping ***/
 
 // Analog inputs.
-#define GPIO_BANDGAP			(GPIO) {GPIOB, 1, 0}
-#define GPIO_VOLTAGE_SENSE		(GPIO) {GPIOB, 0, 0}
-#define GPIO_CURRENT_SENSE		(GPIO) {GPIOA, 0, 0}
+static const GPIO GPIO_BANDGAP =			(GPIO) {GPIOB, 1, 1, 0};
+static const GPIO GPIO_VOLTAGE_SENSE =		(GPIO) {GPIOB, 1, 0, 0};
+static const GPIO GPIO_CURRENT_SENSE =		(GPIO) {GPIOA, 0, 0, 0};
 
 // LCD.
-#define GPIO_LCD_E				(GPIO) {GPIOC, 15, 0}
-#define GPIO_LCD_RS				(GPIO) {GPIOC, 14, 0}
-#define GPIO_LCD_DB0			(GPIO) {GPIOA, 1, 0}
-#define GPIO_LCD_DB1			(GPIO) {GPIOA, 2, 0}
-#define GPIO_LCD_DB2			(GPIO) {GPIOA, 3, 0}
-#define GPIO_LCD_DB3			(GPIO) {GPIOA, 4, 0}
-#define GPIO_LCD_DB4			(GPIO) {GPIOA, 5, 0}
-#define GPIO_LCD_DB5			(GPIO) {GPIOA, 6, 0}
-#define GPIO_LCD_DB6			(GPIO) {GPIOA, 7, 0}
-#define GPIO_LCD_DB7			(GPIO) {GPIOA, 8, 0}
+static const GPIO GPIO_LCD_E =				(GPIO) {GPIOC, 3, 15, 0};
+static const GPIO GPIO_LCD_RS =				(GPIO) {GPIOC, 3, 14, 0};
+static const GPIO GPIO_LCD_DB0 =			(GPIO) {GPIOA, 0, 1, 0};
+static const GPIO GPIO_LCD_DB1 =			(GPIO) {GPIOA, 0, 2, 0};
+static const GPIO GPIO_LCD_DB2 =			(GPIO) {GPIOA, 0, 3, 0};
+static const GPIO GPIO_LCD_DB3 =			(GPIO) {GPIOA, 0, 4, 0};
+static const GPIO GPIO_LCD_DB4 =			(GPIO) {GPIOA, 0, 5, 0};
+static const GPIO GPIO_LCD_DB5 =			(GPIO) {GPIOA, 0, 6, 0};
+static const GPIO GPIO_LCD_DB6 =			(GPIO) {GPIOA, 0, 7, 0};
+static const GPIO GPIO_LCD_DB7 =			(GPIO) {GPIOA, 0, 8, 0};
 
 // Current range (relays).
-#define GPIO_BYPASS				(GPIO) {GPIOB, 7, 0}
-#define GPIO_TRCS_RANGE_LOW		(GPIO) {GPIOB, 6, 0}
-#define GPIO_TRCS_RANGE_MIDDLE	(GPIO) {GPIOB, 3, 0}
-#define GPIO_TRCS_RANGE_HIGH	(GPIO) {GPIOA, 15, 0}
+static const GPIO GPIO_BYPASS =				(GPIO) {GPIOB, 1, 7, 0};
+static const GPIO GPIO_TRCS_RANGE_LOW =		(GPIO) {GPIOB, 1, 6, 0};
+static const GPIO GPIO_TRCS_RANGE_MIDDLE =	(GPIO) {GPIOB, 1, 3, 0};
+static const GPIO GPIO_TRCS_RANGE_HIGH =	(GPIO) {GPIOA, 0, 15, 0};
 
 // USART.
-#define GPIO_USART2_TX			(GPIO) {GPIOA, 9, 4}
-#define GPIO_USART2_RX			(GPIO) {GPIOA, 10, 4}
+static const GPIO GPIO_USART2_TX =			(GPIO) {GPIOA, 0, 9, 4};
+static const GPIO GPIO_USART2_RX =			(GPIO) {GPIOA, 0, 10, 4};
 
 #endif /* MAPPING_H */

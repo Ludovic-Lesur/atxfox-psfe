@@ -14,7 +14,6 @@
 
 /*** TST868U functions ***/
 
-void TST868U_Ping();
 void TST868U_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]);
 void TST868U_SendByte(unsigned char uplink_byte);
 

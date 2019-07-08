@@ -88,33 +88,33 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 	switch (trcs_range) {
 
 	case TRCS_RANGE_NONE:
-		GPIO_Write(GPIO_TRCS_RANGE_LOW, 0);
-		GPIO_Write(GPIO_TRCS_RANGE_MIDDLE, 0);
-		GPIO_Write(GPIO_TRCS_RANGE_HIGH, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
 		break;
 
 	case TRCS_RANGE_LOW:
-		GPIO_Write(GPIO_TRCS_RANGE_LOW, 1);
+		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 1);
 		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
-		GPIO_Write(GPIO_TRCS_RANGE_MIDDLE, 0);
-		GPIO_Write(GPIO_TRCS_RANGE_HIGH, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_LOW;
 		break;
 
 	case TRCS_RANGE_MIDDLE:
-		GPIO_Write(GPIO_TRCS_RANGE_MIDDLE, 1);
+		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 1);
 		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
-		GPIO_Write(GPIO_TRCS_RANGE_LOW, 0);
-		GPIO_Write(GPIO_TRCS_RANGE_HIGH, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_MIDDLE;
 		break;
 
 	case TRCS_RANGE_HIGH:
-		GPIO_Write(GPIO_TRCS_RANGE_HIGH, 1);
+		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 1);
 		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
-		GPIO_Write(GPIO_TRCS_RANGE_LOW, 0);
-		GPIO_Write(GPIO_TRCS_RANGE_MIDDLE, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
+		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_HIGH;
 		break;
 
@@ -162,9 +162,9 @@ void TRCS_Init(void) {
 	trcs_ctx.trcs_average_current_ua = 0;
 
 	/* Init GPIOs */
-	GPIO_Configure(GPIO_TRCS_RANGE_LOW, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_TRCS_RANGE_MIDDLE, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
-	GPIO_Configure(GPIO_TRCS_RANGE_HIGH, Output, PushPull, HighSpeed, NoPullUpNoPullDown);
+	GPIO_Configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_TRCS_RANGE_HIGH, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	TRCS_SetRange(TRCS_RANGE_NONE);
 }
 
