@@ -8,6 +8,7 @@
 #include "adc.h"
 #include "gpio.h"
 #include "lcd.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "rcc.h"
 #include "td1208.h"
@@ -83,6 +84,7 @@ int main(void) {
 	/* Init peripherals */
 	TIM21_Init();
 	TIM22_Init();
+	LPTIM1_Init();
 	GPIO_Init();
 	ADC1_Init();
 	USART2_Init();
@@ -157,7 +159,7 @@ int main(void) {
 			// Print project name and HW/SW versions.
 			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
-			TIM22_WaitMilliseconds(2000);
+			LPTIM1_DelayMilliseconds(2000);
 			// Print Sigfox device ID.
 #ifdef PSFE_SIGFOX_TST868U
 			TST868U_Ping();
@@ -176,7 +178,7 @@ int main(void) {
 #ifdef PSFE_SIGFOX_TD1208
 			TD1208_SendBit(1);
 #endif
-			TIM22_WaitMilliseconds(2000);
+			LPTIM1_DelayMilliseconds(2000);
 			// Print units.
 			LCD_Print(0, 0, "       V", 8);
 			LCD_Print(1, 0, "      mA", 8);

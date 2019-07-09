@@ -7,6 +7,7 @@
 
 #include "td1208.h"
 
+#include "lptim.h"
 #include "tim.h"
 #include "usart.h"
 
@@ -86,7 +87,7 @@ void TD1208_DisableEcho(void) {
 	USART2_Send(at_command, 5);
 
 	/* Flush buffer */
-	TIM22_WaitMilliseconds(500);
+	LPTIM1_DelayMilliseconds(500);
 	unsigned int idx = 0;
 	for (idx=0 ; idx<TD1208_RX_BUFFER_LENGTH_BYTES ; idx++) td1208_ctx.rx_buf[idx] = 0;
 	td1208_ctx.rx_buf_idx = 0;

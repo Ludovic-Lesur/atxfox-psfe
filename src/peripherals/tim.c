@@ -70,20 +70,3 @@ void TIM22_Init(void) {
 unsigned int TIM22_GetSeconds(void) {
 	return (TIM22 -> CNT);
 }
-
-/* RETURNS THE NUMBER OF MILLISECONDS ELLAPSED SINCE START-UP.
- * @param:	None.
- * @return:	Number of milliseconds ellapsed since start-up.
- */
-unsigned int TIM22_GetMilliseconds(void) {
-	return (((TIM22 -> CNT) * 1000) + (TIM21 -> CNT));
-}
-
-/* DELAY FUNCTION.
- * @param msToWait:	Number of milliseconds to wait.
- * @return:			None.
- */
-void TIM22_WaitMilliseconds(unsigned int ms_to_wait) {
-	unsigned int start_ms = TIM22_GetMilliseconds();
-	while (TIM22_GetMilliseconds() < (start_ms + ms_to_wait));
-}

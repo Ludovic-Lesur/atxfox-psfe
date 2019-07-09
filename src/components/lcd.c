@@ -9,6 +9,7 @@
 
 #include "gpio.h"
 #include "gpio_reg.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "tim.h"
 
@@ -55,7 +56,7 @@ static char LCD_HexadecimalToAscii(unsigned char value) {
 void LCD_EnablePulse(void) {
 	// Pulse width > 300ns.
 	GPIO_Write(&GPIO_LCD_E, 1);
-	TIM22_WaitMilliseconds(2);
+	LPTIM1_DelayMilliseconds(2);
 	GPIO_Write(&GPIO_LCD_E, 0);
 }
 
@@ -107,13 +108,13 @@ void LCD_Init(void) {
 
 	/* Initialization sequence */
 	GPIO_Write(&GPIO_LCD_E, 0);
-	TIM22_WaitMilliseconds(100);
+	LPTIM1_DelayMilliseconds(100);
 	LCD_Command(0x30);
-	TIM22_WaitMilliseconds(30);
+	LPTIM1_DelayMilliseconds(30);
 	LCD_Command(0x30);
-	TIM22_WaitMilliseconds(10);
+	LPTIM1_DelayMilliseconds(10);
 	LCD_Command(0x30);
-	TIM22_WaitMilliseconds(10);
+	LPTIM1_DelayMilliseconds(10);
 	LCD_Command(0x38); // 8-bits / 2 lines mode.
 	LCD_Command(0x08); // Display off.
 	LCD_Command(0x0C); // Display on.
@@ -152,7 +153,7 @@ void LCD_Print(unsigned char row, unsigned char column, char* string, unsigned c
  */
 void LCD_Clear(void) {
 	LCD_Command(0x01);
-	TIM22_WaitMilliseconds(2);
+	LPTIM1_DelayMilliseconds(2);
 }
 
 /* PRINT A SIGFOX DEVICE ID.

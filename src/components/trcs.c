@@ -9,6 +9,7 @@
 
 #include "adc.h"
 #include "gpio.h"
+#include "lptim.h"
 #include "mapping.h"
 #include "tim.h"
 
@@ -96,7 +97,7 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 
 	case TRCS_RANGE_LOW:
 		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 1);
-		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
+		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_LOW;
@@ -104,7 +105,7 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 
 	case TRCS_RANGE_MIDDLE:
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 1);
-		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
+		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
 		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_MIDDLE;
@@ -112,7 +113,7 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 
 	case TRCS_RANGE_HIGH:
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 1);
-		TIM22_WaitMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
+		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
 		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_HIGH;
@@ -124,7 +125,7 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 	}
 
 	/* Wait establishment */
-	TIM22_WaitMilliseconds(TRCS_RANGE_STABILIZATION_TIME_MS);
+	LPTIM1_DelayMilliseconds(TRCS_RANGE_STABILIZATION_TIME_MS);
 }
 
 /* COMPUTE THE AVERAGE CURRENT OF THE BUFFER.
