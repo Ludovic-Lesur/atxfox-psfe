@@ -39,4 +39,8 @@ static const GPIO GPIO_TRCS_RANGE_HIGH =	(GPIO) {GPIOA, 0, 15, 0};
 static const GPIO GPIO_USART2_TX =			(GPIO) {GPIOA, 0, 9, 4};
 static const GPIO GPIO_USART2_RX =			(GPIO) {GPIOA, 0, 10, 4};
 
+// LPUART.
+static const GPIO GPIO_LPUART1_TX =			(GPIO) {GPIOA, 0, 14, 6};
+static const GPIO GPIO_LPUART1_RX =			(GPIO) {GPIOA, 0, 13, 6};
+
 #endif /* MAPPING_H */

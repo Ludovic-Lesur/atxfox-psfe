@@ -27,7 +27,7 @@ void TIM21_Init(void) {
 	TIM21 -> CNT = 0; // Reset counter.
 
 	/* Configure TIM21 as master to count milliseconds and overflow every seconds */
-	TIM21 -> PSC = SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
+	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function). SYSCLK_KHZ-1 ?
 	TIM21 -> ARR = 1000; // 999 ?
 	TIM21 -> CR2 &= ~(0b111 << 4); // Reset bits 4-6.
 	TIM21 -> CR2 |= (0b010 << 4); // Generate trigger on update event (MMS='010').

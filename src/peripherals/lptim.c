@@ -32,7 +32,7 @@ void LPTIM1_Init(void) {
 	LPTIM1 -> CFGR |= (0b1 << 19); // Enable timeout.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1'), needed to write ARR.
-	LPTIM1 -> ARR = SYSCLK_KHZ; // Overflow period = 1ms.
+	LPTIM1 -> ARR = RCC_SYSCLK_KHZ; // Overflow period = 1ms.
 	unsigned int loop_start_time = TIM22_GetSeconds();
 	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
 		// Wait for ARROK='1' or timeout.

@@ -11,7 +11,7 @@
 /*** RCC macros ***/
 
 // System clock frequency in kHz.
-#define SYSCLK_KHZ	16000
+#define RCC_SYSCLK_KHZ	16000
 
 /*** RCC functions ***/
 

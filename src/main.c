@@ -9,6 +9,7 @@
 #include "gpio.h"
 #include "lcd.h"
 #include "lptim.h"
+#include "lpuart.h"
 #include "mapping.h"
 #include "rcc.h"
 #include "td1208.h"
@@ -88,6 +89,7 @@ int main(void) {
 	GPIO_Init();
 	ADC1_Init();
 	USART2_Init();
+	LPUART1_Init();
 
 	/* Init components */
 	LCD_Init();
@@ -156,7 +158,7 @@ int main(void) {
 
 		/* Init */
 		case PSFE_STATE_INIT:
-			// Print project name and HW/SW versions.
+			// Print project name and HW versions.
 			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
 			LPTIM1_DelayMilliseconds(2000);
@@ -260,16 +262,23 @@ int main(void) {
 
 		/* Send voltage and current on UART */
 		case PSFE_STATE_LOG:
+			// Get MCU temperature.
+			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// UART.
 			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_uart_next_time_seconds) {
-				// TBD.
+				// Log values on USB connector.
+				LPUART1_SendString("U=");
+				LPUART1_SendValue(psfe_ctx.psfe_atx_voltage_mv, LPUART_FORMAT_DECIMAL, 0);
+				LPUART1_SendString("mV*I=");
+				LPUART1_SendValue(psfe_ctx.psfe_atx_current_ua, LPUART_FORMAT_DECIMAL, 0);
+				LPUART1_SendString("µA*T=");
+				LPUART1_SendValue(psfe_ctx.psfe_mcu_temperature_degrees, LPUART_FORMAT_DECIMAL, 0);
+				LPUART1_SendString("°C\n");
 				// Update next time.
 				psfe_ctx.psfe_log_uart_next_time_seconds += PSFE_UART_LOG_PERIOD_SECONDS;
 			}
 			// Sigfox.
 			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_sigfox_next_time_seconds) {
-				// Get MCU temperature.
-				ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
 				// Build data.
 				psfe_ctx.psfe_sigfox_uplink_data[0] = (psfe_ctx.psfe_atx_voltage_mv & 0x0000FF00) >> 8;
 				psfe_ctx.psfe_sigfox_uplink_data[1] = (psfe_ctx.psfe_atx_voltage_mv & 0x000000FF) >> 0;

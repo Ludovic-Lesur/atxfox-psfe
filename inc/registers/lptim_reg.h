@@ -25,4 +25,4 @@ typedef struct {
 
 #define LPTIM1	((LPTIM_BaseAddress*) ((unsigned int) 0x40007C00))
 
-#endif /* REGISTERS_LPTIM_REG_H_ */
+#endif /* LPTIM_REG_H */

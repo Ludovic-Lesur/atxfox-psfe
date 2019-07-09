@@ -7,11 +7,13 @@
 
 #include "tst868u.h"
 
+#include "tim.h"
 #include "usart.h"
 
 /*** TST868U local macros ***/
 
 #define TST868U_RX_BUFFER_LENGTH_BYTES			32
+#define TST868U_TIMEOUT_SECONDS					5
 // Separator character.
 #define TST868U_COMMAND_SEPARATOR				';'
 
@@ -47,7 +49,10 @@ void TST868U_Ping(void) {
 	USART2_Send(at_command, 5);
 
 	/* Wait for response */
-	while (tst868u_ctx.separator_received == 0);
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (tst868u_ctx.separator_received == 0) {
+		if (TIM22_GetSeconds() > (loop_start_time + TST868U_TIMEOUT_SECONDS)) break;
+	}
 	tst868u_ctx.separator_received = 0;
 }
 
@@ -70,7 +75,10 @@ void TST868U_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
 	USART2_Send(at_command, 6);
 
 	/* Wait for response (OK; or KO;) */
-	while (tst868u_ctx.separator_received == 0);
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (tst868u_ctx.separator_received == 0) {
+		if (TIM22_GetSeconds() > (loop_start_time + TST868U_TIMEOUT_SECONDS)) break;
+	}
 	tst868u_ctx.separator_received = 0;
 
 	/* Read device ID */

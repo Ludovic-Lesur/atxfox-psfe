@@ -14,6 +14,7 @@
 /*** TD1208 local macros ***/
 
 #define TD1208_RX_BUFFER_LENGTH_BYTES	32
+#define TD1208_TIMEOUT_SECONDS			5
 // Separator character.
 #define TD1208_NULL						'\0'
 #define TD1208_CR						'\r'
@@ -112,11 +113,16 @@ void TD1208_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
 	USART2_Send(at_command, 5);
 
 	/* Wait for ID */
-	while (td1208_ctx.separator_received == 0);
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (td1208_ctx.separator_received == 0) {
+		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+	}
 	td1208_ctx.separator_received = 0;
 
 	/* Wait for OK */
-	while (td1208_ctx.separator_received == 0);
+	while (td1208_ctx.separator_received == 0) {
+		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+	}
 	td1208_ctx.separator_received = 0;
 
 	/* Read device ID */
