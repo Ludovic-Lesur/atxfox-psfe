@@ -30,7 +30,7 @@
 #define PSFE_OPEN_VOLTAGE_THRESHOLD_MV			100
 
 // Log.
-#define PSFE_UART_LOG_PERIOD_SECONDS			2
+#define PSFE_UART_LOG_PERIOD_SECONDS			1
 #define PSFE_SIGFOX_LOG_PERIOD_SECONDS			600
 #define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	6
 
@@ -184,8 +184,13 @@ int main(void) {
 			// Print units.
 			LCD_Print(0, 0, "       V", 8);
 			LCD_Print(1, 0, "      mA", 8);
-			// Update flag.
+			// Update flags.
 			psfe_ctx.psfe_init_done = 1;
+			psfe_ctx.psfe_log_uart_next_time_seconds = TIM22_GetSeconds();
+			psfe_ctx.psfe_no_input_current_status = 0;
+			psfe_ctx.psfe_no_input_previous_status = 0;
+			psfe_ctx.psfe_bypass_current_status = 0;
+			psfe_ctx.psfe_bypass_previous_status = 0;
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_BYPASS;
 			break;
@@ -270,10 +275,15 @@ int main(void) {
 				LPUART1_SendString("U=");
 				LPUART1_SendValue(psfe_ctx.psfe_atx_voltage_mv, LPUART_FORMAT_DECIMAL, 0);
 				LPUART1_SendString("mV*I=");
-				LPUART1_SendValue(psfe_ctx.psfe_atx_current_ua, LPUART_FORMAT_DECIMAL, 0);
-				LPUART1_SendString("µA*T=");
+				if (psfe_ctx.psfe_bypass_current_status == 0) {
+					LPUART1_SendValue(psfe_ctx.psfe_atx_current_ua, LPUART_FORMAT_DECIMAL, 0);
+					LPUART1_SendString("uA*T=");
+				}
+				else {
+					LPUART1_SendString("BYPASS*T=");
+				}
 				LPUART1_SendValue(psfe_ctx.psfe_mcu_temperature_degrees, LPUART_FORMAT_DECIMAL, 0);
-				LPUART1_SendString("°C\n");
+				LPUART1_SendString("dC\n");
 				// Update next time.
 				psfe_ctx.psfe_log_uart_next_time_seconds += PSFE_UART_LOG_PERIOD_SECONDS;
 			}

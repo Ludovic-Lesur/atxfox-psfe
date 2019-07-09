@@ -129,8 +129,8 @@ void LPUART1_Init(void) {
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
 	LPUART1 -> BRR |= ((RCC_SYSCLK_KHZ * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 
-	/* Enable transmitter interrupt */
-	LPUART1 -> CR1 |= (0b1 << 7); // Enable TXE interrupt (TXEIE='1').
+	/* Enable transmitter */
+	LPUART1 -> CR1 |= (0b1 << 3); // (TE='1').
 
 	/* Enable peripheral */
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
