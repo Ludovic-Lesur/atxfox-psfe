@@ -1,19 +1,18 @@
 /*
  * td1208.c
  *
- *  Created on: 8 juil. 2019
- *      Author: Ludovic
+ *  Created on: 8 july 2019
+ *      Author: Ludo
  */
 
 #include "td1208.h"
 
-#include "lptim.h"
 #include "tim.h"
 #include "usart.h"
 
 /*** TD1208 local macros ***/
 
-#define TD1208_RX_BUFFER_LENGTH_BYTES	32
+#define TD1208_BUFFER_LENGTH_BYTES		32
 #define TD1208_TIMEOUT_SECONDS			5
 // Separator character.
 #define TD1208_NULL						'\0'
@@ -23,9 +22,14 @@
 /*** TD1208 local structures ***/
 
 typedef struct {
-	unsigned char rx_buf[TD1208_RX_BUFFER_LENGTH_BYTES]; 	// Receive buffer.
-	unsigned int rx_buf_idx; 								// Index in RX buffer.
-	unsigned char separator_received;						// Flag set as soon as a separator character was received.
+	unsigned char td1208_at_tx_buf[TD1208_BUFFER_LENGTH_BYTES];	// TX buffer.
+	unsigned char td1208_at_rx_buf[TD1208_BUFFER_LENGTH_BYTES]; // RX buffer.
+	unsigned int td1208_at_rx_buf_idx; 							// Index in RX buffer.
+	unsigned char td1208_at_response_count;						// Number of responses received from TD module.
+	unsigned char td1208_at_parsing_count; 						// Number of parsing function call(s).
+	unsigned char td1208_at_received_ok;
+	unsigned char td1208_sigfox_device_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
+	unsigned char td1208_at_received_id;
 } TD1208_Context;
 
 /*** TD1208 local global variables ***/
@@ -68,83 +72,167 @@ char TD1208_HexaToAscii(unsigned char hexa_value) {
 	return ascii_code;
 }
 
+/* CHECK IF A GIVEN CHARACTER IS HEXADECIMAL.
+ * @param c:	Character to check.
+ * @return:		1 in case of hexadecimal character, 0 otherwise.
+ */
+unsigned char TD1208_IsHexaChar(unsigned char c) {
+	unsigned char result = 0;
+	if (((c >= '0') && (c <= '9')) || ((c >= 'A') && (c <= 'F'))) {
+		result = 1;
+	}
+	return result;
+}
+
+/* RESET PARSING VARIABLES.
+ * @param:  None.
+ * @return: None.
+ */
+void TD1208_ResetParser(void) {
+    unsigned int idx = 0;
+    for (idx=0; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
+    	td1208_ctx.td1208_at_rx_buf[idx] = 0;
+    	td1208_ctx.td1208_at_tx_buf[idx] = 0;
+    }
+    td1208_ctx.td1208_at_rx_buf_idx = 0;
+    td1208_ctx.td1208_at_response_count = 0;
+    td1208_ctx.td1208_at_parsing_count = 0;
+    td1208_ctx.td1208_at_received_ok = 0;
+    td1208_ctx.td1208_at_received_id = 0;
+}
+
+/* PARSE AT RESPONSE BUFFER.
+ * @param:	None.
+ * @return:	None.
+ */
+void TD1208_ParseAtRxBuffer(void) {
+    unsigned int idx;
+    unsigned char sigfox_device_id_ascii_raw[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES] = {0x00};
+    unsigned char sigfox_device_id_ascii[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES] = {0x00};
+    unsigned char sigfox_device_id_idx = 0;
+    unsigned char sigfox_device_id_length = 0;
+    // OK.
+    for (idx=0 ; idx<(td1208_ctx.td1208_at_rx_buf_idx - 1) ; idx++) {
+        if ((td1208_ctx.td1208_at_rx_buf[idx] == 'O') && (td1208_ctx.td1208_at_rx_buf[idx+1] == 'K')) {
+            td1208_ctx.td1208_at_received_ok = 1;
+            break;
+        }
+    }
+    // Device ID.
+	if (td1208_ctx.td1208_at_received_ok == 0) {
+		for (idx=0 ; idx<(td1208_ctx.td1208_at_rx_buf_idx) ; idx++) {
+			// Check character.
+			if (TD1208_IsHexaChar(td1208_ctx.td1208_at_rx_buf[idx]) != 0) {
+				sigfox_device_id_ascii_raw[sigfox_device_id_length] = td1208_ctx.td1208_at_rx_buf[idx];
+				// Increment index.
+				sigfox_device_id_length++;
+			}
+		}
+		if (sigfox_device_id_length > 0) {
+			// Pad MSB with zeroes.
+			for (idx=((2 * SIGFOX_DEVICE_ID_LENGTH_BYTES) - sigfox_device_id_length) ; idx<(2 * SIGFOX_DEVICE_ID_LENGTH_BYTES) ; idx++) {
+				sigfox_device_id_ascii[idx] = sigfox_device_id_ascii_raw[sigfox_device_id_idx];
+				sigfox_device_id_idx++;
+			}
+			// Convert ASCII to byte array.
+			for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) {
+				td1208_ctx.td1208_sigfox_device_id[idx] = 0;
+				td1208_ctx.td1208_sigfox_device_id[idx] |= TD1208_AsciiToHexa(sigfox_device_id_ascii[(2 * idx) + 0]) << 4;
+				td1208_ctx.td1208_sigfox_device_id[idx] |= TD1208_AsciiToHexa(sigfox_device_id_ascii[(2 * idx) + 1]);
+			}
+			// Set flag.
+			td1208_ctx.td1208_at_received_id = 1;
+		}
+	}
+    // Update parsing count.
+    td1208_ctx.td1208_at_parsing_count++;
+}
+
+/* WAIT FOR RECEIVING OK RESPONSE.
+ * @param:	None.
+ * @return:	None.
+ */
+void TD1208_WaitForOk(void) {
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (td1208_ctx.td1208_at_received_ok == 0) {
+		// Decode buffer.
+		if (td1208_ctx.td1208_at_response_count != td1208_ctx.td1208_at_parsing_count) {
+			TD1208_ParseAtRxBuffer();
+		}
+		// Exit if timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+	}
+}
+
+/* WAIT FOR RECEIVING OK RESPONSE.
+ * @param:	None.
+ * @return:	None.
+ */
+void TD1208_WaitForId(void) {
+	unsigned int loop_start_time = TIM22_GetSeconds();
+	while (td1208_ctx.td1208_at_received_id == 0) {
+		// Decode buffer.
+		if (td1208_ctx.td1208_at_response_count != td1208_ctx.td1208_at_parsing_count) {
+			TD1208_ParseAtRxBuffer();
+		}
+		// Exit if timeout.
+		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+	}
+}
+
 /*** TD1208 functions ***/
+
+/* INIT TD1208 INTERFACE
+ * @param:	None.
+ * @return:	None.
+ */
+void TD1208_Init(void) {
+	// Init buffers.
+	TD1208_ResetParser();
+}
 
 /* DISABLE TD1208 ECHO ON UART.
  * @param:	None.
  * @return:	None.
  */
 void TD1208_DisableEcho(void) {
-
-	/* Build AT command */
-	unsigned char at_command[5];
-	at_command[0] = 'A';
-	at_command[1] = 'T';
-	at_command[2] = 'E';
-	at_command[3] = '0';
-	at_command[4] = TD1208_CR;
-
-	/* Send command through UART */
-	USART2_Send(at_command, 5);
-
-	/* Flush buffer */
-	LPTIM1_DelayMilliseconds(500);
-	unsigned int idx = 0;
-	for (idx=0 ; idx<TD1208_RX_BUFFER_LENGTH_BYTES ; idx++) td1208_ctx.rx_buf[idx] = 0;
-	td1208_ctx.rx_buf_idx = 0;
-	td1208_ctx.separator_received = 0;
+	// Reset parser.
+	TD1208_ResetParser();
+	// Build AT command.
+	td1208_ctx.td1208_at_tx_buf[0] = 'A';
+	td1208_ctx.td1208_at_tx_buf[1] = 'T';
+	td1208_ctx.td1208_at_tx_buf[2] = 'E';
+	td1208_ctx.td1208_at_tx_buf[3] = '0';
+	td1208_ctx.td1208_at_tx_buf[4] = TD1208_CR;
+	// Send command through UART.
+	USART2_Send((unsigned char*) td1208_ctx.td1208_at_tx_buf, 5);
+	// Wait for response.
+	TD1208_WaitForOk();
 }
 
 /* RETRIEVE SIGFOX MODULE ID.
- * @param sigfox_id:	Byte array that will contain device ID.
- * @return:				None.
+ * @param td1208_sigfox_device_id:	Byte array that will contain device ID.
+ * @return:							None.
  */
-void TD1208_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
-
-	/* Build AT command */
-	unsigned char at_command[5];
-	at_command[0] = 'A';
-	at_command[1] = 'T';
-	at_command[2] = 'I';
-	at_command[3] = '7';
-	at_command[4] = TD1208_CR;
-
-	/* Send command through UART */
-	USART2_Send(at_command, 5);
-
-	/* Wait for ID */
-	unsigned int loop_start_time = TIM22_GetSeconds();
-	while (td1208_ctx.separator_received == 0) {
-		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+void TD1208_GetSigfoxId(unsigned char td1208_sigfox_device_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
+	// Reset parser.
+	TD1208_ResetParser();
+	// Build AT command.
+	td1208_ctx.td1208_at_tx_buf[0] = 'A';
+	td1208_ctx.td1208_at_tx_buf[1] = 'T';
+	td1208_ctx.td1208_at_tx_buf[2] = 'I';
+	td1208_ctx.td1208_at_tx_buf[3] = '7';
+	td1208_ctx.td1208_at_tx_buf[4] = TD1208_CR;
+	// Send command through UART.
+	USART2_Send((unsigned char*) td1208_ctx.td1208_at_tx_buf, 5);
+	// Wait for ID.
+	TD1208_WaitForId();
+	TD1208_WaitForOk();
+	// Return ID.
+	unsigned char idx = 0;
+	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) {
+		td1208_sigfox_device_id[idx] = td1208_ctx.td1208_sigfox_device_id[idx];
 	}
-	td1208_ctx.separator_received = 0;
-
-	/* Wait for OK */
-	while (td1208_ctx.separator_received == 0) {
-		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
-	}
-	td1208_ctx.separator_received = 0;
-
-	/* Read device ID */
-	unsigned char sigfox_id_ascii[(SIGFOX_ID_LENGTH_BYTES * 2)] = {0, 0, 0, 0, 0, 0, 0, 0};
-	unsigned char sigfox_id_ascii_idx = (SIGFOX_ID_LENGTH_BYTES * 2) - 1;
-	unsigned int idx = 0;
-	for (idx=td1208_ctx.rx_buf_idx ; idx>0 ; idx--) {
-		// Select all characters except CR and LF.
-		if ((td1208_ctx.rx_buf[idx] != TD1208_CR) && (td1208_ctx.rx_buf[idx] != TD1208_LF) && (td1208_ctx.rx_buf[idx] != TD1208_NULL)) {
-			sigfox_id_ascii[sigfox_id_ascii_idx] = td1208_ctx.rx_buf[idx];
-			sigfox_id_ascii_idx--;
-			if (sigfox_id_ascii_idx == 0) {
-				break;
-			}
-		}
-	}
-
-	/* Convert to byte array */
-	for (idx=0 ; idx<SIGFOX_ID_LENGTH_BYTES ; idx++) {
-		sigfox_id[idx] = (TD1208_AsciiToHexa(sigfox_id_ascii[2*idx]) << 4) + TD1208_AsciiToHexa(sigfox_id_ascii[2*idx+1]);
-	}
-
 }
 
 /* SEND A BIT OVER SIGFOX NETWORK.
@@ -152,22 +240,21 @@ void TD1208_GetSigfoxId(unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
  * @return:				None.
  */
 void TD1208_SendBit(unsigned char uplink_bit) {
-
-	/* Build AT command */
-	unsigned char at_command[10];
-	at_command[0] = 'A';
-	at_command[1] = 'T';
-	at_command[2] = '$';
-	at_command[3] = 'S';
-	at_command[4] = 'B';
-	at_command[5] = '=';
-	at_command[6] = uplink_bit ? '1' : '0';
-	at_command[7] = ',';
-	at_command[8] = '2';
-	at_command[9] = TD1208_CR;
-
-	/* Send command through UART */
-	USART2_Send(at_command, 10);
+	// Build AT command.
+	td1208_ctx.td1208_at_tx_buf[0] = 'A';
+	td1208_ctx.td1208_at_tx_buf[1] = 'T';
+	td1208_ctx.td1208_at_tx_buf[2] = '$';
+	td1208_ctx.td1208_at_tx_buf[3] = 'S';
+	td1208_ctx.td1208_at_tx_buf[4] = 'B';
+	td1208_ctx.td1208_at_tx_buf[5] = '=';
+	td1208_ctx.td1208_at_tx_buf[6] = uplink_bit ? '1' : '0';
+	td1208_ctx.td1208_at_tx_buf[7] = ',';
+	td1208_ctx.td1208_at_tx_buf[8] = '2';
+	td1208_ctx.td1208_at_tx_buf[9] = TD1208_CR;
+	// Send command through UART.
+	USART2_Send((unsigned char*) td1208_ctx.td1208_at_tx_buf, 10);
+	// Wait for response.
+	TD1208_WaitForOk();
 }
 
 /* SEND A FRAME OVER SIGFOX NETWORK.
@@ -176,28 +263,25 @@ void TD1208_SendBit(unsigned char uplink_bit) {
  * @return:						None.
  */
 void TD1208_SendFrame(unsigned char* uplink_data, unsigned char uplink_data_length_bytes) {
-
-	/* Build AT command */
+	// Build AT command.
 	unsigned int idx = 0;
-	unsigned char at_command[64];
 	// Header.
-	at_command[idx++] = 'A';
-	at_command[idx++] = 'T';
-	at_command[idx++] = '$';
-	at_command[idx++] = 'S';
-	at_command[idx++] = 'F';
-	at_command[idx++] = '=';
+	td1208_ctx.td1208_at_tx_buf[idx++] = 'A';
+	td1208_ctx.td1208_at_tx_buf[idx++] = 'T';
+	td1208_ctx.td1208_at_tx_buf[idx++] = '$';
+	td1208_ctx.td1208_at_tx_buf[idx++] = 'S';
+	td1208_ctx.td1208_at_tx_buf[idx++] = 'F';
+	td1208_ctx.td1208_at_tx_buf[idx++] = '=';
 	// Data.
 	unsigned int data_idx = 0;
 	for (data_idx=0 ; data_idx<uplink_data_length_bytes ; data_idx++) {
-		at_command[idx++] = TD1208_HexaToAscii((uplink_data[data_idx] & 0xF0) >> 4);
-		at_command[idx++] = TD1208_HexaToAscii((uplink_data[data_idx] & 0x0F));
+		td1208_ctx.td1208_at_tx_buf[idx++] = TD1208_HexaToAscii((uplink_data[data_idx] & 0xF0) >> 4);
+		td1208_ctx.td1208_at_tx_buf[idx++] = TD1208_HexaToAscii((uplink_data[data_idx] & 0x0F));
 	}
 	// AT command end.
-	at_command[idx++] = TD1208_CR;
-
-	/* Send command through UART */
-	USART2_Send(at_command, idx);
+	td1208_ctx.td1208_at_tx_buf[idx++] = TD1208_CR;
+	// Send command through UART.
+	USART2_Send((unsigned char*) td1208_ctx.td1208_at_tx_buf, idx);
 }
 
 /* STORE A NEW BYTE IN RX COMMAND BUFFER.
@@ -205,15 +289,15 @@ void TD1208_SendFrame(unsigned char* uplink_data, unsigned char uplink_data_leng
  * @return:			None.
  */
 void TD1208_FillRxBuffer(unsigned char rx_byte) {
-	td1208_ctx.rx_buf[td1208_ctx.rx_buf_idx] = rx_byte;
+	td1208_ctx.td1208_at_rx_buf[td1208_ctx.td1208_at_rx_buf_idx] = rx_byte;
 	// Set flag if required.
-	if (rx_byte == TD1208_CR) {
-		td1208_ctx.separator_received = 1;
+	if (rx_byte == TD1208_LF) {
+		td1208_ctx.td1208_at_response_count++;
 	}
 	// Increment index.
-	td1208_ctx.rx_buf_idx++;
+	td1208_ctx.td1208_at_rx_buf_idx++;
 	// Manage roll-over.
-	if (td1208_ctx.rx_buf_idx == TD1208_RX_BUFFER_LENGTH_BYTES) {
-		td1208_ctx.rx_buf_idx = 0;
+	if (td1208_ctx.td1208_at_rx_buf_idx >= TD1208_BUFFER_LENGTH_BYTES) {
+		td1208_ctx.td1208_at_rx_buf_idx = 0;
 	}
 }

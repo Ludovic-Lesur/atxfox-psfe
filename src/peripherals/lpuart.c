@@ -7,6 +7,7 @@
 
 #include "lpuart.h"
 
+#include "atxfox.h"
 #include "gpio.h"
 #include "lpuart_reg.h"
 #include "mapping.h"
@@ -37,9 +38,8 @@ static volatile LPUART_Context lpuart_ctx;
  * @param:	None.
  * @return:	None.
  */
-void AES_RNG_LPUART1_IRQHandler(void) {
-
-	/* TXE interrupt */
+void LPUART1_IRQHandler(void) {
+	// TXE interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 7)) != 0) {
 		if ((lpuart_ctx.tx_buf_read_idx) != (lpuart_ctx.tx_buf_write_idx)) {
 			LPUART1 -> TDR = lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
@@ -53,8 +53,7 @@ void AES_RNG_LPUART1_IRQHandler(void) {
 			LPUART1 -> CR1 &= ~(0b1 << 7); // TXEIE='0'.
 		}
 	}
-
-	/* Overrun error interrupt */
+	// Overrun error interrupt.
 	if (((LPUART1 -> ISR) & (0b1 << 3)) != 0) {
 		// Clear ORE flag.
 		LPUART1 -> ICR |= (0b1 << 3);
@@ -107,32 +106,28 @@ void LPUART1_FillTxBuffer(unsigned char tx_byte) {
  * @return:	None.
  */
 void LPUART1_Init(void) {
-
-	/* Init context */
+	// Init context.
 	unsigned int idx = 0;
 	for (idx=0 ; idx<LPUART_TX_BUFFER_SIZE ; idx++) lpuart_ctx.tx_buf[idx] = 0;
 	lpuart_ctx.tx_buf_write_idx = 0;
 	lpuart_ctx.tx_buf_read_idx = 0;
-
-	/* Enable peripheral clock */
+	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
-
-	/* Configure TX and RX GPIOs (first as high impedance) */
+#ifndef DEBUG
+	// Configure TX and RX GPIOs (first as high impedance).
 	GPIO_Configure(&GPIO_LPUART1_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Configure peripheral */
+#endif
+	// Configure peripheral.
 	LPUART1 -> CR1 &= 0xEC008000; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
 	LPUART1 -> CR2 &= 0x00F04FEF; // 1 stop bit (STOP='00').
 	LPUART1 -> CR3 &= 0xFF0F0836;
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
 	LPUART1 -> BRR |= ((RCC_SYSCLK_KHZ * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
-
-	/* Enable transmitter */
+	// Enable transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // (TE='1').
-
-	/* Enable peripheral */
+	// Enable peripheral.
 	LPUART1 -> CR1 |= (0b1 << 0); // UE='1'.
 }
 
@@ -143,18 +138,15 @@ void LPUART1_Init(void) {
  * @return: 			None.
  */
 void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned char print_prefix) {
-
-	/* Disable interrupt */
+	// Disable interrupt.
 	NVIC_DisableInterrupt(IT_LPUART1);
-
 	/* Local variables */
 	unsigned char first_non_zero_found = 0;
 	unsigned int idx;
 	unsigned char current_value = 0;
 	unsigned int current_power = 0;
 	unsigned int previous_decade = 0;
-
-	/* Fill TX buffer according to format */
+	// Fill TX buffer according to format.
 	switch (format) {
 	case LPUART_FORMAT_BINARY:
 		if (print_prefix != 0) {
@@ -223,8 +215,7 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
 		}
 		break;
 	}
-
-	/* Enable interrupt */
+	// Enable interrupt.
 	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
 	NVIC_EnableInterrupt(IT_LPUART1);
 }
@@ -234,16 +225,13 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
  * @return:				None.
  */
 void LPUART1_SendString(char* tx_string) {
-
-	/* Disable interrupt */
+	// Disable interrupt.
 	NVIC_DisableInterrupt(IT_LPUART1);
-
-	/* Fill TX buffer with new bytes */
+	// Fill TX buffer with new bytes.
 	while (*tx_string) {
 		LPUART1_FillTxBuffer((unsigned char) *(tx_string++));
 	}
-
-	/* Enable interrupt */
+	// Enable interrupt.
 	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
 	NVIC_EnableInterrupt(IT_LPUART1);
 }

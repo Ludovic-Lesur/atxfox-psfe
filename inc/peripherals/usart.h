@@ -8,11 +8,6 @@
 #ifndef USART_H
 #define USART_H
 
-/*** USART macros ***/
-
-//#define PSFE_SIGFOX_TST868U
-#define PSFE_SIGFOX_TD1208
-
 /*** USART functions ***/
 
 void USART2_Init(void);

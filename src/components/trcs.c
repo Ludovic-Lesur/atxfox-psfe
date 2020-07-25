@@ -8,6 +8,7 @@
 #include "trcs.h"
 
 #include "adc.h"
+#include "atxfox.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"
@@ -15,9 +16,6 @@
 
 /*** TRCS local macros ***/
 
-#define TRCS_BOARD_NUMBER					1		// TRCS 1.0.x to be defined to select values from calibration tables.
-
-#define TRCS_NUMBER_OF_BOARDS				10
 #define TRCS_NUMBER_OF_RANGES				3
 
 #define TRCS_RANGE_RECOVERY_TIME_MS			100		// Recovery time when switching ranges.
@@ -28,11 +26,11 @@
 
 #define TRCS_RANGE_SWITCH_CONFIRMATION		10		// Number of valid measures to validate a range switch operation.
 
-#define TRCS_AD8219_VOLTAGE_GAIN			60		// AD8219 voltage gain = 60 V/V.
+#define TRCS_LT6105_VOLTAGE_GAIN			59		// LT6105 with 100R and 5.9k resistors.
 
 #define TRCS_CURRENT_BUFFER_LENGTH			32		// Current buffer.
 
-const unsigned int trcs_resistor_mohm_table[TRCS_NUMBER_OF_BOARDS][TRCS_NUMBER_OF_RANGES] = {
+const unsigned int trcs_resistor_mohm_table[ATXFOX_NUMBER_OF_BOARDS][TRCS_NUMBER_OF_RANGES] = {
 	{52000, 510, 6}, // Board 1.0.1 - calibrated.
 	{52000, 510, 5}, // Board 1.0.2 - calibrated.
 	{53000, 510, 6}, // Board 1.0.3 - calibrated.
@@ -182,13 +180,13 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 	unsigned int adc_channel_result_12bits = 0;
 	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
 
-	/* Convert ADC result to µA */
+	/* Convert ADC result to uA */
 	unsigned long long num = adc_channel_result_12bits;
 	num *= ADC_BANDGAP_VOLTAGE_MV;
 	num *= 1000000;
-	unsigned int resistor_mohm = trcs_resistor_mohm_table[TRCS_BOARD_NUMBER - 1][trcs_ctx.trcs_current_range - 1]; // (-1 tp skip TRCS_RANGE_NONE).
+	unsigned int resistor_mohm = trcs_resistor_mohm_table[(psfe_trcs_number[PSFE_BOARD_NUMBER] - 1)][trcs_ctx.trcs_current_range - 1]; // (-1 tp skip TRCS_RANGE_NONE).
 	unsigned long long den = adc_bandgap_result_12bits;
-	den *= TRCS_AD8219_VOLTAGE_GAIN;
+	den *= TRCS_LT6105_VOLTAGE_GAIN;
 	den *= resistor_mohm;
 
 	/* Store result in buffer */

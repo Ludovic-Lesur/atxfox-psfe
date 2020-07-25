@@ -160,18 +160,18 @@ void LCD_Clear(void) {
  * @param sigfox_id:	ID to print.
  * @return:				None.
  */
-void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_ID_LENGTH_BYTES]) {
+void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
 
 	/* Build corresponding string */
-	char sigfox_id_string[2 * SIGFOX_ID_LENGTH_BYTES];
+	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	unsigned char byte_idx = 0;
-	for (byte_idx=0 ; byte_idx<SIGFOX_ID_LENGTH_BYTES ; byte_idx++) {
+	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
 		sigfox_id_string[2 * byte_idx] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0xF0) >> 4);
 		sigfox_id_string[2 * byte_idx + 1] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0x0F) >> 0);
 	}
 
 	/* Print ID */
-	LCD_Print(row, 0, sigfox_id_string, (2 * SIGFOX_ID_LENGTH_BYTES));
+	LCD_Print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
 }
 
 /* PRINT A VALUE ON 5 DIGITS.
