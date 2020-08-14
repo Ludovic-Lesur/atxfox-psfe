@@ -11,7 +11,7 @@
 /*** TRCS functions ***/
 
 void TRCS_Init(void);
-void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass_status);
+void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass_status);
 void TRCS_Off(void);
 
 #endif /* TRCS_H */

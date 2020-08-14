@@ -15,7 +15,7 @@
 /*** PSFE board number (to be defined) ***/
 
 #define PSFE_BOARD_NUMBER			6	// 1.0.x
-#define DEBUG							// Do not use LPUART1 when debugging (same pins).
+#define DEBUG						// Do not use LPUART1 when debugging (same pins).
 
 /*** ATXFOX global variables ***/
 

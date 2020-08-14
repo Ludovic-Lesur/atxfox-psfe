@@ -9,6 +9,7 @@
 
 #include "adc.h"
 #include "atxfox.h"
+#include "filter.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"
@@ -28,7 +29,8 @@
 
 #define TRCS_LT6105_VOLTAGE_GAIN			59		// LT6105 with 100R and 5.9k resistors.
 
-#define TRCS_CURRENT_BUFFER_LENGTH			32		// Current buffer.
+#define TRCS_MEDIAN_FILTER_LENGTH			31		// Length of the median filter window in samples.
+#define TRCS_CENTER_AVERAGE_LENGTH			5
 
 const unsigned int trcs_resistor_mohm_table[ATXFOX_NUMBER_OF_BOARDS][TRCS_NUMBER_OF_RANGES] = {
 	{52000, 510, 6}, // Board 1.0.1 - calibrated.
@@ -66,7 +68,7 @@ typedef struct {
 	TRCS_State trcs_state;
 	unsigned char trcs_range_up_counter;
 	unsigned char trcs_range_down_counter;
-	unsigned int trcs_current_ua_buf[TRCS_CURRENT_BUFFER_LENGTH];
+	unsigned int trcs_adc_sample_buf[TRCS_MEDIAN_FILTER_LENGTH];
 	unsigned char trcs_current_ua_buf_idx;
 	unsigned int trcs_average_current_ua;
 } TRCS_Context;
@@ -82,17 +84,14 @@ static TRCS_Context trcs_ctx;
  * @return:				None.
  */
 void TRCS_SetRange(TRCS_Range trcs_range) {
-
-	/* Configure relays */
+	// Configure relays.
 	switch (trcs_range) {
-
 	case TRCS_RANGE_NONE:
 		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 0);
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
 		break;
-
 	case TRCS_RANGE_LOW:
 		GPIO_Write(&GPIO_TRCS_RANGE_LOW, 1);
 		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
@@ -100,7 +99,6 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_LOW;
 		break;
-
 	case TRCS_RANGE_MIDDLE:
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 1);
 		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
@@ -108,7 +106,6 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_MIDDLE;
 		break;
-
 	case TRCS_RANGE_HIGH:
 		GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 1);
 		LPTIM1_DelayMilliseconds(TRCS_RANGE_RECOVERY_TIME_MS);
@@ -116,31 +113,12 @@ void TRCS_SetRange(TRCS_Range trcs_range) {
 		GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 		trcs_ctx.trcs_current_range = TRCS_RANGE_HIGH;
 		break;
-
 	default:
 		// Unknwon parameter.
 		break;
 	}
-
-	/* Wait establishment */
+	// Wait establishment.
 	LPTIM1_DelayMilliseconds(TRCS_RANGE_STABILIZATION_TIME_MS);
-}
-
-/* COMPUTE THE AVERAGE CURRENT OF THE BUFFER.
- * @param:	None.
- * @return:	None.
- */
-void TRCS_ComputeAverage(void) {
-
-	/* Compute sum */
-	unsigned int sum = 0;
-	unsigned char idx = 0;
-	for (idx=0 ; idx<TRCS_CURRENT_BUFFER_LENGTH ; idx++) {
-		sum += trcs_ctx.trcs_current_ua_buf[idx];
-	}
-
-	/* Compute average */
-	trcs_ctx.trcs_average_current_ua = sum / TRCS_CURRENT_BUFFER_LENGTH;
 }
 
 /*** TRCS functions ***/
@@ -150,21 +128,19 @@ void TRCS_ComputeAverage(void) {
  * @return:	None.
  */
 void TRCS_Init(void) {
-
-	/* Init context */
-	trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
-	trcs_ctx.trcs_state = TRCS_STATE_OFF;
-	trcs_ctx.trcs_range_down_counter = 0;
-	unsigned char idx = 0;
-	for (idx=0 ; idx<TRCS_CURRENT_BUFFER_LENGTH ; idx++) trcs_ctx.trcs_current_ua_buf[idx] = 0;
-	trcs_ctx.trcs_current_ua_buf_idx = 0;
-	trcs_ctx.trcs_average_current_ua = 0;
-
-	/* Init GPIOs */
+	// Init GPIOs.
 	GPIO_Configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_HIGH, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	TRCS_SetRange(TRCS_RANGE_NONE);
+	// Init context.
+	trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
+	trcs_ctx.trcs_state = TRCS_STATE_OFF;
+	trcs_ctx.trcs_range_down_counter = 0;
+	unsigned char idx = 0;
+	for (idx=0 ; idx<TRCS_MEDIAN_FILTER_LENGTH ; idx++) trcs_ctx.trcs_adc_sample_buf[idx] = 0;
+	trcs_ctx.trcs_current_ua_buf_idx = 0;
+	trcs_ctx.trcs_average_current_ua = 0;
 }
 
 /* TRCS BOARD CONTROL FUNCTION.
@@ -172,37 +148,30 @@ void TRCS_Init(void) {
  * @param bypass_status:	Bypass switch status.
  * @return:					None.
  */
-void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
-
-	/* Get raw current sense */
-	unsigned int adc_bandgap_result_12bits = 0;
-	ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
+void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass) {
+	// Perform measurement.
 	unsigned int adc_channel_result_12bits = 0;
 	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
-
-	/* Convert ADC result to uA */
-	unsigned long long num = adc_channel_result_12bits;
+	// Store new sample in buffer.
+	trcs_ctx.trcs_adc_sample_buf[trcs_ctx.trcs_current_ua_buf_idx] = adc_channel_result_12bits;
+	trcs_ctx.trcs_current_ua_buf_idx++;
+	if (trcs_ctx.trcs_current_ua_buf_idx >= TRCS_MEDIAN_FILTER_LENGTH) {
+		trcs_ctx.trcs_current_ua_buf_idx = 0;
+	}
+	// Compute median value.
+	unsigned int averaged_median_value = FILTER_ComputeMedianFilter(trcs_ctx.trcs_adc_sample_buf, TRCS_MEDIAN_FILTER_LENGTH, TRCS_CENTER_AVERAGE_LENGTH);
+	// Convert to uA.
+	unsigned long long num = averaged_median_value;
 	num *= ADC_BANDGAP_VOLTAGE_MV;
 	num *= 1000000;
-	unsigned int resistor_mohm = trcs_resistor_mohm_table[(psfe_trcs_number[PSFE_BOARD_NUMBER] - 1)][trcs_ctx.trcs_current_range - 1]; // (-1 tp skip TRCS_RANGE_NONE).
+	unsigned int resistor_mohm = trcs_resistor_mohm_table[(psfe_trcs_number[PSFE_BOARD_NUMBER] - 1)][trcs_ctx.trcs_current_range - 1]; // (-1 to skip TRCS_RANGE_NONE).
 	unsigned long long den = adc_bandgap_result_12bits;
 	den *= TRCS_LT6105_VOLTAGE_GAIN;
 	den *= resistor_mohm;
-
-	/* Store result in buffer */
-	trcs_ctx.trcs_current_ua_buf[trcs_ctx.trcs_current_ua_buf_idx] = (num) / (den);
-	trcs_ctx.trcs_current_ua_buf_idx++;
-	if (trcs_ctx.trcs_current_ua_buf_idx >= TRCS_CURRENT_BUFFER_LENGTH) {
-		trcs_ctx.trcs_current_ua_buf_idx = 0;
-	}
-
-	/* Compute and return average */
-	TRCS_ComputeAverage();
+	trcs_ctx.trcs_average_current_ua = (num / den);
 	(*trcs_current_ua) = trcs_ctx.trcs_average_current_ua;
-
-	/* Perform state machine */
+	// Perform state machine.
 	switch (trcs_ctx.trcs_state) {
-
 	// Off state.
 	case TRCS_STATE_OFF:
 		// Check bypass switch.
@@ -212,7 +181,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 			TRCS_SetRange(TRCS_RANGE_HIGH);
 		}
 		break;
-
 	// High range state.
 	case TRCS_STATE_HIGH:
 		// Check last ADC result.
@@ -226,7 +194,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 			trcs_ctx.trcs_state = TRCS_STATE_CONFIRM_MIDDLE;
 		}
 		break;
-
 	// Middle range confirmation state.
 	case TRCS_STATE_CONFIRM_MIDDLE:
 		// Check ADC result as much as required.
@@ -246,7 +213,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 			trcs_ctx.trcs_state = TRCS_STATE_HIGH;
 		}
 		break;
-
 	// Middle range state.
 	case TRCS_STATE_MIDDLE:
 		// Check bypass switch.
@@ -269,7 +235,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 		}
 
 		break;
-
 	// Low range confirmation state.
 	case TRCS_STATE_CONFIRM_LOW:
 		// Check ADC result as much as required.
@@ -289,7 +254,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 			trcs_ctx.trcs_state = TRCS_STATE_MIDDLE;
 		}
 		break;
-
 	// Low range state.
 	case TRCS_STATE_LOW:
 		// Chck bypass switch.
@@ -307,7 +271,6 @@ void TRCS_Task(unsigned int* trcs_current_ua, unsigned char bypass) {
 			}
 		}
 		break;
-
 	// Unknwon state.
 	default:
 		// Switch TRCS board off.

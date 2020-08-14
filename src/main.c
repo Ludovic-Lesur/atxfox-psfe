@@ -7,6 +7,7 @@
 
 #include "adc.h"
 #include "atxfox.h"
+#include "filter.h"
 #include "gpio.h"
 #include "lcd.h"
 #include "lptim.h"
@@ -147,7 +148,7 @@ int main(void) {
 			// Print project name and HW versions.
 			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
-			LPTIM1_DelayMilliseconds(2000);
+			LPTIM1_DelayMilliseconds(1000);
 			// Print Sigfox device ID.
 			TD1208_DisableEcho();
 			TD1208_GetSigfoxId(psfe_ctx.psfe_sigfox_id);
@@ -166,21 +167,20 @@ int main(void) {
 			psfe_ctx.psfe_no_input_previous_status = 0;
 			psfe_ctx.psfe_bypass_current_status = 0;
 			psfe_ctx.psfe_bypass_previous_status = 0;
+			// Get bandgap result.
+			ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_BYPASS;
 			break;
-
-		/* Get bypass switch status */
+		// Get bypass switch status.
 		case PSFE_STATE_BYPASS:
 			psfe_ctx.psfe_bypass_current_status = GPIO_Read(&GPIO_BYPASS);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_VOLTAGE_MEASURE;
 			break;
-
-		/* Analog measurements */
+		// Analog measurements.
 		case PSFE_STATE_VOLTAGE_MEASURE:
 			// Compute effective ATX output voltage.
-			ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
 			ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &adc_channel_result_12bits);
 			// Compensate resistor divider.
 			psfe_ctx.psfe_atx_voltage_mv = psfe_vout_voltage_divider[PSFE_BOARD_NUMBER] * ((adc_channel_result_12bits * ADC_BANDGAP_VOLTAGE_MV) / (adc_bandgap_result_12bits));
@@ -194,16 +194,14 @@ int main(void) {
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_CURRENT_MEASURE;
 			break;
-
-		/* Update current range according to previous measure */
+		// Update current range according to previous measure.
 		case PSFE_STATE_CURRENT_MEASURE:
 			// Use TRCS board.
-			TRCS_Task(&psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status);
+			TRCS_Task(adc_bandgap_result_12bits, &psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_DISPLAY;
 			break;
-
-		/* Print voltage and current on LCD screen */
+		// Print voltage and current on LCD screen.
 		case PSFE_STATE_DISPLAY:
 			if (TIM22_GetSeconds() > psfe_ctx.psfe_display_seconds_count) {
 				// Voltage display.
@@ -239,8 +237,7 @@ int main(void) {
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_LOG;
 			break;
-
-		/* Send voltage and current on UART */
+		// Send voltage and current on UART.
 		case PSFE_STATE_LOG:
 			// Get MCU temperature.
 			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
@@ -279,8 +276,7 @@ int main(void) {
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
 			break;
-
-		/* Unknown state */
+		// Unknown state.
 		default:
 			psfe_ctx.psfe_state = PSFE_STATE_OFF;
 			break;
