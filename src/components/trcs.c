@@ -48,13 +48,6 @@ const unsigned int trcs_resistor_mohm_table[ATXFOX_NUMBER_OF_BOARDS][TRCS_NUMBER
 /*** TRCS local structures ***/
 
 typedef enum {
-	TRCS_RANGE_NONE,
-	TRCS_RANGE_LOW,
-	TRCS_RANGE_MIDDLE,
-	TRCS_RANGE_HIGH
-} TRCS_Range;
-
-typedef enum {
 	TRCS_STATE_OFF,
 	TRCS_STATE_HIGH,
 	TRCS_STATE_CONFIRM_MIDDLE,
@@ -148,7 +141,7 @@ void TRCS_Init(void) {
  * @param bypass_status:	Bypass switch status.
  * @return:					None.
  */
-void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass) {
+void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass, TRCS_Range* trcs_range) {
 	// Perform measurement.
 	unsigned int adc_channel_result_12bits = 0;
 	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
@@ -170,6 +163,8 @@ void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_curren
 	den *= resistor_mohm;
 	trcs_ctx.trcs_average_current_ua = (num / den);
 	(*trcs_current_ua) = trcs_ctx.trcs_average_current_ua;
+	// Update range.
+	(*trcs_range) = trcs_ctx.trcs_current_range;
 	// Perform state machine.
 	switch (trcs_ctx.trcs_state) {
 	// Off state.

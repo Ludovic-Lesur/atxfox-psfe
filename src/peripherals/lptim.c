@@ -10,11 +10,6 @@
 #include "lptim_reg.h"
 #include "rcc.h"
 #include "rcc_reg.h"
-#include "tim.h"
-
-/*** LPTIM local macros ***/
-
-#define LPTIM_TIMEOUT_SECONDS	3
 
 /*** LPTIM functions ***/
 
@@ -23,26 +18,18 @@
  * @return:					None.
  */
 void LPTIM1_Init(void) {
-
-	/* Enable clock */
+	// Enable clock.
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
-
-	/* Configure peripheral */
+	// Configure peripheral.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
 	LPTIM1 -> CFGR |= (0b1 << 19); // Enable timeout.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1'), needed to write ARR.
 	LPTIM1 -> ARR = RCC_SYSCLK_KHZ; // Overflow period = 1ms.
-	unsigned int loop_start_time = TIM22_GetSeconds();
-	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0) {
-		// Wait for ARROK='1' or timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + LPTIM_TIMEOUT_SECONDS)) break;
-	}
-
-	/* Clear all flags */
+	while (((LPTIM1 -> ISR) & (0b1 << 4)) == 0);
+	// Clear all flags.
 	LPTIM1 -> ICR |= (0b1111111 << 0);
-
-	/* Disable peripheral by default */
+	// Disable peripheral by default.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }
 
@@ -51,25 +38,17 @@ void LPTIM1_Init(void) {
  * @return:			None.
  */
 void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
-
-	/* Enable timer */
+	// Enable timer.
 	LPTIM1 -> CR |= (0b1 << 0); // Enable LPTIM1 (ENABLE='1').
-
-	/* Make as many overflows as required */
+	// Make as many overflows as required.
 	unsigned int ms_count = 0;
 	unsigned int loop_start_time = 0;
 	unsigned char lptim_default = 0;
 	for (ms_count=0 ; ms_count<delay_ms ; ms_count++) {
 		// Start counter.
-		loop_start_time = TIM22_GetSeconds();
 		LPTIM1 -> CNT &= 0xFFFF0000;
 		LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
-		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0) {
-			if (TIM22_GetSeconds() > (loop_start_time + LPTIM_TIMEOUT_SECONDS)) {
-				lptim_default = 1;
-				break;
-			}
-		}
+		while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
 		// Clear flag.
 		LPTIM1 -> ICR |= (0b1 << 1);
 		// Exit in case of timeout.
@@ -77,7 +56,6 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 			break;
 		}
 	}
-
-	/* Disable timer */
+	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
 }

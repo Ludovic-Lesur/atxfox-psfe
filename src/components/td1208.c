@@ -13,7 +13,7 @@
 /*** TD1208 local macros ***/
 
 #define TD1208_BUFFER_LENGTH_BYTES		32
-#define TD1208_TIMEOUT_SECONDS			5
+#define TD1208_TIMEOUT_COUNT			1000000
 // Separator character.
 #define TD1208_NULL						'\0'
 #define TD1208_CR						'\r'
@@ -153,14 +153,15 @@ void TD1208_ParseAtRxBuffer(void) {
  * @return:	None.
  */
 void TD1208_WaitForOk(void) {
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (td1208_ctx.td1208_at_received_ok == 0) {
 		// Decode buffer.
 		if (td1208_ctx.td1208_at_response_count != td1208_ctx.td1208_at_parsing_count) {
 			TD1208_ParseAtRxBuffer();
 		}
 		// Exit if timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+		loop_count++;
+		if (loop_count > TD1208_TIMEOUT_COUNT) break;
 	}
 }
 
@@ -169,14 +170,15 @@ void TD1208_WaitForOk(void) {
  * @return:	None.
  */
 void TD1208_WaitForId(void) {
-	unsigned int loop_start_time = TIM22_GetSeconds();
+	unsigned int loop_count = 0;
 	while (td1208_ctx.td1208_at_received_id == 0) {
 		// Decode buffer.
 		if (td1208_ctx.td1208_at_response_count != td1208_ctx.td1208_at_parsing_count) {
 			TD1208_ParseAtRxBuffer();
 		}
 		// Exit if timeout.
-		if (TIM22_GetSeconds() > (loop_start_time + TD1208_TIMEOUT_SECONDS)) break;
+		loop_count++;
+		if (loop_count > TD1208_TIMEOUT_COUNT) break;
 	}
 }
 
@@ -282,6 +284,8 @@ void TD1208_SendFrame(unsigned char* uplink_data, unsigned char uplink_data_leng
 	td1208_ctx.td1208_at_tx_buf[idx++] = TD1208_CR;
 	// Send command through UART.
 	USART2_Send((unsigned char*) td1208_ctx.td1208_at_tx_buf, idx);
+	// Wait for response.
+	TD1208_WaitForOk();
 }
 
 /* STORE A NEW BYTE IN RX COMMAND BUFFER.

@@ -10,8 +10,12 @@
 
 /*** TIM functions ***/
 
-void TIM21_Init(void);
+void TIM21_Init(unsigned int period_ms);
+unsigned char TIM21_GetFlag(void);
+void TIM21_ClearFlag(void);
+
 void TIM22_Init(void);
-unsigned int TIM22_GetSeconds(void);
+unsigned char TIM22_GetFlag(void);
+void TIM22_ClearFlag(void);
 
 #endif /* TIM_H */

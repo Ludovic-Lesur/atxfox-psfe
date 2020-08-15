@@ -25,14 +25,21 @@
 // ON/OFF threshold voltages.
 #define PSFE_ON_VOLTAGE_THRESHOLD_MV			3300
 #define PSFE_OFF_VOLTAGE_THRESHOLD_MV			3200
-
 // Voltage threshold.
 #define PSFE_OPEN_VOLTAGE_THRESHOLD_MV			100
-
+// Bandgap calibration.
+#define PSFE_BANDGAP_MEDIAN_FILTER_LENGTH		9
+#define PSFE_BANDGAP_CENTER_AVERAGE_LENGTH		0
+#define PSFE_BANDGAP_CALIBRATION_PERIOD_S		60
+// ATX voltage.
+#define PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH	9
+#define PSFE_ATX_VOLTAGE_CENTER_AVERAGE_LENGTH	0
+// ATX current.
+#define PSFE_ATX_CURRENT_ERROR_VALUE			0xFFFFFF
 // Log.
-#define PSFE_UART_LOG_PERIOD_SECONDS			1
-#define PSFE_SIGFOX_LOG_PERIOD_SECONDS			600
-#define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	6
+#define PSFE_LCD_UART_PERIOD_MS					1000
+#define PSFE_SIGFOX_PERIOD_S					600
+#define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	8
 
 /*** Main structures ***/
 
@@ -44,34 +51,94 @@ typedef enum {
 	PSFE_STATE_BYPASS,						// Read bypass input.
 	PSFE_STATE_VOLTAGE_MEASURE,				// Perform voltage measurement.
 	PSFE_STATE_CURRENT_MEASURE,				// Perform current measurement.
-	PSFE_STATE_DISPLAY,						// Update LCD screen.
-	PSFE_STATE_LOG							// Send measurements through UART.
+	PSFE_STATE_TIMER,						// Manage timers flags and seconds counters.
+	PSFE_STATE_LCD,							// Update LCD screen.
+	PSFE_STATE_UART,						// send measurements through UART.
+	PSFE_STATE_SIGFOX,						// Send data through Sigfox.
+	PSFE_STATE_BANDGAP_CALIBRATION			// Update bandgap calibration value.
 } PSFE_State;
+
+// Sigfox uplink data format.
+typedef struct {
+	union {
+		unsigned char raw_frame[PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES];
+		struct {
+			unsigned atx_voltage_mv : 14;
+			unsigned trcs_range : 2;
+			unsigned atx_current_ua : 24;
+			unsigned mcu_voltage : 16;
+			unsigned mcu_temperature : 8;
+		} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+	};
+} PSFE_UplinkData;
 
 // Context.
 typedef struct {
+	// State machine.
 	PSFE_State psfe_state;
 	unsigned char psfe_init_done;
 	unsigned char psfe_no_input_previous_status;
 	unsigned char psfe_no_input_current_status;
 	unsigned char psfe_bypass_previous_status;
 	unsigned char psfe_bypass_current_status;
+	// Analog measurements.
 	unsigned int psfe_supply_voltage_mv;
 	unsigned int psfe_atx_voltage_mv;
 	unsigned int psfe_atx_current_ua;
-	unsigned int psfe_display_seconds_count;
-	unsigned int psfe_log_uart_next_time_seconds;
-	unsigned int psfe_log_sigfox_next_time_seconds;
+	TRCS_Range psfe_trcs_range;
+	unsigned int psfe_bandgap_result_12bits;
+	unsigned int psfe_bandgap_calibration_seconds_count;
+	unsigned char psfe_mcu_temperature_degrees;
+	// LCD and UART period.
+	unsigned char psfe_log_request;
+	// Sigfox.
+	unsigned int psfe_sigfox_log_seconds_count;
 	unsigned char psfe_sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
-	unsigned char psfe_sigfox_uplink_data[PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES];
-	signed char psfe_mcu_temperature_degrees;
+	PSFE_UplinkData psfe_sigfox_uplink_data;
 } PSFE_Context;
 
 /*** Main global variables ***/
 
 static PSFE_Context psfe_ctx;
 
-/*** Main function ***/
+/*** MAIN local functions ***/
+
+/* COMPUTE ATX VOLTAGE.
+ * @param:	None.
+ * @return:	None.
+ */
+void PSFE_UpdateAtxVoltage(void) {
+	// Local variables.
+	unsigned int adc_sample_buf[PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH];
+	unsigned char idx = 0;
+	unsigned int adc_median = 0;
+	// Get samples.
+	for (idx=0 ; idx<PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH ; idx++) {
+		ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &(adc_sample_buf[idx]));
+	}
+	// Apply filter.
+	adc_median = FILTER_ComputeMedianFilter(adc_sample_buf, PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH, PSFE_ATX_VOLTAGE_CENTER_AVERAGE_LENGTH);
+	// Convert to mV.
+	psfe_ctx.psfe_atx_voltage_mv = psfe_vout_voltage_divider_ratio[PSFE_BOARD_NUMBER] * ((adc_median * ADC_BANDGAP_VOLTAGE_MV) / (psfe_ctx.psfe_bandgap_result_12bits));
+}
+
+/* COMPUTE BANDGAP VOLTAGE.
+ * @param:	None.
+ * @return:	None.
+ */
+void PSFE_UpdateBandgapResult(void) {
+	// Local variables.
+	unsigned int adc_sample_buf[PSFE_BANDGAP_MEDIAN_FILTER_LENGTH];
+	unsigned char idx = 0;
+	// Get samples.
+	for (idx=0 ; idx<PSFE_BANDGAP_MEDIAN_FILTER_LENGTH ; idx++) {
+		ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &(adc_sample_buf[idx]));
+	}
+	// Apply filter.
+	psfe_ctx.psfe_bandgap_result_12bits = FILTER_ComputeMedianFilter(adc_sample_buf, PSFE_BANDGAP_MEDIAN_FILTER_LENGTH, PSFE_BANDGAP_CENTER_AVERAGE_LENGTH);
+}
+
+/*** MAIN function ***/
 
 /* MAIN FUNCTION.
  * @param:	None.
@@ -81,7 +148,7 @@ int main(void) {
 	// Init clock.
 	RCC_Init();
 	// Init peripherals.
-	TIM21_Init();
+	TIM21_Init(PSFE_LCD_UART_PERIOD_MS);
 	TIM22_Init();
 	LPTIM1_Init();
 	GPIO_Init();
@@ -96,19 +163,26 @@ int main(void) {
 	NVIC_EnableInterrupt(IT_USART2);
 	// Init context and global variables.
 	unsigned int adc_channel_result_12bits = 0;
-	unsigned int adc_bandgap_result_12bits = 0;
+	unsigned int vout_voltage_divider_current_ua = 0;
+	// State machine.
 	psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
 	psfe_ctx.psfe_no_input_current_status = 0;
 	psfe_ctx.psfe_no_input_previous_status = 0;
 	psfe_ctx.psfe_bypass_current_status = 0;
 	psfe_ctx.psfe_bypass_previous_status = 0;
 	psfe_ctx.psfe_init_done = 0;
+	// Analog measurements.
 	psfe_ctx.psfe_supply_voltage_mv = 0;
 	psfe_ctx.psfe_atx_voltage_mv = 0;
 	psfe_ctx.psfe_atx_current_ua = 0;
-	psfe_ctx.psfe_display_seconds_count = 0;
-	psfe_ctx.psfe_log_uart_next_time_seconds = PSFE_UART_LOG_PERIOD_SECONDS;
-	psfe_ctx.psfe_log_sigfox_next_time_seconds = PSFE_SIGFOX_LOG_PERIOD_SECONDS;
+	psfe_ctx.psfe_trcs_range = TRCS_RANGE_NONE;
+	psfe_ctx.psfe_bandgap_result_12bits = 0;
+	psfe_ctx.psfe_bandgap_calibration_seconds_count = 0;
+	psfe_ctx.psfe_mcu_temperature_degrees = 0;
+	// LCD and UART period.
+	psfe_ctx.psfe_log_request = 0;
+	// Sigfox.
+	psfe_ctx.psfe_sigfox_log_seconds_count = 0;
 	// Main loop.
 	while (1) {
 		// Perform state machine.
@@ -148,7 +222,7 @@ int main(void) {
 			// Print project name and HW versions.
 			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
-			LPTIM1_DelayMilliseconds(1000);
+			LPTIM1_DelayMilliseconds(2000);
 			// Print Sigfox device ID.
 			TD1208_DisableEcho();
 			TD1208_GetSigfoxId(psfe_ctx.psfe_sigfox_id);
@@ -162,13 +236,12 @@ int main(void) {
 			LCD_Print(1, 0, "      mA", 8);
 			// Update flags.
 			psfe_ctx.psfe_init_done = 1;
-			psfe_ctx.psfe_log_uart_next_time_seconds = TIM22_GetSeconds();
 			psfe_ctx.psfe_no_input_current_status = 0;
 			psfe_ctx.psfe_no_input_previous_status = 0;
 			psfe_ctx.psfe_bypass_current_status = 0;
 			psfe_ctx.psfe_bypass_previous_status = 0;
 			// Get bandgap result.
-			ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &adc_bandgap_result_12bits);
+			PSFE_UpdateBandgapResult();
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_BYPASS;
 			break;
@@ -181,9 +254,7 @@ int main(void) {
 		// Analog measurements.
 		case PSFE_STATE_VOLTAGE_MEASURE:
 			// Compute effective ATX output voltage.
-			ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &adc_channel_result_12bits);
-			// Compensate resistor divider.
-			psfe_ctx.psfe_atx_voltage_mv = psfe_vout_voltage_divider[PSFE_BOARD_NUMBER] * ((adc_channel_result_12bits * ADC_BANDGAP_VOLTAGE_MV) / (adc_bandgap_result_12bits));
+			PSFE_UpdateAtxVoltage();
 			// Detect open state.
 			if (psfe_ctx.psfe_atx_voltage_mv < PSFE_OPEN_VOLTAGE_THRESHOLD_MV) {
 				psfe_ctx.psfe_no_input_current_status = 1;
@@ -197,82 +268,143 @@ int main(void) {
 		// Update current range according to previous measure.
 		case PSFE_STATE_CURRENT_MEASURE:
 			// Use TRCS board.
-			TRCS_Task(adc_bandgap_result_12bits, &psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status);
+			TRCS_Task(psfe_ctx.psfe_bandgap_result_12bits, &psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status, &psfe_ctx.psfe_trcs_range);
+			// Compute ouput voltage divider current.
+			vout_voltage_divider_current_ua = (psfe_ctx.psfe_atx_voltage_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_NUMBER]);
+			// Remove offset current.
+			if (psfe_ctx.psfe_atx_current_ua > vout_voltage_divider_current_ua) {
+				psfe_ctx.psfe_atx_current_ua -= vout_voltage_divider_current_ua;
+			}
+			else {
+				vout_voltage_divider_current_ua = 0;
+			}
 			// Compute next state.
-			psfe_ctx.psfe_state = PSFE_STATE_DISPLAY;
+			psfe_ctx.psfe_state = PSFE_STATE_TIMER;
+			break;
+		case PSFE_STATE_TIMER:
+			// Check timers flag.
+			if (TIM21_GetFlag() != 0) {
+				// Clear flag and update LCD.
+				TIM21_ClearFlag();
+				psfe_ctx.psfe_log_request = 1;
+			}
+			if (TIM22_GetFlag() != 0) {
+				// Clear flag and increment counters.
+				TIM22_ClearFlag();
+				psfe_ctx.psfe_bandgap_calibration_seconds_count++;
+				psfe_ctx.psfe_sigfox_log_seconds_count++;
+			}
+			// Compute next state.
+			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING; // Default.
+			if (psfe_ctx.psfe_log_request != 0) {
+				psfe_ctx.psfe_state = PSFE_STATE_LCD;
+			}
+			else {
+				if (psfe_ctx.psfe_sigfox_log_seconds_count >= PSFE_SIGFOX_PERIOD_S) {
+					psfe_ctx.psfe_state = PSFE_STATE_SIGFOX;
+				}
+				else {
+					if (psfe_ctx.psfe_bandgap_calibration_seconds_count >= PSFE_BANDGAP_CALIBRATION_PERIOD_S) {
+						psfe_ctx.psfe_state = PSFE_STATE_BANDGAP_CALIBRATION;
+					}
+				}
+			}
 			break;
 		// Print voltage and current on LCD screen.
-		case PSFE_STATE_DISPLAY:
-			if (TIM22_GetSeconds() > psfe_ctx.psfe_display_seconds_count) {
-				// Voltage display.
-				if (psfe_ctx.psfe_no_input_current_status == 0) {
-					if (psfe_ctx.psfe_no_input_previous_status != 0) {
-						LCD_Print(0, 0, "       V", 8);
-						psfe_ctx.psfe_no_input_previous_status = 0;
-					}
-					LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_atx_voltage_mv);
+		case PSFE_STATE_LCD:
+			// Voltage display.
+			if (psfe_ctx.psfe_no_input_current_status == 0) {
+				if (psfe_ctx.psfe_no_input_previous_status != 0) {
+					LCD_Print(0, 0, "       V", 8);
+					psfe_ctx.psfe_no_input_previous_status = 0;
 				}
-				else {
-					if (psfe_ctx.psfe_no_input_previous_status == 0) {
-						LCD_Print(0, 0, "NO INPUT", 8);
-						psfe_ctx.psfe_no_input_previous_status = 1;
-					}
+				LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_atx_voltage_mv);
+			}
+			else {
+				if (psfe_ctx.psfe_no_input_previous_status == 0) {
+					LCD_Print(0, 0, "NO INPUT", 8);
+					psfe_ctx.psfe_no_input_previous_status = 1;
 				}
-				// Current display.
-				if (psfe_ctx.psfe_bypass_current_status == 0) {
-					if (psfe_ctx.psfe_bypass_previous_status != 0) {
-						LCD_Print(1, 0, "      mA", 8);
-						psfe_ctx.psfe_bypass_previous_status = 0;
-					}
-					LCD_PrintValue5Digits(1, 0, psfe_ctx.psfe_atx_current_ua);
+			}
+			// Current display.
+			if (psfe_ctx.psfe_bypass_current_status == 0) {
+				if (psfe_ctx.psfe_bypass_previous_status != 0) {
+					LCD_Print(1, 0, "      mA", 8);
+					psfe_ctx.psfe_bypass_previous_status = 0;
 				}
-				else {
-					if (psfe_ctx.psfe_bypass_previous_status == 0) {
-						LCD_Print(1, 0, " BYPASS ", 8);
-						psfe_ctx.psfe_bypass_previous_status = 1;
-					}
+				LCD_PrintValue5Digits(1, 0, psfe_ctx.psfe_atx_current_ua);
+			}
+			else {
+				if (psfe_ctx.psfe_bypass_previous_status == 0) {
+					LCD_Print(1, 0, " BYPASS ", 8);
+					psfe_ctx.psfe_bypass_previous_status = 1;
 				}
-				psfe_ctx.psfe_display_seconds_count = TIM22_GetSeconds();
 			}
 			// Compute next state.
-			psfe_ctx.psfe_state = PSFE_STATE_LOG;
+			psfe_ctx.psfe_state = PSFE_STATE_UART;
 			break;
-		// Send voltage and current on UART.
-		case PSFE_STATE_LOG:
+		// Send data over UART interface.
+		case PSFE_STATE_UART:
 			// Get MCU temperature.
 			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
-			// UART.
-			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_uart_next_time_seconds) {
-				// Log values on USB connector.
-				LPUART1_SendString("U=");
-				LPUART1_SendValue(psfe_ctx.psfe_atx_voltage_mv, LPUART_FORMAT_DECIMAL, 0);
-				LPUART1_SendString("mV*I=");
-				if (psfe_ctx.psfe_bypass_current_status == 0) {
-					LPUART1_SendValue(psfe_ctx.psfe_atx_current_ua, LPUART_FORMAT_DECIMAL, 0);
-					LPUART1_SendString("uA*T=");
-				}
-				else {
-					LPUART1_SendString("BYPASS*T=");
-				}
-				LPUART1_SendValue(psfe_ctx.psfe_mcu_temperature_degrees, LPUART_FORMAT_DECIMAL, 0);
-				LPUART1_SendString("dC\n");
-				// Update next time.
-				psfe_ctx.psfe_log_uart_next_time_seconds += PSFE_UART_LOG_PERIOD_SECONDS;
+			// Log values on USB connector.
+			LPUART1_SendString("U=");
+			LPUART1_SendValue(psfe_ctx.psfe_atx_voltage_mv, LPUART_FORMAT_DECIMAL, 0);
+			LPUART1_SendString("mV*I=");
+			if (psfe_ctx.psfe_bypass_current_status == 0) {
+				LPUART1_SendValue(psfe_ctx.psfe_atx_current_ua, LPUART_FORMAT_DECIMAL, 0);
+				LPUART1_SendString("uA*T=");
 			}
-			// Sigfox.
-			if (TIM22_GetSeconds() > psfe_ctx.psfe_log_sigfox_next_time_seconds) {
-				// Build data.
-				psfe_ctx.psfe_sigfox_uplink_data[0] = (psfe_ctx.psfe_atx_voltage_mv & 0x0000FF00) >> 8;
-				psfe_ctx.psfe_sigfox_uplink_data[1] = (psfe_ctx.psfe_atx_voltage_mv & 0x000000FF) >> 0;
-				psfe_ctx.psfe_sigfox_uplink_data[2] = (psfe_ctx.psfe_atx_current_ua & 0x00FF0000) >> 16;
-				psfe_ctx.psfe_sigfox_uplink_data[3] = (psfe_ctx.psfe_atx_current_ua & 0x0000FF00) >> 8;
-				psfe_ctx.psfe_sigfox_uplink_data[4] = (psfe_ctx.psfe_atx_current_ua & 0x000000FF) >> 0;
-				psfe_ctx.psfe_sigfox_uplink_data[5] = psfe_ctx.psfe_mcu_temperature_degrees;
-				// Send data.
-				TD1208_SendFrame(psfe_ctx.psfe_sigfox_uplink_data, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
-				// Update next time.
-				psfe_ctx.psfe_log_sigfox_next_time_seconds += PSFE_SIGFOX_LOG_PERIOD_SECONDS;
+			else {
+				LPUART1_SendString("BYPASS*T=");
 			}
+			LPUART1_SendValue(psfe_ctx.psfe_mcu_temperature_degrees, LPUART_FORMAT_DECIMAL, 0);
+			LPUART1_SendString("dC\n");
+			// Reset flag.
+			psfe_ctx.psfe_log_request = 0;
+			// Compute next state.
+			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING; // Default.
+			if (psfe_ctx.psfe_sigfox_log_seconds_count >= PSFE_SIGFOX_PERIOD_S) {
+				psfe_ctx.psfe_state = PSFE_STATE_SIGFOX;
+			}
+			else {
+				if (psfe_ctx.psfe_bandgap_calibration_seconds_count >= PSFE_BANDGAP_CALIBRATION_PERIOD_S) {
+					psfe_ctx.psfe_state = PSFE_STATE_BANDGAP_CALIBRATION;
+				}
+			}
+			break;
+		// Send data through Sigfox.
+		case PSFE_STATE_SIGFOX:
+			// Get MCU supply voltage and temperature.
+			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
+			// Build data.
+			psfe_ctx.psfe_sigfox_uplink_data.field.atx_voltage_mv = psfe_ctx.psfe_atx_voltage_mv;
+			psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = psfe_ctx.psfe_trcs_range;
+			if (psfe_ctx.psfe_trcs_range == TRCS_RANGE_NONE) {
+				psfe_ctx.psfe_sigfox_uplink_data.field.atx_current_ua = PSFE_ATX_CURRENT_ERROR_VALUE;
+			}
+			else {
+				psfe_ctx.psfe_sigfox_uplink_data.field.atx_current_ua = psfe_ctx.psfe_atx_current_ua;
+			}
+			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_voltage = psfe_ctx.psfe_supply_voltage_mv;
+			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_temperature = psfe_ctx.psfe_mcu_temperature_degrees;
+			// Send data.
+			TD1208_SendFrame(psfe_ctx.psfe_sigfox_uplink_data.raw_frame, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
+			// Reset counter.
+			psfe_ctx.psfe_sigfox_log_seconds_count = 0;
+			// Compute next state.
+			if (psfe_ctx.psfe_bandgap_calibration_seconds_count >= PSFE_BANDGAP_CALIBRATION_PERIOD_S) {
+				psfe_ctx.psfe_state = PSFE_STATE_BANDGAP_CALIBRATION;
+			}
+			else {
+				psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
+			}
+			break;
+		case PSFE_STATE_BANDGAP_CALIBRATION:
+			// Update bandgap result.
+			PSFE_UpdateBandgapResult();
+			// Reset counter.
+			psfe_ctx.psfe_bandgap_calibration_seconds_count = 0;
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_SUPPLY_VOLTAGE_MONITORING;
 			break;
