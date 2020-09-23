@@ -66,11 +66,11 @@ typedef struct {
 			unsigned atx_voltage_mv : 14;
 			unsigned trcs_range : 2;
 			unsigned atx_current_ua : 24;
-			unsigned mcu_voltage : 16;
-			unsigned mcu_temperature : 8;
+			unsigned mcu_voltage_mv : 16;
+			unsigned mcu_temperature_degrees : 8;
 		} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
 	};
-} PSFE_UplinkData;
+} PSFE_SigfoxUplinkData;
 
 // Context.
 typedef struct {
@@ -94,7 +94,7 @@ typedef struct {
 	// Sigfox.
 	unsigned int psfe_sigfox_log_seconds_count;
 	unsigned char psfe_sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
-	PSFE_UplinkData psfe_sigfox_uplink_data;
+	PSFE_SigfoxUplinkData psfe_sigfox_uplink_data;
 } PSFE_Context;
 
 /*** Main global variables ***/
@@ -386,8 +386,8 @@ int main(void) {
 			else {
 				psfe_ctx.psfe_sigfox_uplink_data.field.atx_current_ua = psfe_ctx.psfe_atx_current_ua;
 			}
-			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_voltage = psfe_ctx.psfe_supply_voltage_mv;
-			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_temperature = psfe_ctx.psfe_mcu_temperature_degrees;
+			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_voltage_mv = psfe_ctx.psfe_supply_voltage_mv;
+			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_temperature_degrees = psfe_ctx.psfe_mcu_temperature_degrees;
 			// Send data.
 			TD1208_SendFrame(psfe_ctx.psfe_sigfox_uplink_data.raw_frame, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
 			// Reset counter.
