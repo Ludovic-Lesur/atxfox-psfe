@@ -110,6 +110,8 @@
                                     <listOptionValue builtIn="false" value="__START=main"/>
                                     									
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
@@ -138,6 +140,8 @@
                                     <listOptionValue builtIn="false" value="__START=main"/>
                                     									
                                     <listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
                                     								
                                 </option>
                                 								
