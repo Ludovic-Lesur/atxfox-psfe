@@ -157,7 +157,7 @@ void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_curren
 	unsigned long long num = averaged_median_value;
 	num *= ADC_BANDGAP_VOLTAGE_MV;
 	num *= 1000000;
-	unsigned int resistor_mohm = trcs_resistor_mohm_table[(psfe_trcs_number[PSFE_BOARD_NUMBER] - 1)][trcs_ctx.trcs_current_range - 1]; // (-1 to skip TRCS_RANGE_NONE).
+	unsigned int resistor_mohm = trcs_resistor_mohm_table[(psfe_trcs_number[PSFE_BOARD_INDEX] - 1)][trcs_ctx.trcs_current_range - 1]; // (-1 to skip TRCS_RANGE_NONE).
 	unsigned long long den = adc_bandgap_result_12bits;
 	den *= TRCS_LT6105_VOLTAGE_GAIN;
 	den *= resistor_mohm;

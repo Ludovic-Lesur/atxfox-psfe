@@ -219,14 +219,11 @@ void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_typ
  * @return: None.
  */
 void GPIO_Init(void) {
-
-	/* Enable all GPIOx clocks */
+	// Enable all GPIOx clocks.
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
-
-	/* Configure standalone GPIOs */
+	// Configure standalone GPIOs.
 	GPIO_Configure(&GPIO_BYPASS, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Others GPIOs are configured in their corresponding peripheral or applicative driver */
+	// Others GPIOs are configured in their corresponding peripheral or applicative driver.
 }
 
 /* SET THE STATE OF A GPIO.

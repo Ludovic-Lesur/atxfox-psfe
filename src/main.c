@@ -119,7 +119,7 @@ void PSFE_UpdateAtxVoltage(void) {
 	// Apply filter.
 	adc_median = FILTER_ComputeMedianFilter(adc_sample_buf, PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH, PSFE_ATX_VOLTAGE_CENTER_AVERAGE_LENGTH);
 	// Convert to mV.
-	psfe_ctx.psfe_atx_voltage_mv = psfe_vout_voltage_divider_ratio[PSFE_BOARD_NUMBER] * ((adc_median * ADC_BANDGAP_VOLTAGE_MV) / (psfe_ctx.psfe_bandgap_result_12bits));
+	psfe_ctx.psfe_atx_voltage_mv = psfe_vout_voltage_divider_ratio[PSFE_BOARD_INDEX] * ((adc_median * ADC_BANDGAP_VOLTAGE_MV) / (psfe_ctx.psfe_bandgap_result_12bits));
 }
 
 /* COMPUTE BANDGAP VOLTAGE.
@@ -270,7 +270,7 @@ int main(void) {
 			// Use TRCS board.
 			TRCS_Task(psfe_ctx.psfe_bandgap_result_12bits, &psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status, &psfe_ctx.psfe_trcs_range);
 			// Compute ouput voltage divider current.
-			vout_voltage_divider_current_ua = (psfe_ctx.psfe_atx_voltage_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_NUMBER]);
+			vout_voltage_divider_current_ua = (psfe_ctx.psfe_atx_voltage_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_INDEX]);
 			// Remove offset current.
 			if (psfe_ctx.psfe_atx_current_ua > vout_voltage_divider_current_ua) {
 				psfe_ctx.psfe_atx_current_ua -= vout_voltage_divider_current_ua;
