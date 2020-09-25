@@ -125,9 +125,9 @@ void TRCS_Init(void) {
 	GPIO_Configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_HIGH, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-	TRCS_SetRange(TRCS_RANGE_NONE);
+	TRCS_SetRange(TRCS_RANGE_HIGH); // High range by default to ensure power continuity.
 	// Init context.
-	trcs_ctx.trcs_current_range = TRCS_RANGE_NONE;
+	trcs_ctx.trcs_current_range = TRCS_RANGE_HIGH;
 	trcs_ctx.trcs_state = TRCS_STATE_OFF;
 	trcs_ctx.trcs_range_down_counter = 0;
 	unsigned char idx = 0;
@@ -178,15 +178,24 @@ void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_curren
 		break;
 	// High range state.
 	case TRCS_STATE_HIGH:
-		// Check last ADC result.
-		if ((adc_channel_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) || (bypass != 0)) {
-			// Current is too high and there is no higher range -> switch board off.
+		// Check bypass.
+		if (bypass != 0) {
 			trcs_ctx.trcs_state = TRCS_STATE_OFF;
-			TRCS_SetRange(TRCS_RANGE_NONE);
+			TRCS_SetRange(TRCS_RANGE_HIGH); // Keep high range to ensure power continuity when bypassed will be disabled.
 		}
-		if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
-			// Middle Range must be confirmed.
-			trcs_ctx.trcs_state = TRCS_STATE_CONFIRM_MIDDLE;
+		else {
+			// Check last ADC result.
+			if (adc_channel_result_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) {
+				// Middle Range must be confirmed.
+				trcs_ctx.trcs_state = TRCS_STATE_CONFIRM_MIDDLE;
+			}
+			else {
+				if (adc_channel_result_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
+					// Current is too high and there is no higher range -> switch board off.
+					trcs_ctx.trcs_state = TRCS_STATE_OFF;
+					TRCS_SetRange(TRCS_RANGE_NONE); // None range to protect the board.
+				}
+			}
 		}
 		break;
 	// Middle range confirmation state.
@@ -214,7 +223,7 @@ void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_curren
 		if (bypass != 0) {
 			// Switch TRCS board off.
 			trcs_ctx.trcs_state = TRCS_STATE_OFF;
-			TRCS_SetRange(TRCS_RANGE_NONE);
+			TRCS_SetRange(TRCS_RANGE_HIGH); // Keep high range to ensure power continuity when bypassed will be disabled.
 		}
 		else {
 			// Check last ADC result.
@@ -255,7 +264,7 @@ void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_curren
 		if (bypass != 0) {
 			// Switch TRCS board off.
 			trcs_ctx.trcs_state = TRCS_STATE_OFF;
-			TRCS_SetRange(TRCS_RANGE_NONE);
+			TRCS_SetRange(TRCS_RANGE_HIGH); // Keep high range to ensure power continuity when bypassed will be disabled.
 		}
 		else {
 			// Check last ADC result.
