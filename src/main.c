@@ -379,11 +379,12 @@ int main(void) {
 			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// Build data.
 			psfe_ctx.psfe_sigfox_uplink_data.field.atx_voltage_mv = psfe_ctx.psfe_atx_voltage_mv;
-			psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = psfe_ctx.psfe_trcs_range;
-			if (psfe_ctx.psfe_trcs_range == TRCS_RANGE_NONE) {
+			if (psfe_ctx.psfe_bypass_current_status != 0) {
+				psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = TRCS_RANGE_NONE;
 				psfe_ctx.psfe_sigfox_uplink_data.field.atx_current_ua = PSFE_ATX_CURRENT_ERROR_VALUE;
 			}
 			else {
+				psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = psfe_ctx.psfe_trcs_range;
 				psfe_ctx.psfe_sigfox_uplink_data.field.atx_current_ua = psfe_ctx.psfe_atx_current_ua;
 			}
 			psfe_ctx.psfe_sigfox_uplink_data.field.mcu_voltage_mv = psfe_ctx.psfe_supply_voltage_mv;
