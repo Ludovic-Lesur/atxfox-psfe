@@ -84,7 +84,7 @@ void USART2_IRQHandler(void) {
  * @param tx_byte:	Byte to append.
  * @return:			None.
  */
-void USART2_FillTxBuffer(unsigned char tx_byte) {
+static void USART2_FillTxBuffer(unsigned char tx_byte) {
 #ifdef USE_TXE_INTERRUPT
 	// Fill buffer.
 	usart_ctx.tx_buf[usart_ctx.tx_buf_write_idx] = tx_byte;

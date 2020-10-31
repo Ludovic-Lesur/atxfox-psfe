@@ -64,7 +64,7 @@ void LPUART1_IRQHandler(void) {
  * @param n:	The word to converts.
  * @return:		The results of conversion.
  */
-char LPUART1_HexaToAscii(unsigned char hexa_value) {
+static char LPUART1_HexaToAscii(unsigned char hexa_value) {
 	char hexa_ascii = 0;
 	if (hexa_value <= 15) {
 		hexa_ascii = (hexa_value <= 9 ? (char) (hexa_value + '0') : (char) (hexa_value + ('A' - 10)));
@@ -76,7 +76,7 @@ char LPUART1_HexaToAscii(unsigned char hexa_value) {
  * @param power:	The desired power.
  * @return result:	Result of computation.
  */
-unsigned int LPUART1_Pow10(unsigned char power) {
+static unsigned int LPUART1_Pow10(unsigned char power) {
 	unsigned int result = 0;
 	unsigned int pow10_buf[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 	if (power <= 9) {
@@ -89,7 +89,7 @@ unsigned int LPUART1_Pow10(unsigned char power) {
  * @param tx_byte:	Byte to append.
  * @return:			None.
  */
-void LPUART1_FillTxBuffer(unsigned char tx_byte) {
+static void LPUART1_FillTxBuffer(unsigned char tx_byte) {
 	// Fill buffer.
 	lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_write_idx] = tx_byte;
 	// Manage index roll-over.
