@@ -2,7 +2,7 @@
  * filter.c
  *
  *  Created on: 14 aug. 2020
- *      Author: ludo
+ *      Author: Ludo
  */
 
 #include "filter.h"
