@@ -4,7 +4,7 @@ The aim of the ATXFox project was to design a laboratory power supply from a sta
 Each voltage output of the ATX has its own front-end, formed by a PSFE and TRCS boards pair. The PSFE board is a generic power supply interface including control switches, standard connectors, LCD screen for voltage and current display, and Sigfox connectivity for optional remote monitoring.
 
 # Hardware
-The board was designed on **Circuit Maker V1.3**. Hardware documentation and design files are available @ https://workspace.circuitmaker.com/Projects/Details/Ludovic-Lesur/PSFEHW1-0
+The board was designed on **Circuit Maker V1.3**. Hardware documentation and design files are available @ https://circuitmaker.com/Projects/Details/Ludovic-Lesur/PSFEHW1-0
 
 # Embedded software
 
