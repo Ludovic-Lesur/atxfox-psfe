@@ -144,7 +144,7 @@ void TRCS_Init(void) {
 void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass, TRCS_Range* trcs_range) {
 	// Perform measurement.
 	unsigned int adc_channel_result_12bits = 0;
-	ADC1_GetChannel12Bits(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
+	ADC1_SingleConversion(ADC_ATX_CURRENT_CHANNEL, &adc_channel_result_12bits);
 	// Store new sample in buffer.
 	trcs_ctx.trcs_adc_sample_buf[trcs_ctx.trcs_current_ua_buf_idx] = adc_channel_result_12bits;
 	trcs_ctx.trcs_current_ua_buf_idx++;

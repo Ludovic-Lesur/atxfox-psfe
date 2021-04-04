@@ -114,7 +114,7 @@ void PSFE_UpdateAtxVoltage(void) {
 	unsigned int adc_median = 0;
 	// Get samples.
 	for (idx=0 ; idx<PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH ; idx++) {
-		ADC1_GetChannel12Bits(ADC_ATX_VOLTAGE_CHANNEL, &(adc_sample_buf[idx]));
+		ADC1_SingleConversion(ADC_ATX_VOLTAGE_CHANNEL, &(adc_sample_buf[idx]));
 	}
 	// Apply filter.
 	adc_median = FILTER_ComputeMedianFilter(adc_sample_buf, PSFE_ATX_VOLTAGE_MEDIAN_FILTER_LENGTH, PSFE_ATX_VOLTAGE_CENTER_AVERAGE_LENGTH);
@@ -132,7 +132,7 @@ void PSFE_UpdateBandgapResult(void) {
 	unsigned char idx = 0;
 	// Get samples.
 	for (idx=0 ; idx<PSFE_BANDGAP_MEDIAN_FILTER_LENGTH ; idx++) {
-		ADC1_GetChannel12Bits(ADC_BANDGAP_CHANNEL, &(adc_sample_buf[idx]));
+		ADC1_SingleConversion(ADC_BANDGAP_CHANNEL, &(adc_sample_buf[idx]));
 	}
 	// Apply filter.
 	psfe_ctx.psfe_bandgap_result_12bits = FILTER_ComputeMedianFilter(adc_sample_buf, PSFE_BANDGAP_MEDIAN_FILTER_LENGTH, PSFE_BANDGAP_CENTER_AVERAGE_LENGTH);
@@ -189,7 +189,7 @@ int main(void) {
 		switch (psfe_ctx.psfe_state) {
 		// Supply voltage monitoring.
 		case PSFE_STATE_SUPPLY_VOLTAGE_MONITORING:
-			ADC_GetSupplyVoltageMv(&psfe_ctx.psfe_supply_voltage_mv);
+			ADC1_GetMcuVoltage(&psfe_ctx.psfe_supply_voltage_mv);
 			// Power-off detection.
 			if (psfe_ctx.psfe_supply_voltage_mv < PSFE_OFF_VOLTAGE_THRESHOLD_MV) {
 				psfe_ctx.psfe_state = PSFE_STATE_OFF;
@@ -346,7 +346,7 @@ int main(void) {
 		// Send data over UART interface.
 		case PSFE_STATE_UART:
 			// Get MCU temperature.
-			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
+			ADC1_GetMcuTemperatureComp1(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// Log values on USB connector.
 			LPUART1_SendString("U=");
 			LPUART1_SendValue(psfe_ctx.psfe_atx_voltage_mv, LPUART_FORMAT_DECIMAL, 0);
@@ -376,7 +376,7 @@ int main(void) {
 		// Send data through Sigfox.
 		case PSFE_STATE_SIGFOX:
 			// Get MCU supply voltage and temperature.
-			ADC_GetMcuTemperature(&psfe_ctx.psfe_mcu_temperature_degrees);
+			ADC1_GetMcuTemperatureComp1(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// Build data.
 			psfe_ctx.psfe_sigfox_uplink_data.field.atx_voltage_mv = psfe_ctx.psfe_atx_voltage_mv;
 			if (psfe_ctx.psfe_bypass_current_status != 0) {

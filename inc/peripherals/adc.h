@@ -22,8 +22,9 @@
 /*** ADC functions ***/
 
 void ADC1_Init(void);
-void ADC_GetSupplyVoltageMv(unsigned int* supply_voltage_mv);
-void ADC_GetMcuTemperature(unsigned char* mcu_temperature_degrees);
-void ADC1_GetChannel12Bits(unsigned char channel, unsigned int* channel_result_12bits);
+void ADC1_SingleConversion(unsigned char channel, unsigned int* channel_result_12bits);
+void ADC1_GetMcuVoltage(unsigned int* supply_voltage_mv);
+void ADC1_GetMcuTemperatureComp1(unsigned char* mcu_temperature_degrees);
+
 
 #endif /* ADC_H */
