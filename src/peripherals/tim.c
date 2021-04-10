@@ -54,7 +54,7 @@ void TIM21_Init(unsigned int period_ms) {
 	TIM21 -> CR1 &= ~(0b1 << 0); // Disable TIM21 (CEN='0').
 	TIM21 -> CNT = 0; // Reset counter.
 	// Configure prescaler and period.
-	TIM21 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function).
+	TIM21 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function).
 	TIM21 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM21 -> DIER |= (0b1 << 0); // UIE='1'.
@@ -94,7 +94,7 @@ void TIM22_Init(void) {
 	TIM22 -> CR1 &= ~(0b1 << 0); // Disable TIM22 (CEN='0').
 	TIM22 -> CNT = 0; // Reset counter.
 	// Configure prescaler and period.
-	TIM22 -> PSC = RCC_SYSCLK_KHZ; // Timer is clocked by SYSCLK (see RCC_Init() function).
+	TIM22 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function).
 	TIM22 -> ARR = 1000;
 	// Enable interrupt.
 	TIM22 -> DIER |= (0b1 << 0); // UIE='1'.

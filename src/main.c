@@ -147,6 +147,7 @@ void PSFE_UpdateBandgapResult(void) {
 int main(void) {
 	// Init clock.
 	RCC_Init();
+	RCC_SwitchToHsi();
 	// Init peripherals.
 	TIM21_Init(PSFE_LCD_UART_PERIOD_MS);
 	TIM22_Init();

@@ -124,7 +124,7 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR3 &= 0xFF0F0836;
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
-	LPUART1 -> BRR |= ((RCC_SYSCLK_KHZ * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> BRR |= ((RCC_GetSysclkKhz() * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Enable transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // (TE='1').
 	// Enable peripheral.
