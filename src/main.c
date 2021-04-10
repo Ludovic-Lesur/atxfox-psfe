@@ -145,6 +145,9 @@ void PSFE_UpdateBandgapResult(void) {
  * @return:	None.
  */
 int main(void) {
+	// Init watchdog.
+	IWDG_Init();
+	IWDG_Reload();
 	// Init clock.
 	RCC_Init();
 	RCC_SwitchToHsi();
@@ -190,6 +193,7 @@ int main(void) {
 		switch (psfe_ctx.psfe_state) {
 		// Supply voltage monitoring.
 		case PSFE_STATE_SUPPLY_VOLTAGE_MONITORING:
+			IWDG_Reload();
 			ADC1_GetMcuVoltage(&psfe_ctx.psfe_supply_voltage_mv);
 			// Power-off detection.
 			if (psfe_ctx.psfe_supply_voltage_mv < PSFE_OFF_VOLTAGE_THRESHOLD_MV) {
@@ -207,6 +211,7 @@ int main(void) {
 			break;
 		// Power-off.
 		case PSFE_STATE_OFF:
+			IWDG_Reload();
 			// Send Sigfox message and display OFF on LCD screen.
 			if (psfe_ctx.psfe_init_done != 0) {
 				TRCS_Off();
@@ -220,6 +225,7 @@ int main(void) {
 			break;
 		// Init.
 		case PSFE_STATE_INIT:
+			IWDG_Reload();
 			// Print project name and HW versions.
 			LCD_Print(0, 0, " ATXFox ", 8);
 			LCD_Print(1, 0, " HW 1.0 ", 8);
@@ -248,12 +254,14 @@ int main(void) {
 			break;
 		// Get bypass switch status.
 		case PSFE_STATE_BYPASS:
+			IWDG_Reload();
 			psfe_ctx.psfe_bypass_current_status = GPIO_Read(&GPIO_BYPASS);
 			// Compute next state.
 			psfe_ctx.psfe_state = PSFE_STATE_VOLTAGE_MEASURE;
 			break;
 		// Analog measurements.
 		case PSFE_STATE_VOLTAGE_MEASURE:
+			IWDG_Reload();
 			// Compute effective ATX output voltage.
 			PSFE_UpdateAtxVoltage();
 			// Detect open state.
@@ -268,6 +276,7 @@ int main(void) {
 			break;
 		// Update current range according to previous measure.
 		case PSFE_STATE_CURRENT_MEASURE:
+			IWDG_Reload();
 			// Use TRCS board.
 			TRCS_Task(psfe_ctx.psfe_bandgap_result_12bits, &psfe_ctx.psfe_atx_current_ua, psfe_ctx.psfe_bypass_current_status, &psfe_ctx.psfe_trcs_range);
 			// Compute ouput voltage divider current.
@@ -283,6 +292,7 @@ int main(void) {
 			psfe_ctx.psfe_state = PSFE_STATE_TIMER;
 			break;
 		case PSFE_STATE_TIMER:
+			IWDG_Reload();
 			// Check timers flag.
 			if (TIM21_GetFlag() != 0) {
 				// Clear flag and update LCD.
@@ -313,6 +323,7 @@ int main(void) {
 			break;
 		// Print voltage and current on LCD screen.
 		case PSFE_STATE_LCD:
+			IWDG_Reload();
 			// Voltage display.
 			if (psfe_ctx.psfe_no_input_current_status == 0) {
 				if (psfe_ctx.psfe_no_input_previous_status != 0) {
@@ -346,6 +357,7 @@ int main(void) {
 			break;
 		// Send data over UART interface.
 		case PSFE_STATE_UART:
+			IWDG_Reload();
 			// Get MCU temperature.
 			ADC1_GetMcuTemperatureComp1(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// Log values on USB connector.
@@ -376,6 +388,7 @@ int main(void) {
 			break;
 		// Send data through Sigfox.
 		case PSFE_STATE_SIGFOX:
+			IWDG_Reload();
 			// Get MCU supply voltage and temperature.
 			ADC1_GetMcuTemperatureComp1(&psfe_ctx.psfe_mcu_temperature_degrees);
 			// Build data.
@@ -403,6 +416,7 @@ int main(void) {
 			}
 			break;
 		case PSFE_STATE_BANDGAP_CALIBRATION:
+			IWDG_Reload();
 			// Update bandgap result.
 			PSFE_UpdateBandgapResult();
 			// Reset counter.
@@ -412,6 +426,7 @@ int main(void) {
 			break;
 		// Unknown state.
 		default:
+			IWDG_Reload();
 			psfe_ctx.psfe_state = PSFE_STATE_OFF;
 			break;
 		}
