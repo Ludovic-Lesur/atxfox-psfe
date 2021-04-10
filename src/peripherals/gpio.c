@@ -21,7 +21,7 @@
 
 /* SET THE MODE OF A GPIO PIN.
  * @param gpio:	GPIO structure.
- * @param mode: Desired mode ('GPIO_MODE_INPUT', 'GPIO_MODE_OUTPUT', 'AlternateFunction' or 'GPIO_MODE_ANALOG').
+ * @param mode: Mode (see enum defined in gpio.h).
  * @return: 	None.
  */
 static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
@@ -54,7 +54,7 @@ static void GPIO_SetMode(const GPIO* gpio, GPIO_Mode mode) {
 
 /* GET THE MODE OF A GPIO PIN.
  * @param gpio:			GPIO structure.
- * @return gpioMode: 	Current mode of the  GPIO ('GPIO_MODE_INPUT', 'GPIO_MODE_OUTPUT', 'AlternateFunction' or 'GPIO_MODE_ANALOG').
+ * @return gpioMode: 	Current mode (see enum defined in gpio.h).
  */
 static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
 	unsigned char bit0 = (((gpio -> gpio_port_address) -> MODER) & (0b1 << (2 * (gpio -> gpio_num)))) >> (2 * (gpio -> gpio_num));
@@ -65,7 +65,7 @@ static GPIO_Mode GPIO_GetMode(const GPIO* gpio) {
 
 /* SET THE OUTPUT TYPE OF A GPIO PIN.
  * @param gpio:			GPIO structure.
- * @param outputType: 	Desired output ('PushPull' or 'GPIO_TYPE_OPEN_DRAIN').
+ * @param output_type: 	Output type (see enum defined in gpio.h).
  * @return: 			None.
  */
 static void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
@@ -88,32 +88,30 @@ static void GPIO_SetOutputType(const GPIO* gpio, GPIO_OutputType output_type) {
 
 /* SET THE OUTPUT SPEED OF A GPIO PIN.
  * @param gpio:			GPIO structure.
- * @param outputSpeed: 	Desired output speed ('GPIO_SPEED_LOW', 'MediumSpeed', 'HighSpeed' or 'VeryHighSpeed').
+ * @param output_speed: Output speed (see enum defined in gpio.h).
  * @return: 			None.
  */
 static void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
+		// Set low speed during transition.
+		(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b11 << (2 * (gpio -> gpio_num)));
+		// Set required bits.
 		switch(output_speed) {
 		case GPIO_SPEED_LOW:
-			// OSPEEDRy = '00'.
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
+			// Nothing to do.
 			break;
 		case GPIO_SPEED_MEDIUM:
 			// OSPEEDRy = '01'.
 			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_SPEED_HIGH:
 			// OSPEEDRy = '10'.
-			(gpio -> gpio_port_address) -> OSPEEDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
 			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_SPEED_VERY_HIGH:
 			// OSPEEDRy = '11'.
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> OSPEEDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
+			(gpio -> gpio_port_address) -> OSPEEDR |= (0b11 << (2 * (gpio -> gpio_num)));
 			break;
 		default:
 			break;
@@ -123,26 +121,25 @@ static void GPIO_SetOutputSpeed(const GPIO* gpio, GPIO_OutputSpeed output_speed)
 
 /* ENABLE OR DISABLE PULL-UP AND PULL-DOWN RESISTORS ON A GPIO PIN.
  * @param gpio:				GPIO structure.
- * @param pullResistor: 	Desired configuration ('GPIO_PULL_NONE', 'PullUp', or 'PullDown').
+ * @param pull_resistor: 	Resistor configuration (see enum defined in gpio.h).
  * @return: 				None.
  */
 static void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resistor) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
+		// Disable resistors during transition.
+		(gpio -> gpio_port_address) -> PUPDR &= ~(0b11 << (2 * (gpio -> gpio_num)));
+		// Set required bits.
 		switch(pull_resistor) {
 		case GPIO_PULL_NONE:
-			// PUPDRy = '00'.
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
+			// Nothing to do.
 			break;
 		case GPIO_PULL_UP:
 			// PUPDRy = '01'.
 			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2 * (gpio -> gpio_num)));
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		case GPIO_PULL_DOWN:
 			// PUPDRy = '10'.
-			(gpio -> gpio_port_address) -> PUPDR &= ~(0b1 << (2 * (gpio -> gpio_num)));
 			(gpio -> gpio_port_address) -> PUPDR |= (0b1 << (2 * (gpio -> gpio_num) + 1));
 			break;
 		default:
@@ -151,10 +148,10 @@ static void GPIO_SetPullUpPullDown(const GPIO* gpio, GPIO_PullResistor pull_resi
 	}
 }
 
-/* SELECT THE ALTERNATE FUNCTION OF A GPIO PIN (REQUIRES THE MODE 'AlternateFunction').
- * @param gpio:		GPIO structure.
- * @param gpio_af_num: 	Alternate function gpio_number (0 to 15).
- * @return: 		None.
+/* SELECT THE ALTERNATE FUNCTION OF A GPIO PIN (REQUIRES THE MODE 'GPIO_MODE_ALTERNATE_FUNCTION').
+ * @param gpio:			GPIO structure.
+ * @param gpio_af_num: 	Alternate function number (0 to 15).
+ * @return: 			None.
  */
 static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num) {
 	// Ensure alternate function exists.
@@ -163,30 +160,14 @@ static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num
 		// Select proper register to set.
 		if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < AFRH_OFFSET)) {
 			// Set AFRL register: AFRy = 'gpio_af_num'.
-			for (i=0 ; i<4 ; i++) {
-				if (gpio_af_num & (0b1 << i)) {
-					// Bit = '1'.
-					(gpio -> gpio_port_address) -> AFRL |= (0b1 << (4 * (gpio -> gpio_num) + i));
-				}
-				else {
-					// Bit = '0'.
-					(gpio -> gpio_port_address) -> AFRL &= ~(0b1 << (4 * (gpio -> gpio_num) + i));
-				}
-			}
+			(gpio -> gpio_port_address) -> AFRL &= ~(0b1111 << (4 * (gpio -> gpio_num)));
+			(gpio -> gpio_port_address) -> AFRL |= (gpio_af_num << (4 * (gpio -> gpio_num)));
 		}
 		else {
 			if (((gpio -> gpio_num) >= AFRH_OFFSET) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
 				// Set AFRH register: AFRy = 'gpio_af_num'.
-				for (i=0 ; i<4 ; i++) {
-					if (gpio_af_num & (0b1 << i)) {
-						// Bit = '1'.
-						(gpio -> gpio_port_address) -> AFRH |= (0b1 << (4 * ((gpio -> gpio_num) - AFRH_OFFSET) + i));
-					}
-					else {
-						// Bit = '0'.
-						(gpio -> gpio_port_address) -> AFRH &= ~(0b1 << (4 * ((gpio -> gpio_num) - AFRH_OFFSET) + i));
-					}
-				}
+				(gpio -> gpio_port_address) -> AFRH &= ~(0b1111 << (4 * ((gpio -> gpio_num) - AFRH_OFFSET)));
+				(gpio -> gpio_port_address) -> AFRH |= (gpio_af_num << (4 * ((gpio -> gpio_num) - AFRH_OFFSET)));
 			}
 		}
 	}
@@ -195,12 +176,12 @@ static void GPIO_SetAlternateFunction(const GPIO* gpio, unsigned int gpio_af_num
 /*** GPIO functions ***/
 
 /* FUNCTION FOR CONFIGURING A GPIO PIN.
- * @param gpio:			GPIO structure.
- * @param mode: 		Desired mode ('GPIO_MODE_INPUT', 'GPIO_MODE_OUTPUT', 'AlternateFunction' or 'GPIO_MODE_ANALOG').
- * @param outputType:	Desired output ('PushPull' or 'GPIO_TYPE_OPEN_DRAIN').
- * @param outputSpeed: 	Desired output speed ('0Speed', 'MediumSpeed', '1Speed' or 'Very1Speed').
- * @param pullResistor: Desired configuration ('GPIO_PULL_NONE', 'PullUp', or 'PullDown').
- * @param gpio_af_num: 		Alternate function gpio_number (0 to 15) if 'AlternateFunction' mode is selected.
+ * @param gpio:				GPIO structure.
+ * @param mode: 			Mode (see enum defined in gpio.h).
+ * @param output_type:		Output type (see enum defined in gpio.h).
+ * @param output_speed: 	Output speed (see enum defined in gpio.h).
+ * @param pull_resistor:	Resistor configuration (see enum defined in gpio.h).
+ * @param gpio_af_num: 		Alternate function number (0 to 15) if 'GPIO_MODE_ALTERNATE_FUNCTION' mode is selected.
  */
 void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_type, GPIO_OutputSpeed output_speed, GPIO_PullResistor pull_resistor) {
 	GPIO_SetMode(gpio, mode);
@@ -219,31 +200,28 @@ void GPIO_Configure(const GPIO* gpio, GPIO_Mode mode, GPIO_OutputType output_typ
 void GPIO_Init(void) {
 	// Enable all GPIOx clocks.
 	RCC -> IOPENR |= (0b111 << 0); // IOPxEN='1'.
-	// Configure standalone GPIOs.
-	GPIO_Configure(&GPIO_BYPASS, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-	// Others GPIOs are configured in their corresponding peripheral or applicative driver.
 }
 
 /* SET THE STATE OF A GPIO.
  * @param gpio:		GPIO structure.
- * @param state: 	Desired state of the pin ('0' or '1').
+ * @param state: 	GPIO output state ('0' or '1').
  * @return: 		None.
  */
 void GPIO_Write(const GPIO* gpio, unsigned char state) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
-		if (state) {
-			(gpio -> gpio_port_address) -> ODR |= (0b1 << (gpio -> gpio_num));
+		if (state == 0) {
+			(gpio -> gpio_port_address) -> ODR &= ~(0b1 << (gpio -> gpio_num));
 		}
 		else {
-			(gpio -> gpio_port_address) -> ODR &= ~(0b1 << (gpio -> gpio_num));
+			(gpio -> gpio_port_address) -> ODR |= (0b1 << (gpio -> gpio_num));
 		}
 	}
 }
 
 /* READ THE STATE OF A GPIO.
  * @param gpio:		GPIO structure.
- * @return state: 	GPIO state ('0' or '1').
+ * @return state: 	Current GPIO input state ('0' or '1').
  */
 unsigned char GPIO_Read(const GPIO* gpio) {
 	unsigned char state = 0;
@@ -275,11 +253,7 @@ unsigned char GPIO_Read(const GPIO* gpio) {
 void GPIO_Toggle(const GPIO* gpio) {
 	// Ensure GPIO exists.
 	if (((gpio -> gpio_num) >= 0) && ((gpio -> gpio_num) < GPIO_PER_PORT)) {
-		if (GPIO_Read(gpio) == 0) {
-			GPIO_Write(gpio, 1);
-		}
-		else {
-			GPIO_Write(gpio, 0);
-		}
+		// Toggle ODR bit.
+		(gpio -> gpio_port_address) -> ODR ^= (0b1 << (gpio -> gpio_num));
 	}
 }
