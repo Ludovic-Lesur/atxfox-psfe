@@ -7,6 +7,7 @@
 
 #include "td1208.h"
 
+#include "nvic.h"
 #include "tim.h"
 #include "usart.h"
 
@@ -191,6 +192,8 @@ void TD1208_WaitForId(void) {
 void TD1208_Init(void) {
 	// Init buffers.
 	TD1208_ResetParser();
+	// Enable interrupt.
+	NVIC_EnableInterrupt(NVIC_IT_USART2);
 }
 
 /* DISABLE TD1208 ECHO ON UART.

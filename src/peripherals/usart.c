@@ -13,7 +13,6 @@
 #include "rcc.h"
 #include "rcc_reg.h"
 #include "td1208.h"
-#include "tim.h"
 #include "usart_reg.h"
 
 /*** USART local macros ***/
@@ -23,21 +22,22 @@
 // Baud rate.
 #define USART_BAUD_RATE 		9600
 // TX buffer size.
-#define USART_TX_BUFFER_SIZE	32
+#define USART_TX_BUFFER_SIZE	128
+#define USART2_TIMEOUT_COUNT	100000
 
 /*** USART local structures ***/
 
 #ifdef USE_TXE_INTERRUPT
 typedef struct {
-
 	unsigned char tx_buf[USART_TX_BUFFER_SIZE]; 	// Transmit buffer.
 	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
 	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
 } USART_Context;
-
+#endif
 
 /*** USART local global variables ***/
 
+#ifdef USE_TXE_INTERRUPT
 static volatile USART_Context usart_ctx;
 #endif
 
@@ -52,13 +52,10 @@ void USART2_IRQHandler(void) {
 	// TXE interrupt.
 	if (((USART2 -> ISR) & (0b1 << 7)) != 0) {
 		if ((usart_ctx.tx_buf_read_idx) != (usart_ctx.tx_buf_write_idx)) {
-			// Fill transmit data register with new byte.
-			USART2 -> TDR = usart_ctx.tx_buf[usart_ctx.tx_buf_read_idx];
-			// Increment TX read index.
-			usart_ctx.tx_buf_read_idx++;
-			// Manage roll-over.
+			USART2 -> TDR = (usart_ctx.tx_buf)[usart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
+			usart_ctx.tx_buf_read_idx++; // Increment TX read index.
 			if (usart_ctx.tx_buf_read_idx == USART_TX_BUFFER_SIZE) {
-				usart_ctx.tx_buf_read_idx = 0;
+				usart_ctx.tx_buf_read_idx = 0; // Manage roll-over.
 			}
 		}
 		else {
@@ -70,8 +67,9 @@ void USART2_IRQHandler(void) {
 	// RXNE interrupt.
 	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
 		// Store incoming byte in command buffer.
-		unsigned char rx_byte = USART2 -> RDR;
-		TD1208_FillRxBuffer(rx_byte);
+		TD1208_FillRxBuffer(USART2 -> RDR);
+		// Clear RXNE flag.
+		USART2 -> RQR |= (0b1 << 3);
 	}
 	// Overrun error interrupt.
 	if (((USART2 -> ISR) & (0b1 << 3)) != 0) {
@@ -80,7 +78,7 @@ void USART2_IRQHandler(void) {
 	}
 }
 
-/* FILL USART2 TX BUFFER WITH A NEW BYTE.
+/* FILL USART TX BUFFER WITH A NEW BYTE.
  * @param tx_byte:	Byte to append.
  * @return:			None.
  */
@@ -97,7 +95,12 @@ static void USART2_FillTxBuffer(unsigned char tx_byte) {
 	// Fill transmit register.
 	USART2 -> TDR = tx_byte;
 	// Wait for transmission to complete.
-	while (((USART2 -> ISR) & (0b1 << 7)) == 0); // Wait for TXE='1'.
+	unsigned int loop_count = 0;
+	while (((USART2 -> ISR) & (0b1 << 7)) == 0) {
+		// Wait for TXE='1' or timeout.
+		loop_count++;
+		if (loop_count > USART2_TIMEOUT_COUNT) break;
+	}
 #endif
 }
 
@@ -118,17 +121,14 @@ void USART2_Init(void) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 17); // USART2EN='1'.
 	// Configure TX and RX GPIOs.
-	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_UP);
-	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_UP);
+	GPIO_Configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	// Configure peripheral.
-	USART2 -> CR1 = 0; // Disable peripheral before configuration (UE='0'), 1 stop bit and 8 data bits (M='00').
-	USART2 -> CR2 = 0; // 1 stop bit (STOP='00').
-	USART2 -> CR3 = 0;
 	USART2 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='1').
 	USART2 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Enable transmitter and receiver.
-	USART2 -> CR1 |= (0b11 << 2); // TE='1' and RE='1'.
-	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
+	USART2 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
+	NVIC_SetPriority(NVIC_IT_USART2, 2);
 	// Enable peripheral.
 	USART2 -> CR1 |= (0b1 << 0);
 }

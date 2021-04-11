@@ -5,20 +5,24 @@
  *      Author: Ludo
  */
 
+// Peripherals.
 #include "adc.h"
-#include "atxfox.h"
-#include "filter.h"
 #include "gpio.h"
-#include "lcd.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "lpuart.h"
 #include "mapping.h"
 #include "nvic.h"
 #include "rcc.h"
-#include "td1208.h"
 #include "tim.h"
 #include "trcs.h"
 #include "usart.h"
+// Components.
+#include "filter.h"
+#include "lcd.h"
+#include "td1208.h"
+// Applicative.
+#include "atxfox.h"
 
 /*** Main macros ***/
 
@@ -145,12 +149,15 @@ void PSFE_UpdateBandgapResult(void) {
  * @return:	None.
  */
 int main(void) {
-	// Init watchdog.
-	IWDG_Init();
-	IWDG_Reload();
+	// Init memory.
+	NVIC_Init();
 	// Init clock.
 	RCC_Init();
 	RCC_SwitchToHsi();
+	RCC_EnableLsi();
+	// Init watchdog.
+	IWDG_Init();
+	IWDG_Reload();
 	// Init peripherals.
 	TIM21_Init(PSFE_LCD_UART_PERIOD_MS);
 	TIM22_Init();
@@ -164,7 +171,6 @@ int main(void) {
 	LCD_Clear();
 	TRCS_Init();
 	TD1208_Init();
-	NVIC_EnableInterrupt(IT_USART2);
 	// Init context and global variables.
 	unsigned int adc_channel_result_12bits = 0;
 	unsigned int vout_voltage_divider_current_ua = 0;

@@ -125,6 +125,8 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
 	LPUART1 -> BRR |= ((RCC_GetSysclkKhz() * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	// Set interrupt priority.
+	NVIC_SetPriority(NVIC_IT_LPUART1, 3);
 	// Enable transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // (TE='1').
 	// Enable peripheral.
@@ -139,7 +141,7 @@ void LPUART1_Init(void) {
  */
 void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned char print_prefix) {
 	// Disable interrupt.
-	NVIC_DisableInterrupt(IT_LPUART1);
+	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
 	/* Local variables */
 	unsigned char first_non_zero_found = 0;
 	unsigned int idx;
@@ -217,7 +219,7 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
 	}
 	// Enable interrupt.
 	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
-	NVIC_EnableInterrupt(IT_LPUART1);
+	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }
 
 /* SEND A BYTE ARRAY THROUGH LPUART1.
@@ -226,12 +228,12 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
  */
 void LPUART1_SendString(char* tx_string) {
 	// Disable interrupt.
-	NVIC_DisableInterrupt(IT_LPUART1);
+	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
 	// Fill TX buffer with new bytes.
 	while (*tx_string) {
 		LPUART1_FillTxBuffer((unsigned char) *(tx_string++));
 	}
 	// Enable interrupt.
 	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
-	NVIC_EnableInterrupt(IT_LPUART1);
+	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }

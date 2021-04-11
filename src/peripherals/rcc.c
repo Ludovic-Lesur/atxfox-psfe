@@ -101,3 +101,25 @@ unsigned char RCC_SwitchToHsi(void) {
 	}
 	return sysclk_on_hsi;
 }
+
+/* CONFIGURE AND USE LSI AS LOW SPEED OSCILLATOR (32kHz INTERNAL RC).
+ * @param:					None.
+ * @return lsi_available:	'1' if LSI was successfully started, 0 otherwise.
+ */
+unsigned char RCC_EnableLsi(void) {
+	// Enable LSI.
+	RCC -> CSR |= (0b1 << 0); // LSION='1'.
+	// Wait for LSI to be stable.
+	unsigned char lsi_available = 0;
+	unsigned int count = 0;
+	while ((((RCC -> CSR) & (0b1 << 1)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
+		RCC_Delay();
+		count++; // Wait for LSIRDY='1'.
+	}
+	// Check timeout.
+	if (count < RCC_TIMEOUT_COUNT) {
+		// Update flag.
+		lsi_available = 1;
+	}
+	return lsi_available;
+}

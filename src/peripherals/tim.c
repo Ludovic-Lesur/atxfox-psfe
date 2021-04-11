@@ -59,8 +59,8 @@ void TIM21_Init(unsigned int period_ms) {
 	// Enable interrupt.
 	TIM21 -> DIER |= (0b1 << 0); // UIE='1'.
 	tim21_flag = 0;
-	NVIC_SetPriority(IT_TIM21, 0);
-	NVIC_EnableInterrupt(IT_TIM21);
+	NVIC_SetPriority(NVIC_IT_TIM21, 0);
+	NVIC_EnableInterrupt(NVIC_IT_TIM21);
 	// Generate event to update registers.
 	TIM21  -> EGR |= (0b1 << 0); // UG='1'.
 	// Enable peripheral.
@@ -99,8 +99,8 @@ void TIM22_Init(void) {
 	// Enable interrupt.
 	TIM22 -> DIER |= (0b1 << 0); // UIE='1'.
 	tim22_flag = 0;
-	NVIC_SetPriority(IT_TIM22, 1);
-	NVIC_EnableInterrupt(IT_TIM22);
+	NVIC_SetPriority(NVIC_IT_TIM22, 1);
+	NVIC_EnableInterrupt(NVIC_IT_TIM22);
 	// Generate event to update registers.
 	TIM22  -> EGR |= (0b1 << 0); // UG='1'.
 	// Enable peripheral.
