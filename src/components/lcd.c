@@ -53,7 +53,7 @@ static char LCD_HexadecimalToAscii(unsigned char value) {
  * @param:	None.
  * @return:	None.
  */
-void LCD_EnablePulse(void) {
+static void LCD_EnablePulse(void) {
 	// Pulse width > 300ns.
 	GPIO_Write(&GPIO_LCD_E, 1);
 	LPTIM1_DelayMilliseconds(2);
@@ -64,13 +64,11 @@ void LCD_EnablePulse(void) {
  * @param lcd_command:	Command to send.
  * @return:				None.
  */
-void LCD_Command(unsigned char lcd_command) {
-
-	/* Put command on output port */
+static void LCD_Command(unsigned char lcd_command) {
+	// Put command on output port.
 	GPIOA -> ODR &= 0xFFFFFE01;
 	GPIOA -> ODR |= (lcd_command << 1);
-
-	/* Send command */
+	// Send command.
 	GPIO_Write(&GPIO_LCD_RS, 0);
 	LCD_EnablePulse();
 }
@@ -79,13 +77,11 @@ void LCD_Command(unsigned char lcd_command) {
  * @param lcd_data:	Data to send.
  * @return:			None.
  */
-void LCD_Data(unsigned char lcd_data) {
-
-	/* Put data on output port */
+static void LCD_Data(unsigned char lcd_data) {
+	// Put data on output port.
 	GPIOA -> ODR &= 0xFFFFFE01;
 	GPIOA -> ODR |= (lcd_data << 1);
-
-	/* Send command */
+	// Send command.
 	GPIO_Write(&GPIO_LCD_RS, 1);
 	LCD_EnablePulse();
 }
@@ -93,8 +89,7 @@ void LCD_Data(unsigned char lcd_data) {
 /*** LCD functions ***/
 
 void LCD_Init(void) {
-
-	/* Init GPIOs */
+	// Init GPIOs.
 	GPIO_Configure(&GPIO_LCD_E, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LCD_RS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LCD_DB0, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -105,8 +100,7 @@ void LCD_Init(void) {
 	GPIO_Configure(&GPIO_LCD_DB5, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LCD_DB6, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
-
-	/* Initialization sequence */
+	// Initialization sequence.
 	GPIO_Write(&GPIO_LCD_E, 0);
 	LPTIM1_DelayMilliseconds(100);
 	LCD_Command(0x30);
@@ -128,14 +122,11 @@ void LCD_Init(void) {
  * @return:					None.
  */
 void LCD_Print(unsigned char row, unsigned char column, char* string, unsigned char string_length) {
-
-	/* Check parameters */
+	// Check parameters.
 	if ((row <= LCD_ROW_IDX_MAX) && (column <= LCD_COLUMN_IDX_MAX)) {
-
-		/* Set position */
+		// Set position.
 		LCD_Command(((row * 0x40) + column) + 0x80);
-
-		/* Print string */
+		// Print string.
 		unsigned char column_idx = column;
 		unsigned char string_idx = 0;
 		// Loop until string is printed or screen edge is reached.
@@ -161,16 +152,14 @@ void LCD_Clear(void) {
  * @return:				None.
  */
 void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
-
-	/* Build corresponding string */
+	// Build corresponding string.
 	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
 		sigfox_id_string[2 * byte_idx] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0xF0) >> 4);
 		sigfox_id_string[2 * byte_idx + 1] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0x0F) >> 0);
 	}
-
-	/* Print ID */
+	// Print ID.
 	LCD_Print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
 }
 
@@ -179,13 +168,11 @@ void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_
  * @return:			None.
  */
 void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int value) {
-
-	/* Local variables */
+	// Local variables.
 	unsigned char u1, u2, u3, u4, u5;
 	unsigned char d1, d2, d3;
 	char value_string[5] = {0};
-
-	/* Convert value to message */
+	// Convert value to message.
 	if (value < 10000) {
 		// Format = u.ddd
 		u1 = (value) / (1000);
@@ -235,7 +222,6 @@ void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int
 		value_string[3] = LCD_DecimalToAscii(u4);
 		value_string[4] = LCD_DecimalToAscii(u5);
 	}
-
-	/* Print value */
+	// Print value.
 	LCD_Print(row, column, value_string, 5);
 }

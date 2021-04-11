@@ -76,7 +76,7 @@ static TRCS_Context trcs_ctx;
  * @param trcs_range:	Range to activate (see TRCS_Range structure).
  * @return:				None.
  */
-void TRCS_SetRange(TRCS_Range trcs_range) {
+static void TRCS_SetRange(TRCS_Range trcs_range) {
 	// Configure relays.
 	switch (trcs_range) {
 	case TRCS_RANGE_NONE:

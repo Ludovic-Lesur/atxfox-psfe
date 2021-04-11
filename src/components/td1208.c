@@ -43,7 +43,7 @@ static volatile TD1208_Context td1208_ctx;
  * @param c:			Hexadecimal character to convert.
  * @return hexa_value:	Result of conversion.
  */
-unsigned char TD1208_AsciiToHexa(unsigned char c) {
+static unsigned char TD1208_AsciiToHexa(unsigned char c) {
 	unsigned char value = 0;
 	if ((c >= '0') && (c <= '9')) {
 		value = c - '0';
@@ -60,7 +60,7 @@ unsigned char TD1208_AsciiToHexa(unsigned char c) {
  * @param hexa_value:	Hexadecimal value (0 to 15).
  * @return ascii_code:	Corresponding ASCII code ('0' to 'F').
  */
-char TD1208_HexaToAscii(unsigned char hexa_value) {
+static char TD1208_HexaToAscii(unsigned char hexa_value) {
 	char ascii_code = '\0';
 	if (hexa_value <= 9) {
 		ascii_code = hexa_value + '0';
@@ -77,7 +77,7 @@ char TD1208_HexaToAscii(unsigned char hexa_value) {
  * @param c:	Character to check.
  * @return:		1 in case of hexadecimal character, 0 otherwise.
  */
-unsigned char TD1208_IsHexaChar(unsigned char c) {
+static unsigned char TD1208_IsHexaChar(unsigned char c) {
 	unsigned char result = 0;
 	if (((c >= '0') && (c <= '9')) || ((c >= 'A') && (c <= 'F'))) {
 		result = 1;
@@ -89,7 +89,7 @@ unsigned char TD1208_IsHexaChar(unsigned char c) {
  * @param:  None.
  * @return: None.
  */
-void TD1208_ResetParser(void) {
+static void TD1208_ResetParser(void) {
     unsigned int idx = 0;
     for (idx=0; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
     	td1208_ctx.td1208_at_rx_buf[idx] = 0;
@@ -106,7 +106,7 @@ void TD1208_ResetParser(void) {
  * @param:	None.
  * @return:	None.
  */
-void TD1208_ParseAtRxBuffer(void) {
+static void TD1208_ParseAtRxBuffer(void) {
     unsigned int idx;
     unsigned char sigfox_device_id_ascii_raw[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES] = {0x00};
     unsigned char sigfox_device_id_ascii[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES] = {0x00};
@@ -153,7 +153,7 @@ void TD1208_ParseAtRxBuffer(void) {
  * @param:	None.
  * @return:	None.
  */
-void TD1208_WaitForOk(void) {
+static void TD1208_WaitForOk(void) {
 	unsigned int loop_count = 0;
 	while (td1208_ctx.td1208_at_received_ok == 0) {
 		// Decode buffer.
@@ -170,7 +170,7 @@ void TD1208_WaitForOk(void) {
  * @param:	None.
  * @return:	None.
  */
-void TD1208_WaitForId(void) {
+static void TD1208_WaitForId(void) {
 	unsigned int loop_count = 0;
 	while (td1208_ctx.td1208_at_received_id == 0) {
 		// Decode buffer.
