@@ -54,9 +54,12 @@ static char LCD_HexadecimalToAscii(unsigned char value) {
  * @return:	None.
  */
 static void LCD_EnablePulse(void) {
-	// Pulse width > 300ns.
-	GPIO_Write(&GPIO_LCD_E, 1);
-	LPTIM1_DelayMilliseconds(2);
+	// Local variables.
+	unsigned int loop_count = 0;
+	// Pulse width > 460ns.
+	for (loop_count=0 ; loop_count<5 ; loop_count++) {
+		GPIO_Write(&GPIO_LCD_E, ((loop_count > 0x01) ? 1 : 0));
+	}
 	GPIO_Write(&GPIO_LCD_E, 0);
 }
 
@@ -112,6 +115,8 @@ void LCD_Init(void) {
 	LCD_Command(0x38); // 8-bits / 2 lines mode.
 	LCD_Command(0x08); // Display off.
 	LCD_Command(0x0C); // Display on.
+	// Clear.
+	LCD_Clear();
 }
 
 /* PRINT A STRING ON LCD SCREEN.

@@ -7,9 +7,9 @@
 
 #include "lpuart.h"
 
-#include "atxfox.h"
 #include "gpio.h"
 #include "lpuart_reg.h"
+#include "mode.h"
 #include "mapping.h"
 #include "nvic.h"
 #include "rcc.h"
@@ -18,47 +18,7 @@
 /*** LPUART local macros ***/
 
 #define LPUART_BAUD_RATE 		9600 // Baud rate.
-#define LPUART_TX_BUFFER_SIZE	128 // TX buffer size.
-
-/*** LPUART local structures ***/
-
-typedef struct {
-	unsigned char tx_buf[LPUART_TX_BUFFER_SIZE]; 	// Transmit buffer.
-	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
-	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
-} LPUART_Context;
-
-/*** LPUART local global variables ***/
-
-static volatile LPUART_Context lpuart_ctx;
-
-/*** LPUART local functions ***/
-
-/* LPUART1 INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void LPUART1_IRQHandler(void) {
-	// TXE interrupt.
-	if (((LPUART1 -> ISR) & (0b1 << 7)) != 0) {
-		if ((lpuart_ctx.tx_buf_read_idx) != (lpuart_ctx.tx_buf_write_idx)) {
-			LPUART1 -> TDR = lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
-			lpuart_ctx.tx_buf_read_idx++; // Increment TX read index.
-			if (lpuart_ctx.tx_buf_read_idx == LPUART_TX_BUFFER_SIZE) {
-				lpuart_ctx.tx_buf_read_idx = 0; // Manage roll-over.
-			}
-		}
-		else {
-			// No more bytes, disable TXE interrupt.
-			LPUART1 -> CR1 &= ~(0b1 << 7); // TXEIE='0'.
-		}
-	}
-	// Overrun error interrupt.
-	if (((LPUART1 -> ISR) & (0b1 << 3)) != 0) {
-		// Clear ORE flag.
-		LPUART1 -> ICR |= (0b1 << 3);
-	}
-}
+#define LPUART_TIMEOUT_COUNT	100000
 
 /* CONVERTS A 4-BIT WORD TO THE ASCII CODE OF THE CORRESPONDING HEXADECIMAL CHARACTER.
  * @param n:	The word to converts.
@@ -90,12 +50,14 @@ static unsigned int LPUART1_Pow10(unsigned char power) {
  * @return:			None.
  */
 static void LPUART1_FillTxBuffer(unsigned char tx_byte) {
-	// Fill buffer.
-	lpuart_ctx.tx_buf[lpuart_ctx.tx_buf_write_idx] = tx_byte;
-	// Manage index roll-over.
-	lpuart_ctx.tx_buf_write_idx++;
-	if (lpuart_ctx.tx_buf_write_idx == LPUART_TX_BUFFER_SIZE) {
-		lpuart_ctx.tx_buf_write_idx = 0;
+	// Fill transmit register.
+	LPUART1 -> TDR = tx_byte;
+	// Wait for transmission to complete.
+	unsigned int loop_count = 0;
+	while (((LPUART1 -> ISR) & (0b1 << 7)) == 0) {
+		// Wait for TXE='1' or timeout.
+		loop_count++;
+		if (loop_count > LPUART_TIMEOUT_COUNT) break;
 	}
 }
 
@@ -106,11 +68,6 @@ static void LPUART1_FillTxBuffer(unsigned char tx_byte) {
  * @return:	None.
  */
 void LPUART1_Init(void) {
-	// Init context.
-	unsigned int idx = 0;
-	for (idx=0 ; idx<LPUART_TX_BUFFER_SIZE ; idx++) lpuart_ctx.tx_buf[idx] = 0;
-	lpuart_ctx.tx_buf_write_idx = 0;
-	lpuart_ctx.tx_buf_read_idx = 0;
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 #ifndef DEBUG
@@ -125,8 +82,6 @@ void LPUART1_Init(void) {
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	LPUART1 -> BRR &= 0xFFF00000; // Reset all bits.
 	LPUART1 -> BRR |= ((RCC_GetSysclkKhz() * 1000) / (LPUART_BAUD_RATE)) * 256; // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
-	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_LPUART1, 3);
 	// Enable transmitter.
 	LPUART1 -> CR1 |= (0b1 << 3); // (TE='1').
 	// Enable peripheral.
@@ -140,9 +95,7 @@ void LPUART1_Init(void) {
  * @return: 			None.
  */
 void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned char print_prefix) {
-	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
-	/* Local variables */
+	// Local variables.
 	unsigned char first_non_zero_found = 0;
 	unsigned int idx;
 	unsigned char current_value = 0;
@@ -217,9 +170,6 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
 		}
 		break;
 	}
-	// Enable interrupt.
-	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
-	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }
 
 /* SEND A BYTE ARRAY THROUGH LPUART1.
@@ -227,13 +177,8 @@ void LPUART1_SendValue(unsigned int tx_value, LPUART_Format format, unsigned cha
  * @return:				None.
  */
 void LPUART1_SendString(char* tx_string) {
-	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_LPUART1);
 	// Fill TX buffer with new bytes.
 	while (*tx_string) {
 		LPUART1_FillTxBuffer((unsigned char) *(tx_string++));
 	}
-	// Enable interrupt.
-	LPUART1 -> CR1 |= (0b1 << 7); // (TXEIE = '1').
-	NVIC_EnableInterrupt(NVIC_IT_LPUART1);
 }

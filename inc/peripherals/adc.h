@@ -10,21 +10,24 @@
 
 /*** ADC macros ***/
 
-// ADC_INx channels.
-#define ADC_BANDGAP_CHANNEL			9
-#define ADC_ATX_VOLTAGE_CHANNEL		8
-#define ADC_ATX_CURRENT_CHANNEL		0
-// Bandgap voltage in mV.
-#define ADC_BANDGAP_VOLTAGE_MV		2048
-// ADC full scale result on 12-bits.
-#define ADC_FULL_SCALE_12BITS		4095
+#define ADC_REF191_VOLTAGE_MV	2048
+
+/*** ADC structures ***/
+
+typedef enum {
+	ADC_DATA_IDX_VOUT_MV = 0,
+	ADC_DATA_IDX_VMCU_MV,
+	ADC_DATA_IDX_IOUT_12BITS,
+	ADC_DATA_IDX_REF191_12BITS,
+	ADC_DATA_IDX_MAX
+} ADC_DataIndex;
 
 /*** ADC functions ***/
 
 void ADC1_Init(void);
-void ADC1_SingleConversion(unsigned char channel, unsigned int* channel_result_12bits);
-void ADC1_GetMcuVoltage(unsigned int* supply_voltage_mv);
-void ADC1_GetMcuTemperatureComp1(unsigned char* mcu_temperature_degrees);
-
+void ADC1_PerformMeasurements(void);
+void ADC1_GetData(ADC_DataIndex adc_data_idx, volatile unsigned int* data);
+void ADC1_GetTmcuComp2(volatile signed char* tmcu_degrees);
+void ADC1_GetTmcuComp1(volatile unsigned char* tmcu_degrees);
 
 #endif /* ADC_H */

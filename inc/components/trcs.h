@@ -11,16 +11,19 @@
 /*** TRCS structures ***/
 
 typedef enum {
-	TRCS_RANGE_NONE = 0,
-	TRCS_RANGE_LOW,
+	TRCS_RANGE_LOW = 0,
 	TRCS_RANGE_MIDDLE,
-	TRCS_RANGE_HIGH
+	TRCS_RANGE_HIGH,
+	TRCS_RANGE_NONE
 } TRCS_Range;
 
 /*** TRCS functions ***/
 
 void TRCS_Init(void);
-void TRCS_Task(unsigned int adc_bandgap_result_12bits, unsigned int* trcs_current_ua, unsigned char bypass_status, TRCS_Range* trcs_range);
+void TRCS_Task(void);
+void TRCS_SetBypassFlag(unsigned char bypass_flag);
+void TRCS_GetRange(volatile TRCS_Range* range);
+void TRCS_GetIout(volatile unsigned int* iout_ua);
 void TRCS_Off(void);
 
 #endif /* TRCS_H */

@@ -17,29 +17,9 @@
 
 /*** USART local macros ***/
 
-// If defined, use TXE interrupt for sending data.
-//#define USE_TXE_INTERRUPT
 // Baud rate.
 #define USART_BAUD_RATE 		9600
-// TX buffer size.
-#define USART_TX_BUFFER_SIZE	128
 #define USART2_TIMEOUT_COUNT	100000
-
-/*** USART local structures ***/
-
-#ifdef USE_TXE_INTERRUPT
-typedef struct {
-	unsigned char tx_buf[USART_TX_BUFFER_SIZE]; 	// Transmit buffer.
-	unsigned int tx_buf_read_idx; 					// Reading index in TX buffer.
-	unsigned int tx_buf_write_idx; 					// Writing index in TX buffer.
-} USART_Context;
-#endif
-
-/*** USART local global variables ***/
-
-#ifdef USE_TXE_INTERRUPT
-static volatile USART_Context usart_ctx;
-#endif
 
 /*** USART local functions ***/
 
@@ -48,22 +28,6 @@ static volatile USART_Context usart_ctx;
  * @return:	None.
  */
 void USART2_IRQHandler(void) {
-#ifdef USE_TXE_INTERRUPT
-	// TXE interrupt.
-	if (((USART2 -> ISR) & (0b1 << 7)) != 0) {
-		if ((usart_ctx.tx_buf_read_idx) != (usart_ctx.tx_buf_write_idx)) {
-			USART2 -> TDR = (usart_ctx.tx_buf)[usart_ctx.tx_buf_read_idx]; // Fill transmit data register with new byte.
-			usart_ctx.tx_buf_read_idx++; // Increment TX read index.
-			if (usart_ctx.tx_buf_read_idx == USART_TX_BUFFER_SIZE) {
-				usart_ctx.tx_buf_read_idx = 0; // Manage roll-over.
-			}
-		}
-		else {
-			// No more bytes, disable TXE interrupt.
-			USART2 -> CR1 &= ~(0b1 << 7); // TXEIE = '0'.
-		}
-	}
-#endif
 	// RXNE interrupt.
 	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
 		// Store incoming byte in command buffer.
@@ -128,7 +92,7 @@ void USART2_Init(void) {
 	USART2 -> BRR = ((RCC_GetSysclkKhz() * 1000) / (USART_BAUD_RATE)); // BRR = (fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Enable transmitter and receiver.
 	USART2 -> CR1 |= (0b1 << 5) | (0b11 << 2); // TE='1', RE='1' and RXNEIE='1'.
-	NVIC_SetPriority(NVIC_IT_USART2, 2);
+	NVIC_SetPriority(NVIC_IT_USART2, 0);
 	// Enable peripheral.
 	USART2 -> CR1 |= (0b1 << 0);
 }

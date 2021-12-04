@@ -21,23 +21,6 @@
 /*** LPTIM local global variables ***/
 
 static unsigned int lptim_clock_frequency_hz = 0;
-static volatile unsigned char lptim_wake_up = 0;
-
-/*** LPTIM local functions ***/
-
-/* LPTIM INTERRUPT HANDLER.
- * @param:	None.
- * @return:	None.
- */
-void LPTIM1_IRQHandler(void) {
-	// Check flag.
-	if (((LPTIM1 -> ISR) & (0b1 << 1)) != 0) {
-		// Set wake-up flag.
-		lptim_wake_up = 1;
-		// Clear all flags.
-		LPTIM1 -> ICR |= (0b1 << 1);
-	}
-}
 
 /* WRITE ARR REGISTER.
  * @param arr_value:	ARR register value to write.
@@ -67,26 +50,22 @@ static void LPTIM1_WriteArr(unsigned int arr_value) {
 /*** LPTIM functions ***/
 
 /* INIT LPTIM FOR DELAY OPERATION.
- * @param:	None.
- * @return:	None.
+ * @param lsi_freq_hz:	Effective LSI oscillator frequency.
+ * @return:				None.
  */
-void LPTIM1_Init(void) {
+void LPTIM1_Init(unsigned int lsi_freq_hz) {
 	// Disable peripheral.
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 	// Enable peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 18); // Reset bits 18-19.
 	RCC -> CCIPR |= (0b01 << 18); // LPTIMSEL='01' (LSI clock selected).
-	lptim_clock_frequency_hz = (RCC_LSI_FREQUENCY_HZ >> 5);
+	lptim_clock_frequency_hz = (lsi_freq_hz >> 5);
 	RCC -> APB1ENR |= (0b1 << 31); // LPTIM1EN='1'.
 	// Configure peripheral.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0'), needed to write CFGR.
 	LPTIM1 -> CFGR &= ~(0b1 << 0);
 	LPTIM1 -> CFGR |= (0b101 << 9); // Prescaler = 32.
 	LPTIM1 -> CNT &= 0xFFFF0000; // Reset counter.
-	// Enable LPTIM EXTI line.
-	LPTIM1 -> IER |= (0b1 << 1); // ARRMIE='1'.
-	// Set interrupt priority.
-	NVIC_SetPriority(NVIC_IT_LPTIM1, 2);
 	// Clear all flags.
 	LPTIM1 -> ICR |= (0b1111111 << 0);
 }
@@ -111,13 +90,11 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 	// Compute ARR value.
 	unsigned int arr = ((local_delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
 	LPTIM1_WriteArr(arr);
-	// Start timer.
-	NVIC_EnableInterrupt(NVIC_IT_LPTIM1);
-	lptim_wake_up = 0;
+	// Clear flag.
+	LPTIM1 -> ICR |= (0b1 << 1);
 	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 	// Wait for interrupt.
-	while (lptim_wake_up == 0);
+	while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);
 	// Disable timer.
 	LPTIM1 -> CR &= ~(0b1 << 0); // Disable LPTIM1 (ENABLE='0').
-	NVIC_DisableInterrupt(NVIC_IT_LPTIM1);
 }
