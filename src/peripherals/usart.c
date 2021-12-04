@@ -27,7 +27,7 @@
  * @param:	None.
  * @return:	None.
  */
-void USART2_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 	// RXNE interrupt.
 	if (((USART2 -> ISR) & (0b1 << 5)) != 0) {
 		// Store incoming byte in command buffer.
