@@ -14,7 +14,9 @@
 #include "lpuart.h"
 #include "mode.h"
 #include "nvic.h"
+#include "pwr.h"
 #include "rcc.h"
+#include "rtc.h"
 #include "tim.h"
 #include "usart.h"
 // Components.
@@ -38,6 +40,10 @@ int main(void) {
 	EXTI_Init();
 	// Init clock.
 	RCC_Init();
+	PWR_Init();
+	// Reset RTC before starting oscillators.
+	RTC_Reset();
+	// Start clocks.
 	RCC_SwitchToHsi();
 	RCC_EnableLsi();
 	// Init watchdog.
@@ -51,6 +57,7 @@ int main(void) {
 	TIM21_GetLsiFrequency(&lsi_frequency_hz);
 	TIM21_Disable();
 	// Init peripherals.
+	RTC_Init(lsi_frequency_hz);
 	TIM2_Init(PSFE_ADC_CONVERSION_PERIOD_MS);
 	TIM22_Init(PSFE_LCD_UART_PRINT_PERIOD_MS);
 	LPTIM1_Init(lsi_frequency_hz);
@@ -63,7 +70,6 @@ int main(void) {
 	TD1208_Init();
 	// Init applicative layer.
 	PSFE_Init();
-	TIM2_Start();
 	// Main loop.
 	while (1) {
 		PSFE_Task();

@@ -15,6 +15,7 @@
 #include "mapping.h"
 #include "math.h"
 #include "mode.h"
+#include "rtc.h"
 #include "td1208.h"
 #include "tim.h"
 #include "trcs.h"
@@ -32,7 +33,7 @@
 #define PSFE_VOUT_ERROR_THRESHOLD_MV			100
 #define PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
 
-#define PSFE_SIGFOX_PERIOD_S					600
+#define PSFE_SIGFOX_PERIOD_S					300
 #define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	8
 
 /*** PSFE local structures ***/
@@ -73,9 +74,7 @@ typedef struct {
 	volatile unsigned int psfe_vmcu_mv;
 	volatile unsigned char psfe_tmcu_degrees;
 	volatile TRCS_Range psfe_trcs_range;
-	unsigned int psfe_adc_calibration_seconds_count;
 	// Sigfox.
-	unsigned int psfe_sigfox_log_seconds_count;
 	unsigned char psfe_sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	PSFE_SigfoxUplinkData psfe_sigfox_uplink_data;
 } PSFE_Context;
@@ -107,7 +106,9 @@ void PSFE_Init(void) {
 	psfe_ctx.psfe_vmcu_mv = 0;
 	psfe_ctx.psfe_tmcu_degrees = 0;
 	psfe_ctx.psfe_trcs_range = TRCS_RANGE_NONE;
-	psfe_ctx.psfe_adc_calibration_seconds_count = 0;
+	// Start continuous timers.
+	TIM2_Start();
+	RTC_StartWakeUpTimer(PSFE_SIGFOX_PERIOD_S);
 }
 
 /* PSFE BOARD MAIN TASK.
@@ -168,8 +169,15 @@ void PSFE_Task(void) {
 		psfe_ctx.psfe_state = PSFE_STATE_PERIOD_CHECK;
 		break;
 	case PSFE_STATE_PERIOD_CHECK:
-		// Check Sigfox and ADC conversions period with RTC wake-up timer.
-		psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
+		// Check Sigfox period with RTC wake-up timer.
+		if (RTC_GetWakeUpTimerFlag() != 0) {
+			// Clear flag.
+			RTC_ClearWakeUpTimerFlag();
+			psfe_ctx.psfe_state = PSFE_STATE_SIGFOX;
+		}
+		else {
+			psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
+		}
 		break;
 	// Send data through Sigfox.
 	case PSFE_STATE_SIGFOX:
@@ -187,16 +195,15 @@ void PSFE_Task(void) {
 		psfe_ctx.psfe_sigfox_uplink_data.field.tmcu_degrees = psfe_ctx.psfe_tmcu_degrees;
 		// Send data.
 		TD1208_SendFrame(psfe_ctx.psfe_sigfox_uplink_data.raw_frame, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
-		// Reset counter.
-		psfe_ctx.psfe_sigfox_log_seconds_count = 0;
 		// Compute next state.
 		psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
 		break;
 	// Power-off.
 	case PSFE_STATE_OFF:
-		// Send Sigfox message and display OFF on LCD screen.
+		// Send Sigfox message and clear LCD screen.
 		if (psfe_ctx.psfe_init_done != 0) {
 			TRCS_Off();
+			TIM22_Stop();
 			LCD_Clear();
 			TD1208_SendBit(0);
 		}
