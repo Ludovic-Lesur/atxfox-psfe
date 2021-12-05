@@ -13,6 +13,7 @@
 #include "lptim.h"
 #include "lpuart.h"
 #include "mapping.h"
+#include "math.h"
 #include "mode.h"
 #include "td1208.h"
 #include "tim.h"
@@ -27,10 +28,9 @@
 #define PSFE_ON_VOLTAGE_THRESHOLD_MV			3300
 #define PSFE_OFF_VOLTAGE_THRESHOLD_MV			3200
 
+#define PSFE_VOUT_BUFFER_LENGTH					10
 #define PSFE_VOUT_ERROR_THRESHOLD_MV			100
 #define PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
-
-#define PSFE_IOUT_ERROR_VALUE					0xFFFFFF
 
 #define PSFE_SIGFOX_PERIOD_S					600
 #define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	8
@@ -40,7 +40,7 @@
 typedef enum {
 	PSFE_STATE_VMCU_MONITORING,
 	PSFE_STATE_INIT,
-	PSFE_STATE_VOUT_MONITORING,
+	PSFE_STATE_BYPASS_READ,
 	PSFE_STATE_PERIOD_CHECK,
 	PSFE_STATE_SIGFOX,
 	PSFE_STATE_OFF,
@@ -64,11 +64,10 @@ typedef struct {
 	unsigned int lsi_frequency_hz;
 	PSFE_State psfe_state;
 	unsigned char psfe_init_done;
-	volatile unsigned char psfe_no_input_previous_status;
-	unsigned char psfe_no_input_current_status;
-	volatile unsigned char psfe_bypass_previous_status;
-	unsigned char psfe_bypass_current_status;
+	unsigned char psfe_bypass_flag;
 	// Analog measurements.
+	volatile unsigned int psfe_vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
+	volatile unsigned int psfe_vout_mv_buf_idx;
 	volatile unsigned int psfe_vout_mv;
 	volatile unsigned int psfe_iout_ua;
 	volatile unsigned int psfe_vmcu_mv;
@@ -97,12 +96,12 @@ static const unsigned int psfe_vout_voltage_divider_resistance[PSFE_NUMBER_OF_BO
 void PSFE_Init(void) {
 	// Init context.
 	psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
-	psfe_ctx.psfe_no_input_current_status = 0;
-	psfe_ctx.psfe_no_input_previous_status = 0;
-	psfe_ctx.psfe_bypass_current_status = 0;
-	psfe_ctx.psfe_bypass_previous_status = 0;
+	psfe_ctx.psfe_bypass_flag = GPIO_Read(&GPIO_TRCS_BYPASS);
 	psfe_ctx.psfe_init_done = 0;
 	// Analog measurements.
+	unsigned char idx = 0;
+	for (idx=0 ; idx<PSFE_VOUT_BUFFER_LENGTH ; idx++) psfe_ctx.psfe_vout_mv_buf[idx] = 0;
+	psfe_ctx.psfe_vout_mv_buf_idx = 0;
 	psfe_ctx.psfe_vout_mv = 0;
 	psfe_ctx.psfe_iout_ua = 0;
 	psfe_ctx.psfe_vmcu_mv = 0;
@@ -134,7 +133,7 @@ void PSFE_Task(void) {
 				psfe_ctx.psfe_state = PSFE_STATE_INIT;
 			}
 			else {
-				psfe_ctx.psfe_state = PSFE_STATE_VOUT_MONITORING;
+				psfe_ctx.psfe_state = PSFE_STATE_BYPASS_READ;
 			}
 		}
 		break;
@@ -153,30 +152,18 @@ void PSFE_Task(void) {
 		LCD_PrintSigfoxId(1, psfe_ctx.psfe_sigfox_id);
 		// Send START message through Sigfox.
 		TD1208_SendBit(1);
+		// Delay for Sigfox device ID printing.
 		LPTIM1_DelayMilliseconds(2000);
-		// Print units.
-		LCD_Print(0, 0, "       V", 8);
-		LCD_Print(1, 0, "      mA", 8);
 		// Update flags.
 		psfe_ctx.psfe_init_done = 1;
-		psfe_ctx.psfe_no_input_current_status = 0;
-		psfe_ctx.psfe_no_input_previous_status = 0;
-		psfe_ctx.psfe_bypass_current_status = 0;
-		psfe_ctx.psfe_bypass_previous_status = 0;
 		// Restart LCD/UART timer.
 		TIM22_Start();
 		// Compute next state.
-		psfe_ctx.psfe_state = PSFE_STATE_VOUT_MONITORING;
+		psfe_ctx.psfe_state = PSFE_STATE_BYPASS_READ;
 		break;
-	// Output voltage monitoring.
-	case PSFE_STATE_VOUT_MONITORING:
-		// Detect open state.
-		if (psfe_ctx.psfe_vout_mv < PSFE_VOUT_ERROR_THRESHOLD_MV) {
-			psfe_ctx.psfe_no_input_current_status = 1;
-		}
-		else {
-			psfe_ctx.psfe_no_input_current_status = 0;
-		}
+	case PSFE_STATE_BYPASS_READ:
+		// Static GPIO reading in addition to EXTI interrupt.
+		psfe_ctx.psfe_bypass_flag = GPIO_Read(&GPIO_TRCS_BYPASS);
 		// Compute next state.
 		psfe_ctx.psfe_state = PSFE_STATE_PERIOD_CHECK;
 		break;
@@ -188,9 +175,9 @@ void PSFE_Task(void) {
 	case PSFE_STATE_SIGFOX:
 		// Build data.
 		psfe_ctx.psfe_sigfox_uplink_data.field.vout_mv = psfe_ctx.psfe_vout_mv;
-		if (psfe_ctx.psfe_bypass_current_status != 0) {
+		if (psfe_ctx.psfe_bypass_flag != 0) {
 			psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = TRCS_RANGE_NONE;
-			psfe_ctx.psfe_sigfox_uplink_data.field.iout_ua = PSFE_IOUT_ERROR_VALUE;
+			psfe_ctx.psfe_sigfox_uplink_data.field.iout_ua = (TRCS_IOUT_ERROR_VALUE & 0x00FFFFFF);
 		}
 		else {
 			psfe_ctx.psfe_sigfox_uplink_data.field.trcs_range = psfe_ctx.psfe_trcs_range;
@@ -230,7 +217,7 @@ void PSFE_Task(void) {
  * @return:				None.
  */
 void PSFE_SetBypassFlag(unsigned char bypass_state) {
-	psfe_ctx.psfe_bypass_current_status = bypass_state;
+	psfe_ctx.psfe_bypass_flag = bypass_state;
 }
 
 /* CALLBACK CALLED BY TIM2 INTERRUPT.
@@ -241,8 +228,14 @@ void PSFE_AdcCallback(void) {
 	// Perform measurements.
 	ADC1_PerformMeasurements();
 	TRCS_Task();
-	// Update local data.
-	ADC1_GetData(ADC_DATA_IDX_VOUT_MV, &psfe_ctx.psfe_vout_mv);
+	// Update local Vout.
+	ADC1_GetData(ADC_DATA_IDX_VOUT_MV, &psfe_ctx.psfe_vout_mv_buf[psfe_ctx.psfe_vout_mv_buf_idx]);
+	psfe_ctx.psfe_vout_mv = MATH_ComputeAverage((unsigned int*) psfe_ctx.psfe_vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH);
+	psfe_ctx.psfe_vout_mv_buf_idx++;
+	if (psfe_ctx.psfe_vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
+		psfe_ctx.psfe_vout_mv_buf_idx = 0;
+	}
+	// Update local Iout.
 	TRCS_GetIout(&psfe_ctx.psfe_iout_ua);
 	TRCS_GetRange((TRCS_Range*) &psfe_ctx.psfe_trcs_range);
 #ifdef PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
@@ -256,6 +249,7 @@ void PSFE_AdcCallback(void) {
 		psfe_ctx.psfe_iout_ua = 0;
 	}
 #endif
+	// Update local Vmcu and Tmcu.
 	ADC1_GetData(ADC_DATA_IDX_VMCU_MV, &psfe_ctx.psfe_vmcu_mv);
 	ADC1_GetTmcuComp1(&psfe_ctx.psfe_tmcu_degrees);
 }
@@ -267,37 +261,25 @@ void PSFE_AdcCallback(void) {
 void PSFE_LcdUartCallback(void) {
 	// LCD Vout display.
 	if (psfe_ctx.psfe_vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
-		if (psfe_ctx.psfe_no_input_previous_status != 0) {
-			LCD_Print(0, 0, "       V", 8);
-			psfe_ctx.psfe_no_input_previous_status = 0;
-		}
 		LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_vout_mv);
+		LCD_Print(0, 5, "  V", 3);
 	}
 	else {
-		if (psfe_ctx.psfe_no_input_previous_status == 0) {
-			LCD_Print(0, 0, "NO INPUT", 8);
-			psfe_ctx.psfe_no_input_previous_status = 1;
-		}
+		LCD_Print(0, 0, "NO INPUT", 8);
 	}
 	// LCD Iout display.
-	if (psfe_ctx.psfe_bypass_current_status == 0) {
-		if (psfe_ctx.psfe_bypass_previous_status != 0) {
-			LCD_Print(1, 0, "      mA", 8);
-			psfe_ctx.psfe_bypass_previous_status = 0;
-		}
+	if (psfe_ctx.psfe_bypass_flag == 0) {
 		LCD_PrintValue5Digits(1, 0, psfe_ctx.psfe_iout_ua);
+		LCD_Print(1, 5, " mA", 3);
 	}
 	else {
-		if (psfe_ctx.psfe_bypass_previous_status == 0) {
-			LCD_Print(1, 0, " BYPASS ", 8);
-			psfe_ctx.psfe_bypass_previous_status = 1;
-		}
+		LCD_Print(1, 0, " BYPASS ", 8);
 	}
 	// UART.
 	LPUART1_SendString("U=");
 	LPUART1_SendValue(psfe_ctx.psfe_vout_mv, LPUART_FORMAT_DECIMAL, 0);
 	LPUART1_SendString("mV*I=");
-	if (psfe_ctx.psfe_bypass_current_status == 0) {
+	if (psfe_ctx.psfe_bypass_flag == 0) {
 		LPUART1_SendValue(psfe_ctx.psfe_iout_ua, LPUART_FORMAT_DECIMAL, 0);
 		LPUART1_SendString("uA*T=");
 	}

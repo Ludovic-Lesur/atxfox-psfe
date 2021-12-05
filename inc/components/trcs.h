@@ -8,6 +8,10 @@
 #ifndef TRCS_H
 #define TRCS_H
 
+/*** TRCS macros ***/
+
+#define TRCS_IOUT_ERROR_VALUE	0xFFFFFFFF
+
 /*** TRCS structures ***/
 
 typedef enum {

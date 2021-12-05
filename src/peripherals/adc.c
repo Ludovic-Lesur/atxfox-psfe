@@ -8,10 +8,10 @@
 #include "adc.h"
 
 #include "adc_reg.h"
-#include "filter.h"
 #include "gpio.h"
 #include "lptim.h"
 #include "mapping.h"
+#include "math.h"
 #include "psfe.h"
 #include "rcc_reg.h"
 
@@ -79,7 +79,7 @@ static void ADC1_FilteredConversion(unsigned char adc_channel, unsigned int* adc
 		ADC1_SingleConversion(adc_channel, &(adc_sample_buf[idx]));
 	}
 	// Apply median filter.
-	(*adc_result_12bits) = FILTER_ComputeMedianFilter(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
+	(*adc_result_12bits) = MATH_ComputeMedianFilter(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
 }
 
 /* UPDATE ADC CALIBRATION VALUE WITH EXTERNAL BANDGAP.
