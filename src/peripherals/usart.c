@@ -97,20 +97,18 @@ void USART2_Init(void) {
 	USART2 -> CR1 |= (0b1 << 0);
 }
 
-/* SEND A BYTE ARRAY THROUGH USART2.
- * @param tx_data:			Byte array to send.
- * @param tx_data_length:	Number of bytes to send.
- * @return:					None.
+/* SEND A STRING THROUGH USART2.
+ * @param tx_string:	String to send.
+ * @return:				None.
  */
-void USART2_Send(unsigned char* tx_data, unsigned char tx_data_length) {
+void USART2_SendString(char* tx_string) {
 #ifdef USE_TXE_INTERRUPT
 	// Disable interrupt.
 	NVIC_DisableInterrupt(IT_USART2);
 #endif
 	// Fill TX buffer with new bytes.
-	unsigned char byte_idx = 0;
-	for (byte_idx=0 ; byte_idx<tx_data_length ; byte_idx++) {
-		USART2_FillTxBuffer(tx_data[byte_idx]);
+	while (*tx_string) {
+		USART2_FillTxBuffer((unsigned char) *(tx_string++));
 	}
 	// Enable interrupt.
 #ifdef USE_TXE_INTERRUPT

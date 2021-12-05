@@ -11,12 +11,6 @@
 /*** USART functions ***/
 
 void USART2_Init(void);
-void USART2_Send(unsigned char* tx_data, unsigned char tx_data_length);
-
-/*** Error management ***/
-
-#if (defined PSFE_SIGFOX_TST868U) && (defined PSFE_SIGFOX_TD1208)
-#error "Only one Sigfox module type should be selected."
-#endif
+void USART2_SendString(char* tx_string);
 
 #endif /* USART_H */

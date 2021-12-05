@@ -11,6 +11,7 @@
 #include "gpio_reg.h"
 #include "lptim.h"
 #include "mapping.h"
+#include "string.h"
 #include "tim.h"
 
 /*** LCD local macros ***/
@@ -19,35 +20,6 @@
 #define LCD_COLUMN_IDX_MAX		7
 
 /*** LCD local functions ***/
-
-/* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN DECIMAL VALUE.
- * @param value:	Value to convert (0 to 9).
- * @return:			None.
- */
-static char LCD_DecimalToAscii(unsigned char value) {
-	char ascii_code = 0;
-	if (value < 10) {
-		ascii_code = value + '0';
-	}
-	return ascii_code;
-}
-
-/* RETURN CORRESPONDING ASCII CHARACTER OF A GIVEN HEXADECIMAL VALUE.
- * @param value:	Value to convert (0 to 15).
- * @return:			None.
- */
-static char LCD_HexadecimalToAscii(unsigned char value) {
-	char ascii_code = 0;
-	if (value < 10) {
-		ascii_code = value + '0';
-	}
-	else {
-		if (value < 16) {
-			ascii_code = value + 'A' - 10;
-		}
-	}
-	return ascii_code;
-}
 
 /* CREATE A PULSE ON ENABLE SIGNAL TO WRITE LCD REGISTERS.
  * @param:	None.
@@ -161,8 +133,8 @@ void LCD_PrintSigfoxId(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_
 	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
-		sigfox_id_string[2 * byte_idx] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0xF0) >> 4);
-		sigfox_id_string[2 * byte_idx + 1] = LCD_HexadecimalToAscii((sigfox_id[byte_idx] & 0x0F) >> 0);
+		sigfox_id_string[2 * byte_idx] = STRING_HexaToAscii((sigfox_id[byte_idx] & 0xF0) >> 4);
+		sigfox_id_string[2 * byte_idx + 1] = STRING_HexaToAscii((sigfox_id[byte_idx] & 0x0F) >> 0);
 	}
 	// Print ID.
 	LCD_Print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
@@ -184,11 +156,11 @@ void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int
 		d1 = (value - (u1 * 1000)) / (100);
 		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
 		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
-		value_string[0] = LCD_DecimalToAscii(u1);
+		value_string[0] = STRING_DecimalToAscii(u1);
 		value_string[1] = '.';
-		value_string[2] = LCD_DecimalToAscii(d1);
-		value_string[3] = LCD_DecimalToAscii(d2);
-		value_string[4] = LCD_DecimalToAscii(d3);
+		value_string[2] = STRING_DecimalToAscii(d1);
+		value_string[3] = STRING_DecimalToAscii(d2);
+		value_string[4] = STRING_DecimalToAscii(d3);
 	}
 	else if (value < 100000) {
 		// Format = uu.dd
@@ -196,11 +168,11 @@ void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int
 		u2 = (value - (u1 * 10000)) / (1000);
 		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
 		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
-		value_string[0] = LCD_DecimalToAscii(u1);
-		value_string[1] = LCD_DecimalToAscii(u2);
+		value_string[0] = STRING_DecimalToAscii(u1);
+		value_string[1] = STRING_DecimalToAscii(u2);
 		value_string[2] = '.';
-		value_string[3] = LCD_DecimalToAscii(d1);
-		value_string[4] = LCD_DecimalToAscii(d2);
+		value_string[3] = STRING_DecimalToAscii(d1);
+		value_string[4] = STRING_DecimalToAscii(d2);
 	}
 	else if (value < 1000000) {
 		// Format = uuu.d
@@ -208,11 +180,11 @@ void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int
 		u2 = (value - (u1 * 100000)) / (10000);
 		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
 		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
-		value_string[0] = LCD_DecimalToAscii(u1);
-		value_string[1] = LCD_DecimalToAscii(u2);
-		value_string[2] = LCD_DecimalToAscii(u3);
+		value_string[0] = STRING_DecimalToAscii(u1);
+		value_string[1] = STRING_DecimalToAscii(u2);
+		value_string[2] = STRING_DecimalToAscii(u3);
 		value_string[3] = '.';
-		value_string[4] = LCD_DecimalToAscii(d1);
+		value_string[4] = STRING_DecimalToAscii(d1);
 	}
 	else {
 		// Format = uuuuu
@@ -221,11 +193,11 @@ void LCD_PrintValue5Digits(unsigned char row, unsigned char column, unsigned int
 		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
 		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
 		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
-		value_string[0] = LCD_DecimalToAscii(u1);
-		value_string[1] = LCD_DecimalToAscii(u2);
-		value_string[2] = LCD_DecimalToAscii(u3);
-		value_string[3] = LCD_DecimalToAscii(u4);
-		value_string[4] = LCD_DecimalToAscii(u5);
+		value_string[0] = STRING_DecimalToAscii(u1);
+		value_string[1] = STRING_DecimalToAscii(u2);
+		value_string[2] = STRING_DecimalToAscii(u3);
+		value_string[3] = STRING_DecimalToAscii(u4);
+		value_string[4] = STRING_DecimalToAscii(u5);
 	}
 	// Print value.
 	LCD_Print(row, column, value_string, 5);

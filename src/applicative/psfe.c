@@ -16,6 +16,7 @@
 #include "math.h"
 #include "mode.h"
 #include "rtc.h"
+#include "string.h"
 #include "td1208.h"
 #include "tim.h"
 #include "trcs.h"
@@ -35,6 +36,8 @@
 
 #define PSFE_SIGFOX_PERIOD_S					300
 #define PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES	8
+
+#define PSFE_STRING_VALUE_BUFFER_LENGTH			16
 
 /*** PSFE local structures ***/
 
@@ -266,6 +269,8 @@ void PSFE_AdcCallback(void) {
  * @return:	None.
  */
 void PSFE_LcdUartCallback(void) {
+	// Local variables.
+	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
 	// LCD Vout display.
 	if (psfe_ctx.psfe_vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
 		LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_vout_mv);
@@ -284,15 +289,18 @@ void PSFE_LcdUartCallback(void) {
 	}
 	// UART.
 	LPUART1_SendString("U=");
-	LPUART1_SendValue(psfe_ctx.psfe_vout_mv, LPUART_FORMAT_DECIMAL, 0);
+	STRING_ConvertValue(psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	LPUART1_SendString(str_value);
 	LPUART1_SendString("mV*I=");
 	if (psfe_ctx.psfe_bypass_flag == 0) {
-		LPUART1_SendValue(psfe_ctx.psfe_iout_ua, LPUART_FORMAT_DECIMAL, 0);
+		STRING_ConvertValue(psfe_ctx.psfe_iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
+		LPUART1_SendString(str_value);
 		LPUART1_SendString("uA*T=");
 	}
 	else {
 		LPUART1_SendString("BYPASS*T=");
 	}
-	LPUART1_SendValue(psfe_ctx.psfe_tmcu_degrees, LPUART_FORMAT_DECIMAL, 0);
+	STRING_ConvertValue(psfe_ctx.psfe_tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
+	LPUART1_SendString(str_value);
 	LPUART1_SendString("dC\n");
 }

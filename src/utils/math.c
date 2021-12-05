@@ -13,6 +13,19 @@
 
 /*** MATH functions ***/
 
+/* COMPUTE A POWER A 10.
+ * @param power:	Desired power.
+ * @return result:	Result of computation.
+ */
+unsigned int MATH_Pow10(unsigned char power) {
+	unsigned int result = 0;
+	unsigned int pow10_buf[10] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+	if (power <= 9) {
+		result = pow10_buf[power];
+	}
+	return result;
+}
+
 /* COMPUTE AVERAGE VALUE.
  * @param data:			Input buffer.
  * @param data_length:	Input buffer length.
