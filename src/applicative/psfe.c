@@ -41,7 +41,6 @@ typedef enum {
 	PSFE_STATE_VMCU_MONITORING,
 	PSFE_STATE_INIT,
 	PSFE_STATE_VOUT_MONITORING,
-	PSFE_STATE_BYPASS_MONITORING,
 	PSFE_STATE_PERIOD_CHECK,
 	PSFE_STATE_SIGFOX,
 	PSFE_STATE_OFF,
@@ -96,7 +95,7 @@ static const unsigned int psfe_vout_voltage_divider_resistance[PSFE_NUMBER_OF_BO
  * @return:	None.
  */
 void PSFE_Init(void) {
-	// State machine.
+	// Init context.
 	psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
 	psfe_ctx.psfe_no_input_current_status = 0;
 	psfe_ctx.psfe_no_input_previous_status = 0;
@@ -179,13 +178,6 @@ void PSFE_Task(void) {
 			psfe_ctx.psfe_no_input_current_status = 0;
 		}
 		// Compute next state.
-		psfe_ctx.psfe_state = PSFE_STATE_BYPASS_MONITORING;
-		break;
-	// Get bypass switch status.
-	case PSFE_STATE_BYPASS_MONITORING:
-		psfe_ctx.psfe_bypass_current_status = GPIO_Read(&GPIO_BYPASS);
-		TRCS_SetBypassFlag(psfe_ctx.psfe_bypass_current_status);
-		// Compute next state.
 		psfe_ctx.psfe_state = PSFE_STATE_PERIOD_CHECK;
 		break;
 	case PSFE_STATE_PERIOD_CHECK:
@@ -231,6 +223,14 @@ void PSFE_Task(void) {
 		psfe_ctx.psfe_state = PSFE_STATE_OFF;
 		break;
 	}
+}
+
+/* SET TRCS BYPASS STATUS (CALLED BY EXTI INTERRUPT).
+ * @param bypass_state:	Bypass switch state.
+ * @return:				None.
+ */
+void PSFE_SetBypassFlag(unsigned char bypass_state) {
+	psfe_ctx.psfe_bypass_current_status = bypass_state;
 }
 
 /* CALLBACK CALLED BY TIM2 INTERRUPT.

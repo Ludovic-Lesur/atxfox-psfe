@@ -7,6 +7,7 @@
 
 // Peripherals.
 #include "adc.h"
+#include "exti.h"
 #include "gpio.h"
 #include "iwdg.h"
 #include "lptim.h"
@@ -34,6 +35,7 @@ int main(void) {
 	NVIC_Init();
 	// Init GPIOs.
 	GPIO_Init();
+	EXTI_Init();
 	// Init clock.
 	RCC_Init();
 	RCC_SwitchToHsi();

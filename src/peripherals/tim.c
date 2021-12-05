@@ -76,7 +76,7 @@ void TIM2_Init(unsigned int period_ms) {
 	TIM2 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM2 -> DIER |= (0b1 << 0); // UIE='1'.
-	NVIC_SetPriority(NVIC_IT_TIM2, 2);
+	NVIC_SetPriority(NVIC_IT_TIM2, 1);
 	// Generate event to update registers.
 	TIM2  -> EGR |= (0b1 << 0); // UG='1'.
 }
@@ -180,7 +180,7 @@ void TIM22_Init(unsigned int period_ms) {
 	TIM22 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM22 -> DIER |= (0b1 << 0); // UIE='1'.
-	NVIC_SetPriority(NVIC_IT_TIM22, 3);
+	NVIC_SetPriority(NVIC_IT_TIM22, 2);
 	// Generate event to update registers.
 	TIM22  -> EGR |= (0b1 << 0); // UG='1'.
 }

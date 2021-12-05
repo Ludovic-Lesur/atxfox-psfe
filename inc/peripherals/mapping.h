@@ -30,7 +30,7 @@ static const GPIO GPIO_LCD_DB6 =			(GPIO) {GPIOA, 0, 7, 0};
 static const GPIO GPIO_LCD_DB7 =			(GPIO) {GPIOA, 0, 8, 0};
 
 // Current range (relays).
-static const GPIO GPIO_BYPASS =				(GPIO) {GPIOB, 1, 7, 0};
+static const GPIO GPIO_TRCS_BYPASS =		(GPIO) {GPIOB, 1, 7, 0};
 static const GPIO GPIO_TRCS_RANGE_LOW =		(GPIO) {GPIOB, 1, 6, 0};
 static const GPIO GPIO_TRCS_RANGE_MIDDLE =	(GPIO) {GPIOB, 1, 3, 0};
 static const GPIO GPIO_TRCS_RANGE_HIGH =	(GPIO) {GPIOA, 0, 15, 0};

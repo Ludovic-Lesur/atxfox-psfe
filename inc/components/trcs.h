@@ -21,7 +21,7 @@ typedef enum {
 
 void TRCS_Init(void);
 void TRCS_Task(void);
-void TRCS_SetBypassFlag(unsigned char bypass_flag);
+void TRCS_SetBypassFlag(unsigned char bypass_state);
 void TRCS_GetRange(volatile TRCS_Range* range);
 void TRCS_GetIout(volatile unsigned int* iout_ua);
 void TRCS_Off(void);

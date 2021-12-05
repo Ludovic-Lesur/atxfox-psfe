@@ -27,6 +27,7 @@ static const unsigned char psfe_vout_voltage_divider_ratio[PSFE_NUMBER_OF_BOARDS
 
 void PSFE_Init(void);
 void PSFE_Task(void);
+void PSFE_SetBypassFlag(unsigned char bypass_state);
 void PSFE_AdcCallback(void);
 void PSFE_LcdUartCallback(void);
 

@@ -8,10 +8,12 @@
 #include "trcs.h"
 
 #include "adc.h"
+#include "exti.h"
 #include "filter.h"
 #include "gpio.h"
 #include "mapping.h"
 #include "mode.h"
+#include "nvic.h"
 #include "psfe.h"
 
 /*** TRCS local macros ***/
@@ -104,7 +106,7 @@ void TRCS_Init(void) {
 	GPIO_Configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_Configure(&GPIO_TRCS_RANGE_HIGH, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
-	GPIO_Configure(&GPIO_BYPASS, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_Configure(&GPIO_TRCS_BYPASS, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Set board in high range by default to ensure power continuity.
 	GPIO_Write(&GPIO_TRCS_RANGE_HIGH, 1);
 	GPIO_Write(&GPIO_TRCS_RANGE_MIDDLE, 0);
@@ -115,7 +117,11 @@ void TRCS_Init(void) {
 	trcs_ctx.trcs_previous_range_idx = TRCS_RANGE_INDEX_HIGH;
 	trcs_ctx.trcs_iout_ua = 0;
 	trcs_ctx.trcs_iout_12bits = 0;
-	trcs_ctx.trcs_bypass_flag = 1;
+	trcs_ctx.trcs_bypass_flag = GPIO_Read(&GPIO_TRCS_BYPASS);
+	// Enable bypass switch interrupt.
+	EXTI_ConfigureGpio(&GPIO_TRCS_BYPASS, EXTI_TRIGGER_ANY_EDGE);
+	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 3);
+	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
 
 /* TRCS BOARD CONTROL FUNCTION.
@@ -173,12 +179,12 @@ void TRCS_Task(void) {
 	trcs_ctx.trcs_previous_range_idx = trcs_ctx.trcs_current_range_idx;
 }
 
-/* SET TRCS BYPASS FLAG.
- * @param bypass_flag:	Bypass state.
+/* SET TRCS BYPASS STATUS (CALLED BY EXTI INTERRUPT).
+ * @param bypass_state:	Bypass switch state.
  * @return:				None.
  */
-void TRCS_SetBypassFlag(unsigned char bypass_flag) {
-	trcs_ctx.trcs_bypass_flag = bypass_flag;
+void TRCS_SetBypassFlag(unsigned char bypass_state) {
+	trcs_ctx.trcs_bypass_flag = bypass_state;
 }
 
 /* GET CURRENT TRCS RANGE.
