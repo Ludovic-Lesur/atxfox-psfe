@@ -143,8 +143,6 @@ void PSFE_Task(void) {
 		break;
 	// Init.
 	case PSFE_STATE_INIT:
-		// Stop LCD/UART timer.
-		TIM22_Stop();
 		// Print project name and HW versions.
 		LCD_Print(0, 0, " ATXFox ", 8);
 		LCD_Print(1, 0, " HW 1.0 ", 8);
@@ -160,8 +158,6 @@ void PSFE_Task(void) {
 		LPTIM1_DelayMilliseconds(2000);
 		// Update flags.
 		psfe_ctx.psfe_init_done = 1;
-		// Restart LCD/UART timer.
-		TIM22_Start();
 		// Compute next state.
 		psfe_ctx.psfe_state = PSFE_STATE_BYPASS_READ;
 		break;
@@ -206,7 +202,6 @@ void PSFE_Task(void) {
 		// Send Sigfox message and clear LCD screen.
 		if (psfe_ctx.psfe_init_done != 0) {
 			TRCS_Off();
-			TIM22_Stop();
 			LCD_Clear();
 			TD1208_SendBit(0);
 		}
@@ -271,21 +266,24 @@ void PSFE_AdcCallback(void) {
 void PSFE_LcdUartCallback(void) {
 	// Local variables.
 	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
-	// LCD Vout display.
-	if (psfe_ctx.psfe_vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
-		LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_vout_mv);
-		LCD_Print(0, 5, "  V", 3);
-	}
-	else {
-		LCD_Print(0, 0, "NO INPUT", 8);
-	}
-	// LCD Iout display.
-	if (psfe_ctx.psfe_bypass_flag == 0) {
-		LCD_PrintValue5Digits(1, 0, psfe_ctx.psfe_iout_ua);
-		LCD_Print(1, 5, " mA", 3);
-	}
-	else {
-		LCD_Print(1, 0, " BYPASS ", 8);
+	// Update display is enabled.
+	if (psfe_ctx.psfe_init_done != 0) {
+		// LCD Vout display.
+		if (psfe_ctx.psfe_vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
+			LCD_PrintValue5Digits(0, 0, psfe_ctx.psfe_vout_mv);
+			LCD_Print(0, 5, "  V", 3);
+		}
+		else {
+			LCD_Print(0, 0, "NO INPUT", 8);
+		}
+		// LCD Iout display.
+		if (psfe_ctx.psfe_bypass_flag == 0) {
+			LCD_PrintValue5Digits(1, 0, psfe_ctx.psfe_iout_ua);
+			LCD_Print(1, 5, " mA", 3);
+		}
+		else {
+			LCD_Print(1, 0, " BYPASS ", 8);
+		}
 	}
 	// UART.
 	LPUART1_SendString("U=");

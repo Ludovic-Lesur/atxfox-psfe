@@ -59,7 +59,6 @@ int main(void) {
 	// Init peripherals.
 	RTC_Init(lsi_frequency_hz);
 	TIM2_Init(PSFE_ADC_CONVERSION_PERIOD_MS);
-	TIM22_Init(PSFE_LCD_UART_PRINT_PERIOD_MS);
 	LPTIM1_Init(lsi_frequency_hz);
 	ADC1_Init();
 	USART2_Init();

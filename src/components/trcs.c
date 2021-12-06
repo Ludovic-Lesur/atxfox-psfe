@@ -136,7 +136,7 @@ void TRCS_Init(void) {
 	trcs_ctx.trcs_bypass_flag = GPIO_Read(&GPIO_TRCS_BYPASS);
 	// Enable bypass switch interrupt.
 	EXTI_ConfigureGpio(&GPIO_TRCS_BYPASS, EXTI_TRIGGER_ANY_EDGE);
-	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 3);
+	NVIC_SetPriority(NVIC_IT_EXTI_4_15, 2);
 	NVIC_EnableInterrupt(NVIC_IT_EXTI_4_15);
 }
 

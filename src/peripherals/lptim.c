@@ -22,6 +22,8 @@
 
 static unsigned int lptim_clock_frequency_hz = 0;
 
+/*** LPTIM local functions ***/
+
 /* WRITE ARR REGISTER.
  * @param arr_value:	ARR register value to write.
  * @return:				None.
@@ -92,6 +94,7 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 	LPTIM1_WriteArr(arr);
 	// Clear flag.
 	LPTIM1 -> ICR |= (0b1 << 1);
+	// Start timer.
 	LPTIM1 -> CR |= (0b1 << 1); // SNGSTRT='1'.
 	// Wait for interrupt.
 	while (((LPTIM1 -> ISR) & (0b1 << 1)) == 0);

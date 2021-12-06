@@ -16,6 +16,7 @@
 /*** TIM local global variables ***/
 
 static volatile unsigned char tim21_flag = 0;
+static volatile unsigned char tim2_irq_count = 0;
 
 /*** TIM local functions ***/
 
@@ -27,7 +28,15 @@ static volatile unsigned char tim21_flag = 0;
 void __attribute__((optimize("-O0"))) TIM2_IRQHandler(void) {
 	// Update interrupt.
 	if (((TIM2 -> SR) & (0b1 << 0)) != 0) {
+		// Perform ADC conversion and TRCS control.
 		PSFE_AdcCallback();
+		// Check display period.
+		tim2_irq_count++;
+		if ((tim2_irq_count * PSFE_ADC_CONVERSION_PERIOD_MS) >= PSFE_LCD_UART_PRINT_PERIOD_MS) {
+			// Update display and log.
+			PSFE_LcdUartCallback();
+			tim2_irq_count = 0;
+		}
 		// Clear flag.
 		TIM2 -> SR &= ~(0b1 << 0);
 	}
@@ -38,24 +47,10 @@ void __attribute__((optimize("-O0"))) TIM2_IRQHandler(void) {
  * @return:	None.
  */
 void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
-	// Update interrupt.
+	// TI1 interrupt.
 	if (((TIM21 -> SR) & (0b1 << 1)) != 0) {
 		tim21_flag = 1;
 		TIM21 -> SR &= ~(0b1 << 1);
-	}
-}
-
-/* TIM22 INTERRUPT HANDLER.
- * @param:		None.
- * @return:		None.
- * @duration:	~ 25ms
- */
-void __attribute__((optimize("-O0"))) TIM22_IRQHandler(void) {
-	// Update interrupt.
-	if (((TIM22 -> SR) & (0b1 << 0)) != 0) {
-		PSFE_LcdUartCallback();
-		// Clear flag.
-		TIM22 -> SR &= ~(0b1 << 0);
 	}
 }
 
@@ -163,46 +158,4 @@ void TIM21_Disable(void) {
 	// Disable TIM21 peripheral.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.
-}
-
-/* CONFIGURE TIM2 FOR LCD AND UART PRINT PERIOD.
- * @param period_ms:	Timer period in ms.
- * @return:				None.
- */
-void TIM22_Init(unsigned int period_ms) {
-	// Enable peripheral clock.
-	RCC -> APB2ENR |= (0b1 << 5); // TIM22EN='1'.
-	// Reset timer before configuration.
-	TIM22 -> CR1 &= ~(0b1 << 0); // Disable TIM22 (CEN='0').
-	TIM22 -> CNT = 0; // Reset counter.
-	// Configure prescaler and period.
-	TIM22 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function).
-	TIM22 -> ARR = period_ms;
-	// Enable interrupt.
-	TIM22 -> DIER |= (0b1 << 0); // UIE='1'.
-	NVIC_SetPriority(NVIC_IT_TIM22, 2);
-	// Generate event to update registers.
-	TIM22  -> EGR |= (0b1 << 0); // UG='1'.
-}
-
-/* START TIM2.
- * @param:	None.
- * @return:	None.
- */
-void TIM22_Start(void) {
-	// Enable interrupt.
-	NVIC_EnableInterrupt(NVIC_IT_TIM22);
-	// Start timer.
-	TIM22 -> CR1 |= (0b1 << 0); // CEN='1'.
-}
-
-/* STOP TIM2.
- * @param:	None.
- * @return:	None.
- */
-void TIM22_Stop(void) {
-	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_TIM22);
-	// Stop timer.
-	TIM22 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 }
