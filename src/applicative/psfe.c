@@ -286,19 +286,25 @@ void PSFE_LcdUartCallback(void) {
 		}
 	}
 	// UART.
-	LPUART1_SendString("U=");
+	LPUART1_SendString("Vout=");
 	STRING_ConvertValue(psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
 	LPUART1_SendString(str_value);
-	LPUART1_SendString("mV*I=");
+	LPUART1_SendString("mV Iout=");
 	if (psfe_ctx.psfe_bypass_flag == 0) {
 		STRING_ConvertValue(psfe_ctx.psfe_iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
 		LPUART1_SendString(str_value);
-		LPUART1_SendString("uA*T=");
+		LPUART1_SendString("uA Vmcu=");
 	}
 	else {
-		LPUART1_SendString("BYPASS*T=");
+		LPUART1_SendString("BYPASS Vmcu=");
 	}
-	STRING_ConvertValue(psfe_ctx.psfe_tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_ConvertValue(psfe_ctx.psfe_vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	LPUART1_SendString(str_value);
+	LPUART1_SendString("mV Tmcu=");
+	if ((psfe_ctx.psfe_tmcu_degrees & 0x80) != 0) {
+		LPUART1_SendString("-");
+	}
+	STRING_ConvertValue((psfe_ctx.psfe_tmcu_degrees & 0x7F), STRING_FORMAT_DECIMAL, 0, str_value);
 	LPUART1_SendString(str_value);
 	LPUART1_SendString("dC\n");
 }
