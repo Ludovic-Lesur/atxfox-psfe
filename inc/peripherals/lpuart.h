@@ -10,7 +10,7 @@
 
 /*** LPUART functions ***/
 
-void LPUART1_Init(void);
-void LPUART1_SendString(char* tx_string);
+void LPUART1_init(void);
+void LPUART1_send_string(char* tx_string);
 
 #endif /* LPUART_H */

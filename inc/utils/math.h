@@ -10,8 +10,8 @@
 
 /*** MATH functions ***/
 
-unsigned int MATH_Pow10(unsigned char power);
-unsigned int MATH_ComputeAverage(unsigned int* data, unsigned char data_length);
-unsigned int MATH_ComputeMedianFilter(unsigned int* buf, unsigned char median_length, unsigned char average_length);
+unsigned int MATH_pow_10(unsigned char power);
+unsigned int MATH_average(unsigned int* data, unsigned char data_length);
+unsigned int MATH_median_filter(unsigned int* data, unsigned char median_length, unsigned char average_length);
 
 #endif /* MATH_H */

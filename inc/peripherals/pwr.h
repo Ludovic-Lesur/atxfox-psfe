@@ -10,6 +10,6 @@
 
 /*** PWR functions ***/
 
-void PWR_Init(void);
+void PWR_init(void);
 
 #endif /* PWR_H */

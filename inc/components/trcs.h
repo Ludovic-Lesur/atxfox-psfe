@@ -18,16 +18,17 @@ typedef enum {
 	TRCS_RANGE_LOW = 0,
 	TRCS_RANGE_MIDDLE,
 	TRCS_RANGE_HIGH,
-	TRCS_RANGE_NONE
-} TRCS_Range;
+	TRCS_RANGE_NONE,
+	TRCS_RANGE_LAST
+} TRCS_range_t;
 
 /*** TRCS functions ***/
 
-void TRCS_Init(void);
-void TRCS_Task(void);
-void TRCS_SetBypassFlag(unsigned char bypass_state);
-void TRCS_GetRange(volatile TRCS_Range* range);
-void TRCS_GetIout(volatile unsigned int* iout_ua);
-void TRCS_Off(void);
+void TRCS_init(void);
+void TRCS_task(void);
+void TRCS_set_bypass_flag(unsigned char bypass_state);
+void TRCS_get_range(volatile TRCS_range_t* range);
+void TRCS_get_iout(volatile unsigned int* iout_ua);
+void TRCS_off(void);
 
 #endif /* TRCS_H */

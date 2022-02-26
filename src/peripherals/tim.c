@@ -29,12 +29,12 @@ void __attribute__((optimize("-O0"))) TIM2_IRQHandler(void) {
 	// Update interrupt.
 	if (((TIM2 -> SR) & (0b1 << 0)) != 0) {
 		// Perform ADC conversion and TRCS control.
-		PSFE_AdcCallback();
+		PSFE_adc_callback();
 		// Check display period.
 		tim2_irq_count++;
 		if ((tim2_irq_count * PSFE_ADC_CONVERSION_PERIOD_MS) >= PSFE_LCD_UART_PRINT_PERIOD_MS) {
 			// Update display and log.
-			PSFE_LcdUartCallback();
+			PSFE_lcd_uart_callback();
 			tim2_irq_count = 0;
 		}
 		// Clear flag.
@@ -60,18 +60,18 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
  * @param period_ms:	Timer period in ms.
  * @return:				None.
  */
-void TIM2_Init(unsigned int period_ms) {
+void TIM2_init(unsigned int period_ms) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Reset timer before configuration.
 	TIM2 -> CR1 &= ~(0b1 << 0); // Disable TIM2 (CEN='0').
 	TIM2 -> CNT = 0; // Reset counter.
 	// Configure prescaler and period.
-	TIM2 -> PSC = RCC_GetSysclkKhz(); // Timer is clocked by SYSCLK (see RCC_Init() function).
+	TIM2 -> PSC = RCC_get_sysclk_khz(); // Timer is clocked by SYSCLK (see RCC_init() function).
 	TIM2 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM2 -> DIER |= (0b1 << 0); // UIE='1'.
-	NVIC_SetPriority(NVIC_IT_TIM2, 1);
+	NVIC_set_priority(NVIC_IT_TIM2, 1);
 	// Generate event to update registers.
 	TIM2  -> EGR |= (0b1 << 0); // UG='1'.
 }
@@ -80,9 +80,9 @@ void TIM2_Init(unsigned int period_ms) {
  * @param:	None.
  * @return:	None.
  */
-void TIM2_Start(void) {
+void TIM2_start(void) {
 	// Enable interrupt.
-	NVIC_EnableInterrupt(NVIC_IT_TIM2);
+	NVIC_enable_interrupt(NVIC_IT_TIM2);
 	// Start timer.
 	TIM2 -> CR1 |= (0b1 << 0); // CEN='1'.
 }
@@ -91,7 +91,7 @@ void TIM2_Start(void) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Init(void) {
+void TIM21_init(void) {
 	// Enable peripheral clock.
 	RCC -> APB2ENR |= (0b1 << 2); // TIM21EN='1'.
 	// Reset timer before configuration.
@@ -114,7 +114,7 @@ void TIM21_Init(void) {
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
  * @return:						None.
  */
-void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
+void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	// Local variables.
 	unsigned char tim21_interrupt_count = 0;
 	unsigned int tim21_ccr1_edge1 = 0;
@@ -124,7 +124,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 	TIM21 -> CCR1 &= 0xFFFF0000;
 	// Enable interrupt.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
-	NVIC_EnableInterrupt(NVIC_IT_TIM21);
+	NVIC_enable_interrupt(NVIC_IT_TIM21);
 	// Enable TIM21 peripheral.
 	TIM21 -> CR1 |= (0b1 << 0); // CEN='1'.
 	TIM21 -> CCER |= (0b1 << 0); // CC1E='1'.
@@ -142,7 +142,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
 		}
 	}
 	// Disable interrupt.
-	NVIC_DisableInterrupt(NVIC_IT_TIM21);
+	NVIC_disable_interrupt(NVIC_IT_TIM21);
 	// Stop counter.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
@@ -154,7 +154,7 @@ void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz) {
  * @param:	None.
  * @return:	None.
  */
-void TIM21_Disable(void) {
+void TIM21_disable(void) {
 	// Disable TIM21 peripheral.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	RCC -> APB2ENR &= ~(0b1 << 2); // TIM21EN='0'.

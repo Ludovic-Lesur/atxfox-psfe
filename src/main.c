@@ -34,45 +34,45 @@
  */
 int main(void) {
 	// Init memory.
-	NVIC_Init();
+	NVIC_init();
 	// Init GPIOs.
-	GPIO_Init();
-	EXTI_Init();
+	GPIO_init();
+	EXTI_init();
 	// Init clock.
-	RCC_Init();
-	PWR_Init();
+	RCC_init();
+	PWR_init();
 	// Reset RTC before starting oscillators.
-	RTC_Reset();
+	RTC_reset();
 	// Start clocks.
-	RCC_SwitchToHsi();
-	RCC_EnableLsi();
+	RCC_switch_to_hsi();
+	RCC_enable_lsi();
 	// Init watchdog.
 #ifndef DEBUG
-	IWDG_Init();
+	IWDG_init();
 #endif
-	IWDG_Reload();
+	IWDG_reload();
 	// Get effective LSI frequency.
 	unsigned int lsi_frequency_hz = 0;
-	TIM21_Init();
-	TIM21_GetLsiFrequency(&lsi_frequency_hz);
-	TIM21_Disable();
+	TIM21_init();
+	TIM21_get_lsi_frequency(&lsi_frequency_hz);
+	TIM21_disable();
 	// Init peripherals.
-	RTC_Init(lsi_frequency_hz);
-	TIM2_Init(PSFE_ADC_CONVERSION_PERIOD_MS);
-	LPTIM1_Init(lsi_frequency_hz);
-	ADC1_Init();
-	USART2_Init();
-	LPUART1_Init();
+	RTC_init(lsi_frequency_hz);
+	TIM2_init(PSFE_ADC_CONVERSION_PERIOD_MS);
+	LPTIM1_init(lsi_frequency_hz);
+	ADC1_init();
+	USART2_init();
+	LPUART1_init();
 	// Init components.
-	LCD_Init();
-	TRCS_Init();
-	TD1208_Init();
+	LCD_init();
+	TRCS_init();
+	TD1208_init();
 	// Init applicative layer.
-	PSFE_Init();
+	PSFE_init();
 	// Main loop.
 	while (1) {
-		PSFE_Task();
-		IWDG_Reload();
+		PSFE_task();
+		IWDG_reload();
 	}
 	return 0;
 }

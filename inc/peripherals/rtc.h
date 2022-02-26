@@ -10,10 +10,10 @@
 
 /*** RTC functions ***/
 
-void RTC_Reset(void);
-void RTC_Init(unsigned int lsi_freq_hz);
-void RTC_StartWakeUpTimer(unsigned int delay_seconds);
-volatile unsigned char RTC_GetWakeUpTimerFlag(void);
-void RTC_ClearWakeUpTimerFlag(void);
+void RTC_reset(void);
+void RTC_init(unsigned int lsi_freq_hz);
+void RTC_start_wakeup_timer(unsigned int delay_seconds);
+volatile unsigned char RTC_get_wakeup_timer_flag(void);
+void RTC_clear_wakeup_timer_flag(void);
 
 #endif /* RTC_H */

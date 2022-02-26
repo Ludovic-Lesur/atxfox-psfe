@@ -10,7 +10,7 @@
 
 /*** LPTIM functions ***/
 
-void LPTIM1_Init(unsigned int lsi_freq_hz);
-void LPTIM1_DelayMilliseconds(unsigned int delay_ms);
+void LPTIM1_init(unsigned int lsi_freq_hz);
+void LPTIM1_delay_milliseconds(unsigned int delay_ms);
 
 #endif /* PERIPHERALS_LPTIM_H_ */

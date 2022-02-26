@@ -19,15 +19,15 @@ typedef enum {
 	ADC_DATA_IDX_VMCU_MV,
 	ADC_DATA_IDX_IOUT_12BITS,
 	ADC_DATA_IDX_REF191_12BITS,
-	ADC_DATA_IDX_MAX
-} ADC_DataIndex;
+	ADC_DATA_IDX_LAST
+} ADC_data_index_t;
 
 /*** ADC functions ***/
 
-void ADC1_Init(void);
-void ADC1_PerformMeasurements(void);
-void ADC1_GetData(ADC_DataIndex adc_data_idx, volatile unsigned int* data);
-void ADC1_GetTmcuComp2(volatile signed char* tmcu_degrees);
-void ADC1_GetTmcuComp1(volatile unsigned char* tmcu_degrees);
+void ADC1_init(void);
+void ADC1_perform_measurements(void);
+void ADC1_get_data(ADC_data_index_t data_idx, volatile unsigned int* data);
+void ADC1_get_tmcu_comp2(volatile signed char* tmcu_degrees);
+void ADC1_get_tmcu_comp1(volatile unsigned char* tmcu_degrees);
 
 #endif /* ADC_H */

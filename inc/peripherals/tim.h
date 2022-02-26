@@ -10,15 +10,15 @@
 
 /*** TIM functions ***/
 
-void TIM2_Init(unsigned int period_ms);
-void TIM2_Start(void);
+void TIM2_init(unsigned int period_ms);
+void TIM2_start(void);
 
-void TIM21_Init(void);
-void TIM21_GetLsiFrequency(unsigned int* lsi_frequency_hz);
-void TIM21_Disable(void);
+void TIM21_init(void);
+void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+void TIM21_disable(void);
 
-void TIM22_Init(unsigned int period_ms);
-void TIM22_Start(void);
-void TIM22_Stop(void);
+void TIM22_init(unsigned int period_ms);
+void TIM22_start(void);
+void TIM22_stop(void);
 
 #endif /* TIM_H */

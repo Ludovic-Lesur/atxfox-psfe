@@ -28,7 +28,7 @@ static unsigned int lptim_clock_frequency_hz = 0;
  * @param arr_value:	ARR register value to write.
  * @return:				None.
  */
-static void LPTIM1_WriteArr(unsigned int arr_value) {
+static void LPTIM1_write_arr(unsigned int arr_value) {
 	unsigned int loop_count = 0;
 	// Reset bits.
 	LPTIM1 -> ICR |= (0b1 << 4);
@@ -55,7 +55,7 @@ static void LPTIM1_WriteArr(unsigned int arr_value) {
  * @param lsi_freq_hz:	Effective LSI oscillator frequency.
  * @return:				None.
  */
-void LPTIM1_Init(unsigned int lsi_freq_hz) {
+void LPTIM1_init(unsigned int lsi_freq_hz) {
 	// Disable peripheral.
 	RCC -> APB1ENR &= ~(0b1 << 31); // LPTIM1EN='0'.
 	// Enable peripheral clock.
@@ -76,7 +76,7 @@ void LPTIM1_Init(unsigned int lsi_freq_hz) {
  * @param delay_ms:	Number of milliseconds to wait.
  * @return:			None.
  */
-void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
+void LPTIM1_delay_milliseconds(unsigned int delay_ms) {
 	// Clamp value if required.
 	unsigned int local_delay_ms = delay_ms;
 	if (local_delay_ms > LPTIM_DELAY_MS_MAX) {
@@ -91,7 +91,7 @@ void LPTIM1_DelayMilliseconds(unsigned int delay_ms) {
 	LPTIM1 -> CNT &= 0xFFFF0000;
 	// Compute ARR value.
 	unsigned int arr = ((local_delay_ms * lptim_clock_frequency_hz) / (1000)) & 0x0000FFFF;
-	LPTIM1_WriteArr(arr);
+	LPTIM1_write_arr(arr);
 	// Clear flag.
 	LPTIM1 -> ICR |= (0b1 << 1);
 	// Start timer.

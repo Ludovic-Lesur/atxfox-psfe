@@ -25,10 +25,10 @@ static const unsigned char psfe_vout_voltage_divider_ratio[PSFE_NUMBER_OF_BOARDS
 
 /*** PSFE functions ***/
 
-void PSFE_Init(void);
-void PSFE_Task(void);
-void PSFE_SetBypassFlag(unsigned char bypass_state);
-void PSFE_AdcCallback(void);
-void PSFE_LcdUartCallback(void);
+void PSFE_init(void);
+void PSFE_task(void);
+void PSFE_set_bypass_flag(unsigned char bypass_state);
+void PSFE_adc_callback(void);
+void PSFE_lcd_uart_callback(void);
 
 #endif /* ATXFOX_H */

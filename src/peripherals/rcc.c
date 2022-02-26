@@ -25,7 +25,7 @@ static unsigned int rcc_sysclk_khz;
  * @param:	None.
  * @return:	None.
  */
-static void RCC_Delay(void) {
+static void RCC_delay(void) {
 	unsigned int j = 0;
 	unsigned int loop_count = (19 * rcc_sysclk_khz) / 3; // Value for 100ms.
 	for (j=0 ; j<loop_count ; j++) {
@@ -43,7 +43,7 @@ static void RCC_Delay(void) {
  * @param:	None.
  * @return:	None.
  */
-void RCC_Init(void) {
+void RCC_init(void) {
 	// Prescalers (HCLK, PCLK1 and PCLK2 must not exceed 32MHz).
 	RCC -> CFGR &= ~(0b1111 << 4); // HCLK = SYSCLK = 16MHz (HPRE='0000').
 	RCC -> CFGR &= ~(0b111 << 8); // PCLK1 = HCLK = 16MHz (PPRE1='000').
@@ -58,7 +58,7 @@ void RCC_Init(void) {
  * @param:					None.
  * @return rcc_sysclk_khz:	Current system clock frequency in kHz.
  */
-unsigned int RCC_GetSysclkKhz(void) {
+unsigned int RCC_get_sysclk_khz(void) {
 	return rcc_sysclk_khz;
 }
 
@@ -66,16 +66,16 @@ unsigned int RCC_GetSysclkKhz(void) {
  * @param:					None.
  * @return sysclk_on_hsi:	'1' if SYSCLK source was successfully switched to HSI, 0 otherwise.
  */
-unsigned char RCC_SwitchToHsi(void) {
+unsigned char RCC_switch_to_hsi(void) {
 	// Set flash latency.
-	FLASH_SetLatency(1);
+	FLASH_set_latency(1);
 	// Init HSI.
 	RCC -> CR |= (0b1 << 0); // Enable HSI (HSI16ON='1').
 	// Wait for HSI to be stable.
 	unsigned char sysclk_on_hsi = 0;
 	unsigned int count = 0;
 	while ((((RCC -> CR) & (0b1 << 2)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		RCC_Delay();
+		RCC_delay();
 		count++; // Wait for HSIRDYF='1' or timeout.
 	}
 	// Check timeout.
@@ -86,7 +86,7 @@ unsigned char RCC_SwitchToHsi(void) {
 		// Wait for clock switch.
 		count = 0;
 		while ((((RCC -> CFGR) & (0b11 << 2)) != (0b01 << 2)) && (count < RCC_TIMEOUT_COUNT)) {
-			RCC_Delay();
+			RCC_delay();
 			count++; // Wait for SWS='01' or timeout.
 		}
 		// Check timeout.
@@ -106,14 +106,14 @@ unsigned char RCC_SwitchToHsi(void) {
  * @param:					None.
  * @return lsi_available:	'1' if LSI was successfully started, 0 otherwise.
  */
-unsigned char RCC_EnableLsi(void) {
+unsigned char RCC_enable_lsi(void) {
 	// Enable LSI.
 	RCC -> CSR |= (0b1 << 0); // LSION='1'.
 	// Wait for LSI to be stable.
 	unsigned char lsi_available = 0;
 	unsigned int count = 0;
 	while ((((RCC -> CSR) & (0b1 << 1)) == 0) && (count < RCC_TIMEOUT_COUNT)) {
-		RCC_Delay();
+		RCC_delay();
 		count++; // Wait for LSIRDY='1'.
 	}
 	// Check timeout.

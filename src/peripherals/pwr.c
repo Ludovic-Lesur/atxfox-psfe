@@ -16,7 +16,7 @@
  * @param:	None.
  * @return:	None.
  */
-void PWR_Init(void) {
+void PWR_init(void) {
 	// Enable power interface clock.
 	RCC -> APB1ENR |= (0b1 << 28); // PWREN='1'.
 	// Unlock back-up registers (DBP bit).

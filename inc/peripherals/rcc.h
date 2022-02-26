@@ -15,9 +15,9 @@
 
 /*** RCC functions ***/
 
-void RCC_Init(void);
-unsigned int RCC_GetSysclkKhz(void);
-unsigned char RCC_SwitchToHsi(void);
-unsigned char RCC_EnableLsi(void);
+void RCC_init(void);
+unsigned int RCC_get_sysclk_khz(void);
+unsigned char RCC_switch_to_hsi(void);
+unsigned char RCC_enable_lsi(void);
 
 #endif /* RCC_H */

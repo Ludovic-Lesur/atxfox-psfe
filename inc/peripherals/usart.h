@@ -10,7 +10,7 @@
 
 /*** USART functions ***/
 
-void USART2_Init(void);
-void USART2_SendString(char* tx_string);
+void USART2_init(void);
+void USART2_send_string(char* tx_string);
 
 #endif /* USART_H */
