@@ -14,7 +14,7 @@
 #define STRING_DIGIT_BOOLEAN_LENGTH			1
 #define STRING_DIGIT_DECIMAL_MAX			9
 #define STRING_DIGIT_HEXADECIMAL_MAX		0x0F
-#define __STRING_H__EXADECICMAL_DIGIT_PER_BYTE	2
+#define STRING_HEXADECICMAL_DIGIT_PER_BYTE	2
 
 /*** STRING local functions ***/
 
@@ -280,7 +280,7 @@ STRING_status_t STRING_string_to_value(char* str, STRING_format_t format, unsign
 			goto errors;
 		}
 		// Check if parameter can be binary coded on 32 bits = 4 bytes.
-		if (number_of_digits > (__STRING_H__EXADECICMAL_DIGIT_PER_BYTE * MATH_HEXADECIMAL_MAX_LENGTH)) {
+		if (number_of_digits > (STRING_HEXADECICMAL_DIGIT_PER_BYTE * MATH_HEXADECIMAL_MAX_LENGTH)) {
 			// Error in parameter -> value is too large.
 			status = STRING_ERROR_HEXADECIMAL_OVERFLOW;
 			goto errors;

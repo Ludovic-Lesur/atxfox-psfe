@@ -62,7 +62,7 @@ PARSER_status_t PARSER_compare(PARSER_context_t* parser_ctx, PARSER_mode_t mode,
 			goto errors;
 		}
 		break;
-	case PARSER___MODE_H__EADER:
+	case PARSER_MODE_HEADER:
 		// Update start index.
 		(parser_ctx -> start_idx) = idx;
 		break;

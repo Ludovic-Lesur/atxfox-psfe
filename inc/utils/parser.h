@@ -6,7 +6,7 @@
  */
 
 #ifndef __PARSER_H__
-#define	__PARSER_H__
+#define __PARSER_H__
 
 #include "string.h"
 
@@ -26,7 +26,7 @@ typedef enum {
 
 typedef enum {
 	PARSER_MODE_COMMAND,
-	PARSER___MODE_H__EADER,
+	PARSER_MODE_HEADER,
 	PARSER_MODE_LAST
 } PARSER_mode_t;
 

@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef __LP__TIM_H____
-#define __LP__TIM_H____
+#ifndef __LPTIM_H__
+#define __LPTIM_H__
 
 /*** LPTIM structures ***/
 
@@ -27,4 +27,4 @@ LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char st
 #define LPTIM1_error_check() { ERROR_status_check(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
 #define LPTIM1_error_check_print() { ERROR_status_check_print(lptim_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }
 
-#endif /* __LP__TIM_H____ */
+#endif /* __LPTIM_H__ */

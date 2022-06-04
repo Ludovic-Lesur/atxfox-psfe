@@ -96,7 +96,7 @@ unsigned char RCC_switch_to_hsi(void) {
 			RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
 			// Update flag and frequency.
 			sysclk_on_hsi = 1;
-			rcc_sysclk_khz = __RCC_H__SI_FREQUENCY_KHZ;
+			rcc_sysclk_khz = RCC_HSI_FREQUENCY_KHZ;
 		}
 	}
 	return sysclk_on_hsi;
