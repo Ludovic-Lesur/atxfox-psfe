@@ -147,7 +147,7 @@ void TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
 	// Compute LSI frequency.
-	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
+	(*lsi_frequency_hz) = (8 * __RCC_H__SI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
 }
 
 /* DISABLE TIM21 PERIPHERAL.

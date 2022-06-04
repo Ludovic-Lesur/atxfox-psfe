@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef FLASH_REG_H
-#define FLASH_REG_H
+#ifndef __FLASH_REG_H__
+#define __FLASH_REG_H__
 
 /*** FLASH registers ***/
 
@@ -33,4 +33,4 @@ typedef struct {
 #define EEPROM_START_ADDRESS	(unsigned int) 0x08080000
 #define EEPROM_SIZE				1024 // 1kB for STM32L041xxxx (category 2 device).
 
-#endif /* FLASH_REG_H */
+#endif /* __FLASH_REG_H__ */

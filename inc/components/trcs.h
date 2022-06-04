@@ -2,11 +2,11 @@
  * trcs.h
  *
  *  Created on: 30 dec. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef TRCS_H
-#define TRCS_H
+#ifndef __TRCS_H__
+#define __TRCS_H__
 
 /*** TRCS macros ***/
 
@@ -31,4 +31,4 @@ void TRCS_get_range(volatile TRCS_range_t* range);
 void TRCS_get_iout(volatile unsigned int* iout_ua);
 void TRCS_off(void);
 
-#endif /* TRCS_H */
+#endif /* __TRCS_H__ */

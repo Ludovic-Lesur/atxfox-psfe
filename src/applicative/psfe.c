@@ -75,7 +75,7 @@ typedef struct {
 	volatile unsigned int psfe_vout_mv;
 	volatile unsigned int psfe_iout_ua;
 	volatile unsigned int psfe_vmcu_mv;
-	volatile unsigned char psfe_tmcu_degrees;
+	volatile signed char psfe_tmcu_degrees;
 	volatile TRCS_range_t psfe_trcs_range;
 	// Sigfox.
 	unsigned char psfe_sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
@@ -103,6 +103,8 @@ void PSFE_init(void) {
 	// Analog measurements.
 	unsigned char idx = 0;
 	for (idx=0 ; idx<PSFE_VOUT_BUFFER_LENGTH ; idx++) psfe_ctx.psfe_vout_mv_buf[idx] = 0;
+	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.psfe_sigfox_id[idx] = 0x00;
+	for (idx=0 ; idx<PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES ; idx++) psfe_ctx.psfe_sigfox_uplink_data.raw_frame[idx] = (0x65 + idx);
 	psfe_ctx.psfe_vout_mv_buf_idx = 0;
 	psfe_ctx.psfe_vout_mv = 0;
 	psfe_ctx.psfe_iout_ua = 0;
@@ -119,10 +121,6 @@ void PSFE_init(void) {
  * @return:	None.
  */
 void PSFE_task(void) {
-	// Local variables.
-#ifdef PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
-	unsigned int vout_voltage_divider_current_ua = 0;
-#endif
 	// Perform state machine.
 	switch (psfe_ctx.psfe_state) {
 	// Supply voltage monitoring.
@@ -146,16 +144,16 @@ void PSFE_task(void) {
 		// Print project name and HW versions.
 		LCD_print(0, 0, " ATXFox ", 8);
 		LCD_print(1, 0, " HW 1.0 ", 8);
-		LPTIM1_delay_milliseconds(2000);
+		LPTIM1_delay_milliseconds(2000, 0);
 		// Print Sigfox device ID.
-		TD1208_disable_echo();
+		TD1208_disable_echo_and_verbose();
 		TD1208_get_sigfox_id(psfe_ctx.psfe_sigfox_id);
 		LCD_print(0, 0, " SFX ID ", 8);
 		LCD_print_sigfox_id(1, psfe_ctx.psfe_sigfox_id);
 		// Send START message through Sigfox.
 		TD1208_send_bit(1);
 		// Delay for Sigfox device ID printing.
-		LPTIM1_delay_milliseconds(2000);
+		LPTIM1_delay_milliseconds(2000, 0);
 		// Update flags.
 		psfe_ctx.psfe_init_done = 1;
 		// Compute next state.
@@ -234,8 +232,8 @@ void PSFE_adc_callback(void) {
 	ADC1_perform_measurements();
 	TRCS_task();
 	// Update local Vout.
-	ADC1_get_data(ADC_DATA_IDX_VOUT_MV, &psfe_ctx.psfe_vout_mv_buf[psfe_ctx.psfe_vout_mv_buf_idx]);
-	psfe_ctx.psfe_vout_mv = MATH_average((unsigned int*) psfe_ctx.psfe_vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH);
+	ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (unsigned int*) &psfe_ctx.psfe_vout_mv_buf[psfe_ctx.psfe_vout_mv_buf_idx]);
+	psfe_ctx.psfe_vout_mv = MATH_average_u32((unsigned int*) psfe_ctx.psfe_vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH);
 	psfe_ctx.psfe_vout_mv_buf_idx++;
 	if (psfe_ctx.psfe_vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
 		psfe_ctx.psfe_vout_mv_buf_idx = 0;
@@ -255,8 +253,8 @@ void PSFE_adc_callback(void) {
 	}
 #endif
 	// Update local Vmcu and Tmcu.
-	ADC1_get_data(ADC_DATA_IDX_VMCU_MV, &psfe_ctx.psfe_vmcu_mv);
-	ADC1_get_tmcu_comp1(&psfe_ctx.psfe_tmcu_degrees);
+	ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (unsigned int*) &psfe_ctx.psfe_vmcu_mv);
+	ADC1_get_tmcu((signed char*) &psfe_ctx.psfe_tmcu_degrees);
 }
 
 /* CALLBACK CALLED BY TIM22 INTERRUPT.
@@ -287,24 +285,21 @@ void PSFE_lcd_uart_callback(void) {
 	}
 	// UART.
 	LPUART1_send_string("Vout=");
-	STRING_convert_value(psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_value_to_string((int) psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
 	LPUART1_send_string(str_value);
 	LPUART1_send_string("mV Iout=");
 	if (psfe_ctx.psfe_bypass_flag == 0) {
-		STRING_convert_value(psfe_ctx.psfe_iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
+		STRING_value_to_string((int) psfe_ctx.psfe_iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
 		LPUART1_send_string(str_value);
 		LPUART1_send_string("uA Vmcu=");
 	}
 	else {
 		LPUART1_send_string("BYPASS Vmcu=");
 	}
-	STRING_convert_value(psfe_ctx.psfe_vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_value_to_string((int) psfe_ctx.psfe_vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
 	LPUART1_send_string(str_value);
 	LPUART1_send_string("mV Tmcu=");
-	if ((psfe_ctx.psfe_tmcu_degrees & 0x80) != 0) {
-		LPUART1_send_string("-");
-	}
-	STRING_convert_value((psfe_ctx.psfe_tmcu_degrees & 0x7F), STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_value_to_string((int) psfe_ctx.psfe_tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
 	LPUART1_send_string(str_value);
 	LPUART1_send_string("dC\n");
 }

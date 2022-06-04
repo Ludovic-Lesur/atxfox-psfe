@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef MAPPING_H
-#define MAPPING_H
+#ifndef __MAPPING_H__
+#define __MAPPING_H__
 
 #include "gpio.h"
 
@@ -43,4 +43,4 @@ static const GPIO_pin_t GPIO_USART2_RX =			(GPIO_pin_t) {GPIOA, 0, 10, 4};
 static const GPIO_pin_t GPIO_LPUART1_TX =			(GPIO_pin_t) {GPIOA, 0, 14, 6};
 static const GPIO_pin_t GPIO_LPUART1_RX =			(GPIO_pin_t) {GPIOA, 0, 13, 6};
 
-#endif /* MAPPING_H */
+#endif /* __MAPPING_H__ */

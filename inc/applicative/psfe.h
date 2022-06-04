@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef ATXFOX_H
-#define ATXFOX_H
+#ifndef __PSFE_H__
+#define __PSFE_H__
 
 #include "mode.h"
 
@@ -31,4 +31,4 @@ void PSFE_set_bypass_flag(unsigned char bypass_state);
 void PSFE_adc_callback(void);
 void PSFE_lcd_uart_callback(void);
 
-#endif /* ATXFOX_H */
+#endif /* __PSFE_H__ */

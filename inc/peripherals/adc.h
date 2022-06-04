@@ -5,8 +5,10 @@
  *      Author: Ludo
  */
 
-#ifndef ADC_H
-#define ADC_H
+#ifndef __ADC_H__
+#define __ADC_H__
+
+#include "lptim.h"
 
 /*** ADC macros ***/
 
@@ -15,19 +17,31 @@
 /*** ADC structures ***/
 
 typedef enum {
-	ADC_DATA_IDX_VOUT_MV = 0,
-	ADC_DATA_IDX_VMCU_MV,
-	ADC_DATA_IDX_IOUT_12BITS,
-	ADC_DATA_IDX_REF191_12BITS,
-	ADC_DATA_IDX_LAST
+	ADC_SUCCESS = 0,
+	ADC_ERROR_CALIBRATION,
+	ADC_ERROR_DATA_INDEX,
+	ADC_ERROR_TIMEOUT,
+	ADC_ERROR_BASE_LPTIM = 0x0100,
+	ADC_ERROR_BASE_LAST = (ADC_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST)
+} ADC_status_t;
+
+typedef enum {
+	ADC_DATA_INDEX_VOUT_MV = 0,
+	ADC_DATA_INDEX_VMCU_MV,
+	ADC_DATA_INDEX_IOUT_12BITS,
+	ADC_DATA_INDEX_REF191_12BITS,
+	ADC_DATA_INDEX_LAST
 } ADC_data_index_t;
 
 /*** ADC functions ***/
 
-void ADC1_init(void);
-void ADC1_perform_measurements(void);
-void ADC1_get_data(ADC_data_index_t data_idx, volatile unsigned int* data);
-void ADC1_get_tmcu_comp2(volatile signed char* tmcu_degrees);
-void ADC1_get_tmcu_comp1(volatile unsigned char* tmcu_degrees);
+ADC_status_t ADC1_init(void);
+ADC_status_t ADC1_perform_measurements(void);
+ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data);
+void ADC1_get_tmcu(signed char* tmcu_degrees);
 
-#endif /* ADC_H */
+#define ADC1_status_check(error_base) { if (adc_status != ADC_SUCCESS) { status = error_base + adc_status; goto errors; }}
+#define ADC1_error_check() { ERROR_status_check(adc_status, ADC_SUCCESS, ERROR_BASE_ADC1); }
+#define ADC1_error_check_print() { ERROR_status_check_print(adc_status, ADC_SUCCESS, ERROR_BASE_ADC1); }
+
+#endif /* __ADC_H__ */

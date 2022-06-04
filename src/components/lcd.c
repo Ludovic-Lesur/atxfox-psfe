@@ -77,13 +77,13 @@ void LCD_init(void) {
 	GPIO_configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Initialization sequence.
 	GPIO_write(&GPIO_LCD_E, 0);
-	LPTIM1_delay_milliseconds(100);
+	LPTIM1_delay_milliseconds(100, 0);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(30);
+	LPTIM1_delay_milliseconds(30, 0);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(10);
+	LPTIM1_delay_milliseconds(10, 0);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(10);
+	LPTIM1_delay_milliseconds(10, 0);
 	LCD_command(0x38); // 8-bits / 2 lines mode.
 	LCD_command(0x08); // Display off.
 	LCD_command(0x0C); // Display on.
@@ -121,7 +121,7 @@ void LCD_print(unsigned char row, unsigned char column, char* string, unsigned c
  */
 void LCD_clear(void) {
 	LCD_command(0x01);
-	LPTIM1_delay_milliseconds(2);
+	LPTIM1_delay_milliseconds(2, 0);
 }
 
 /* PRINT A SIGFOX DEVICE ID.
@@ -133,8 +133,7 @@ void LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVIC
 	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	unsigned char byte_idx = 0;
 	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
-		sigfox_id_string[2 * byte_idx] = STRING_hexa_to_ascii((sigfox_id[byte_idx] & 0xF0) >> 4);
-		sigfox_id_string[2 * byte_idx + 1] = STRING_hexa_to_ascii((sigfox_id[byte_idx] & 0x0F) >> 0);
+		STRING_value_to_string(sigfox_id[byte_idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_id_string[2 * byte_idx]));
 	}
 	// Print ID.
 	LCD_print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
@@ -156,11 +155,11 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		d1 = (value - (u1 * 1000)) / (100);
 		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
 		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
-		value_string[0] = STRING_decimal_to_ascii(u1);
+		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
 		value_string[1] = '.';
-		value_string[2] = STRING_decimal_to_ascii(d1);
-		value_string[3] = STRING_decimal_to_ascii(d2);
-		value_string[4] = STRING_decimal_to_ascii(d3);
+		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_value_to_string(d3, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
 	}
 	else if (value < 100000) {
 		// Format = uu.dd
@@ -168,11 +167,11 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u2 = (value - (u1 * 10000)) / (1000);
 		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
 		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
-		value_string[0] = STRING_decimal_to_ascii(u1);
-		value_string[1] = STRING_decimal_to_ascii(u2);
+		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
 		value_string[2] = '.';
-		value_string[3] = STRING_decimal_to_ascii(d1);
-		value_string[4] = STRING_decimal_to_ascii(d2);
+		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
 	}
 	else if (value < 1000000) {
 		// Format = uuu.d
@@ -180,11 +179,11 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u2 = (value - (u1 * 100000)) / (10000);
 		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
 		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
-		value_string[0] = STRING_decimal_to_ascii(u1);
-		value_string[1] = STRING_decimal_to_ascii(u2);
-		value_string[2] = STRING_decimal_to_ascii(u3);
+		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
 		value_string[3] = '.';
-		value_string[4] = STRING_decimal_to_ascii(d1);
+		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
 	}
 	else {
 		// Format = uuuuu
@@ -193,11 +192,11 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
 		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
 		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
-		value_string[0] = STRING_decimal_to_ascii(u1);
-		value_string[1] = STRING_decimal_to_ascii(u2);
-		value_string[2] = STRING_decimal_to_ascii(u3);
-		value_string[3] = STRING_decimal_to_ascii(u4);
-		value_string[4] = STRING_decimal_to_ascii(u5);
+		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_value_to_string(u5, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
 	}
 	// Print value.
 	LCD_print(row, column, value_string, 5);

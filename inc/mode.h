@@ -5,10 +5,10 @@
  *      Author: Ludo
  */
 
-#ifndef MODE_H
-#define MODE_H
+#ifndef __MODE_H__
+#define __MODE_H__
 
 #define PSFE_BOARD_NUMBER	1	// 1.0.x
-//#define DEBUG					// Do not use LPUART1 when debugging (same pins).
+#define DEBUG					// Do not use LPUART1 when debugging (same pins).
 
-#endif /* MODE_H */
+#endif /* __MODE_H__ */

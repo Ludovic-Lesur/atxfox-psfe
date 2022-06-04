@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef RTC_H
-#define RTC_H
+#ifndef __RTC_H__
+#define __RTC_H__
 
 /*** RTC functions ***/
 
@@ -16,4 +16,4 @@ void RTC_start_wakeup_timer(unsigned int delay_seconds);
 volatile unsigned char RTC_get_wakeup_timer_flag(void);
 void RTC_clear_wakeup_timer_flag(void);
 
-#endif /* RTC_H */
+#endif /* __RTC_H__ */

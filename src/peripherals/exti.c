@@ -28,13 +28,13 @@
  */
 void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 	// Bypass switch (PB7).
-	if (((EXTI -> PR) & (0b1 << (GPIO_TRCS_BYPASS.gpio_num))) != 0) {
+	if (((EXTI -> PR) & (0b1 << (GPIO_TRCS_BYPASS.pin_index))) != 0) {
 		// Set local flags.
 		unsigned char bypass_state = GPIO_read(&GPIO_TRCS_BYPASS);
 		PSFE_set_bypass_flag(bypass_state);
 		TRCS_set_bypass_flag(bypass_state);
 		// Clear flag.
-		EXTI -> PR |= (0b1 << (GPIO_TRCS_BYPASS.gpio_num)); // PIFx='1' (writing '1' clears the bit).
+		EXTI -> PR |= (0b1 << (GPIO_TRCS_BYPASS.pin_index)); // PIFx='1' (writing '1' clears the bit).
 	}
 }
 
@@ -55,42 +55,42 @@ void EXTI_init(void) {
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
  * @param gpio:		GPIO to be attached to EXTI peripheral.
- * @edge_trigger:	Interrupt edge trigger (see EXTI_trigger_t egpio_numeration in exti.h).
+ * @edge_trigger:	Interrupt edge trigger (see EXTI_trigger_t epin_indexeration in exti.h).
  * @return:			None.
  */
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t edge_trigger) {
 	// Select GPIO port.
-	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] &= ~(0b1111 << (4 * ((gpio -> gpio_num) % 4)));
-	SYSCFG -> EXTICR[((gpio -> gpio_num) / 4)] |= ((gpio -> gpio_port_index) << (4 * ((gpio -> gpio_num) % 4)));
+	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] &= ~(0b1111 << (4 * ((gpio -> pin_index) % 4)));
+	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> pin_index) % 4)));
 	// Select triggers.
 	switch (edge_trigger) {
 	// Rising edge only.
 	case EXTI_TRIGGER_RISING_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << ((gpio -> gpio_num))); // Rising edge enabled.
-		EXTI -> FTSR &= ~(0b1 << ((gpio -> gpio_num))); // Falling edge disabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> pin_index))); // Rising edge enabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> pin_index))); // Falling edge disabled.
 		break;
 	// Falling edge only.
 	case EXTI_TRIGGER_FALLING_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
-		EXTI -> RTSR &= ~(0b1 << ((gpio -> gpio_num))); // Rising edge disabled.
-		EXTI -> FTSR |= (0b1 << ((gpio -> gpio_num))); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> pin_index))); // Rising edge disabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> pin_index))); // Falling edge enabled.
 		break;
 	// Both edges.
 	case EXTI_TRIGGER_ANY_EDGE:
-		EXTI -> IMR |= (0b1 << ((gpio -> gpio_num))); // IMx='1'.
-		EXTI -> RTSR |= (0b1 << ((gpio -> gpio_num))); // Rising edge enabled.
-		EXTI -> FTSR |= (0b1 << ((gpio -> gpio_num))); // Falling edge enabled.
+		EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
+		EXTI -> RTSR |= (0b1 << ((gpio -> pin_index))); // Rising edge enabled.
+		EXTI -> FTSR |= (0b1 << ((gpio -> pin_index))); // Falling edge enabled.
 		break;
 	// Unknown configuration.
 	default:
-		EXTI -> IMR &= ~(0b1 << ((gpio -> gpio_num))); // IMx='0'.
-		EXTI -> RTSR &= ~(0b1 << ((gpio -> gpio_num))); // Rising edge disabled.
-		EXTI -> FTSR &= ~(0b1 << ((gpio -> gpio_num))); // Falling edge disabled.
+		EXTI -> IMR &= ~(0b1 << ((gpio -> pin_index))); // IMx='0'.
+		EXTI -> RTSR &= ~(0b1 << ((gpio -> pin_index))); // Rising edge disabled.
+		EXTI -> FTSR &= ~(0b1 << ((gpio -> pin_index))); // Falling edge disabled.
 		break;
 	}
 	// Clear flag.
-	EXTI -> PR |= (0b1 << ((gpio -> gpio_num)));
+	EXTI -> PR |= (0b1 << ((gpio -> pin_index)));
 }
 
 /* CONFIGURE A LINE AS INTERNAL INTERRUPT SOURCE.

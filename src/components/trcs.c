@@ -2,7 +2,7 @@
  * trcs.c
  *
  *  Created on: 30 dec. 2018
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "trcs.h"
@@ -75,9 +75,9 @@ static TRCS_range_info_t trcs_range_table[TRCS_RANGE_INDEX_LAST] = {{TRCS_RANGE_
  */
 static void TRCS_update_adc_data(void) {
 	// Add sample
-	ADC1_get_data(ADC_DATA_IDX_IOUT_12BITS, &trcs_ctx.trcs_iout_12bits_buf[trcs_ctx.trcs_iout_12bits_buf_idx]);
+	ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.trcs_iout_12bits_buf[trcs_ctx.trcs_iout_12bits_buf_idx]);
 	// Update average.
-	trcs_ctx.trcs_iout_12bits = MATH_average((unsigned int*) trcs_ctx.trcs_iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
+	trcs_ctx.trcs_iout_12bits = MATH_average_u32((unsigned int*) trcs_ctx.trcs_iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
 	// Manage index.
 	trcs_ctx.trcs_iout_12bits_buf_idx++;
 	if (trcs_ctx.trcs_iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
@@ -96,7 +96,7 @@ static void TRCS_compute_iout(void) {
 	unsigned long long num = 0;
 	unsigned long long den = 0;
 	// Get bandgap measurement.
-	ADC1_get_data(ADC_DATA_IDX_REF191_12BITS, &ref191_12bits);
+	ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
 	// Convert to uA.
 	num = (unsigned long long) trcs_ctx.trcs_iout_12bits;
 	num *= ADC_REF191_VOLTAGE_MV;

@@ -5,12 +5,12 @@
  *      Author: Ludo
  */
 
-#ifndef LPUART_H
-#define LPUART_H
+#ifndef __LPUART_H__
+#define __LPUART_H__
 
 /*** LPUART functions ***/
 
 void LPUART1_init(void);
 void LPUART1_send_string(char* tx_string);
 
-#endif /* LPUART_H */
+#endif /* __LPUART_H__ */

@@ -2,7 +2,7 @@
  * iwdg.c
  *
  *  Created on: 18 apr. 2020
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "iwdg.h"

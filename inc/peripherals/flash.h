@@ -2,14 +2,14 @@
  * flash.h
  *
  *  Created on: 10 apr. 2021
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef FLASH_H
-#define FLASH_H
+#ifndef __FLASH_H__
+#define __FLASH_H__
 
 /*** FLASH functions ***/
 
 void FLASH_set_latency(unsigned char wait_states);
 
-#endif /* FLASH_H */
+#endif /* __FLASH_H__ */

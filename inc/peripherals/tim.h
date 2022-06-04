@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef TIM_H
-#define TIM_H
+#ifndef __TIM_H__
+#define __TIM_H__
 
 /*** TIM functions ***/
 
@@ -21,4 +21,4 @@ void TIM22_init(unsigned int period_ms);
 void TIM22_start(void);
 void TIM22_stop(void);
 
-#endif /* TIM_H */
+#endif /* __TIM_H__ */

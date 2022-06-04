@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef LPTIM_REG_H
-#define LPTIM_REG_H
+#ifndef __LP__TIM_REG_H____
+#define __LP__TIM_REG_H____
 
 /*** LPTIM registers ***/
 
@@ -25,4 +25,4 @@ typedef struct {
 
 #define LPTIM1	((LPTIM_base_address_t*) ((unsigned int) 0x40007C00))
 
-#endif /* LPTIM_REG_H */
+#endif /* __LP__TIM_REG_H____ */

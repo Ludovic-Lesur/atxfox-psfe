@@ -2,11 +2,11 @@
  * iwdg.h
  *
  *  Created on: 18 apr. 2020
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
-#ifndef IWDG_H
-#define IWDG_H
+#ifndef __IWDG_H__
+#define __IWDG_H__
 
 /*** IWDG macros ***/
 
@@ -17,4 +17,4 @@
 void IWDG_init(void);
 void IWDG_reload(void);
 
-#endif /* IWDG_H */
+#endif /* __IWDG_H__ */

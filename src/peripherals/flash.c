@@ -2,7 +2,7 @@
  * flash.c
  *
  *  Created on: 10 apr. 2021
- *      Author: Ludovic
+ *      Author: Ludo
  */
 
 #include "flash.h"

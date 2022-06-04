@@ -5,8 +5,8 @@
  *      Author: Ludo
  */
 
-#ifndef LCD_H
-#define LCD_H
+#ifndef __LCD_H__
+#define __LCD_H__
 
 #include "td1208.h"
 
@@ -18,4 +18,4 @@ void LCD_clear(void);
 void LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
 void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value);
 
-#endif /* LCD_H */
+#endif /* __LCD_H__ */
