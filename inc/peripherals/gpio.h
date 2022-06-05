@@ -12,7 +12,6 @@
 
 /*** GPIO structures ***/
 
-// GPIO structure.
 typedef struct {
 	GPIO_base_address_t* port_address; // GPIOA to GPIOC.
 	unsigned char port_index; // 0 for GPIOA, 1 for GPIOB, etc.

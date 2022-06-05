@@ -38,8 +38,8 @@ typedef enum {
 /*** EXTI functions ***/
 
 void EXTI_init(void);
-void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t edge_trigger);
-void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t edge_trigger);
+void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger);
+void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger);
 void EXTI_clear_all_flags(void);
 
 #endif /* __EXTI_H__ */
