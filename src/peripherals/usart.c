@@ -103,13 +103,14 @@ USART_status_t USART2_send_string(char* tx_string) {
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
 		status = USART2_fill_tx_buffer((unsigned char) *(tx_string++));
-		if (status != USART_SUCCESS) break;
+		if (status != USART_SUCCESS) goto errors;
 		// Check char count.
 		char_count++;
 		if (char_count > USART_STRING_LENGTH_MAX) {
 			status = USART_ERROR_STRING_LENGTH;
-			break;
+			goto errors;
 		}
 	}
+errors:
 	return status;
 }
