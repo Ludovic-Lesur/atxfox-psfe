@@ -18,7 +18,7 @@
 /*** USART local macros ***/
 
 #define USART_BAUD_RATE 			9600
-#define USART2_TIMEOUT_COUNT		100000
+#define USART_TIMEOUT_COUNT			100000
 #define USART_STRING_LENGTH_MAX		1000
 
 /*** USART local functions ***/
@@ -56,7 +56,7 @@ static USART_status_t USART2_fill_tx_buffer(unsigned char tx_byte) {
 	while (((USART2 -> ISR) & (0b1 << 7)) == 0) {
 		// Wait for TXE='1' or timeout.
 		loop_count++;
-		if (loop_count > USART2_TIMEOUT_COUNT) {
+		if (loop_count > USART_TIMEOUT_COUNT) {
 			status = USART_ERROR_TX_TIMEOUT;
 			goto errors;
 		}
@@ -103,14 +103,13 @@ USART_status_t USART2_send_string(char* tx_string) {
 	while (*tx_string) {
 		// Fill TX buffer with new byte.
 		status = USART2_fill_tx_buffer((unsigned char) *(tx_string++));
-		if (status != USART_SUCCESS) goto errors;
+		if (status != USART_SUCCESS) break;
 		// Check char count.
 		char_count++;
 		if (char_count > USART_STRING_LENGTH_MAX) {
 			status = USART_ERROR_STRING_LENGTH;
-			goto errors;
+			break;
 		}
 	}
-errors:
 	return status;
 }
