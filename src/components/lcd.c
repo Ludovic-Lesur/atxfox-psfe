@@ -16,8 +16,8 @@
 
 /*** LCD local macros ***/
 
-#define LCD_ROW_IDX_MAX			1
-#define LCD_COLUMN_IDX_MAX		7
+#define LCD_ROW_IDX_MAX		1
+#define LCD_COLUMN_IDX_MAX	7
 
 /*** LCD local functions ***/
 
@@ -63,7 +63,14 @@ static void LCD_data(unsigned char lcd_data) {
 
 /*** LCD functions ***/
 
-void LCD_init(void) {
+/* INIT LCD INTERFACE.
+ * @param:			None.
+ * @return status:	Function executions status.
+ */
+LCD_status_t LCD_init(void) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Init GPIOs.
 	GPIO_configure(&GPIO_LCD_E, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_LCD_RS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -77,18 +84,23 @@ void LCD_init(void) {
 	GPIO_configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Initialization sequence.
 	GPIO_write(&GPIO_LCD_E, 0);
-	LPTIM1_delay_milliseconds(100, 0);
+	lptim_status = LPTIM1_delay_milliseconds(100, 0);
+	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(30, 0);
+	lptim_status = LPTIM1_delay_milliseconds(30, 0);
+	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(10, 0);
+	lptim_status = LPTIM1_delay_milliseconds(10, 0);
+	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	LPTIM1_delay_milliseconds(10, 0);
+	lptim_status = LPTIM1_delay_milliseconds(10, 0);
+	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x38); // 8-bits / 2 lines mode.
 	LCD_command(0x08); // Display off.
 	LCD_command(0x0C); // Display on.
-	// Clear.
+errors:
 	LCD_clear();
+	return status;
 }
 
 /* PRINT A STRING ON LCD SCREEN.
@@ -96,55 +108,80 @@ void LCD_init(void) {
  * @param position  		Cursor position (0 to 7).
  * @param string:			Char array to print.
  * @param string_length:	Number of characters to print.
- * @return:					None.
+ * @return status:			Function executions status.
  */
-void LCD_print(unsigned char row, unsigned char column, char* string, unsigned char string_length) {
+LCD_status_t LCD_print(unsigned char row, unsigned char column, char* string, unsigned char string_length) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
 	// Check parameters.
-	if ((row <= LCD_ROW_IDX_MAX) && (column <= LCD_COLUMN_IDX_MAX)) {
-		// Set position.
-		LCD_command(((row * 0x40) + column) + 0x80);
-		// Print string.
-		unsigned char column_idx = column;
-		unsigned char string_idx = 0;
-		// Loop until string is printed or screen edge is reached.
-		while ((column_idx <= LCD_COLUMN_IDX_MAX) && (column_idx < (column + string_length))) {
-			LCD_data(string[string_idx]);
-			string_idx++;
-			column_idx++;
-		}
+	if (row > LCD_ROW_IDX_MAX) {
+		status = LCD_ERROR_ROW_OVERFLOW;
+		goto errors;
 	}
+	if (column > LCD_COLUMN_IDX_MAX) {
+		status = LCD_ERROR_COLUMN_OVERFLOW;
+		goto errors;
+	}
+	// Set position.
+	LCD_command(((row * 0x40) + column) + 0x80);
+	// Print string.
+	unsigned char column_idx = column;
+	unsigned char string_idx = 0;
+	// Loop until string is printed or screen edge is reached.
+	while ((column_idx <= LCD_COLUMN_IDX_MAX) && (column_idx < (column + string_length))) {
+		LCD_data(string[string_idx]);
+		string_idx++;
+		column_idx++;
+	}
+errors:
+	return status;
 }
 
 /* CLEAR LCD SCREEN.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function executions status.
  */
-void LCD_clear(void) {
+LCD_status_t LCD_clear(void) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	// Clear command.
 	LCD_command(0x01);
-	LPTIM1_delay_milliseconds(2, 0);
+	lptim_status = LPTIM1_delay_milliseconds(2, 0);
+	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
+errors:
+	return status;
 }
 
 /* PRINT A SIGFOX DEVICE ID.
  * @param sigfox_id:	ID to print.
- * @return:				None.
+ * @return status:		Function executions status.
  */
-void LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
-	// Build corresponding string.
+LCD_status_t LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
 	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	unsigned char byte_idx = 0;
+	// Build corresponding string.
 	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
-		STRING_value_to_string(sigfox_id[byte_idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_id_string[2 * byte_idx]));
+		string_status = STRING_value_to_string(sigfox_id[byte_idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_id_string[2 * byte_idx]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
 	// Print ID.
-	LCD_print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
+	status = LCD_print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
+errors:
+	return status;
 }
 
 /* PRINT A VALUE ON 5 DIGITS.
  * @param value:	(value * 1000) to print.
- * @return:			None.
+ * @return status:	Function executions status.
  */
-void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value) {
+LCD_status_t LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value) {
 	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
 	unsigned char u1, u2, u3, u4, u5;
 	unsigned char d1, d2, d3;
 	char value_string[5] = {0};
@@ -155,11 +192,15 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		d1 = (value - (u1 * 1000)) / (100);
 		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
 		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
-		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 		value_string[1] = '.';
-		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
-		STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_value_to_string(d3, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(d3, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
 	else if (value < 100000) {
 		// Format = uu.dd
@@ -167,11 +208,15 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u2 = (value - (u1 * 10000)) / (1000);
 		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
 		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
-		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 		value_string[2] = '.';
-		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
 	else if (value < 1000000) {
 		// Format = uuu.d
@@ -179,11 +224,15 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u2 = (value - (u1 * 100000)) / (10000);
 		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
 		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
-		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
-		STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 		value_string[3] = '.';
-		STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
 	else {
 		// Format = uuuuu
@@ -192,12 +241,19 @@ void LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned 
 		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
 		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
 		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
-		STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
-		STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
-		STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_value_to_string(u5, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
+		string_status = STRING_value_to_string(u5, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
+		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
 	// Print value.
-	LCD_print(row, column, value_string, 5);
+	status = LCD_print(row, column, value_string, 5);
+errors:
+	return status;
 }

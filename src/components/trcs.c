@@ -50,14 +50,14 @@ typedef struct {
 } TRCS_range_info_t;
 
 typedef struct {
-	unsigned char trcs_current_range_idx;
-	unsigned char trcs_previous_range_idx;
-	unsigned char trcs_switch_pending;
-	unsigned int trcs_iout_12bits_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
-	unsigned char trcs_iout_12bits_buf_idx;
-	unsigned int trcs_iout_12bits;
-	unsigned int trcs_iout_ua;
-	unsigned char trcs_bypass_flag;
+	unsigned char current_range_idx;
+	unsigned char previous_range_idx;
+	unsigned char switch_pending;
+	unsigned int iout_12bits_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
+	unsigned char iout_12bits_buf_idx;
+	unsigned int iout_12bits;
+	unsigned int iout_ua;
+	unsigned char bypass_flag;
 } TRCS_context_t;
 
 /*** TRCS local global variables ***/
@@ -70,42 +70,53 @@ static TRCS_range_info_t trcs_range_table[TRCS_RANGE_INDEX_LAST] = {{TRCS_RANGE_
 /*** TRCS local functions ***/
 
 /* UPDATE RAW ADC RESULT.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static void TRCS_update_adc_data(void) {
+static TRCS_status_t TRCS_update_adc_data(void) {
+	// Local variables.
+	TRCS_status_t status = TRCS_SUCCESS;
+	ADC_status_t adc_status = ADC_SUCCESS;
 	// Add sample
-	ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.trcs_iout_12bits_buf[trcs_ctx.trcs_iout_12bits_buf_idx]);
+	adc_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
+	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Update average.
-	trcs_ctx.trcs_iout_12bits = MATH_average_u32((unsigned int*) trcs_ctx.trcs_iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
+	trcs_ctx.iout_12bits = MATH_average_u32((unsigned int*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
 	// Manage index.
-	trcs_ctx.trcs_iout_12bits_buf_idx++;
-	if (trcs_ctx.trcs_iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
-		trcs_ctx.trcs_iout_12bits_buf_idx = 0;
+	trcs_ctx.iout_12bits_buf_idx++;
+	if (trcs_ctx.iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
+		trcs_ctx.iout_12bits_buf_idx = 0;
 	}
+errors:
+	return status;
 }
 
 /* COMPUTE OUTPUT CURRENT IN MICRO-AMPS.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
-static void TRCS_compute_iout(void) {
+static TRCS_status_t TRCS_compute_iout(void) {
 	// Local variables.
+	TRCS_status_t status = TRCS_SUCCESS;
+	ADC_status_t adc_status = ADC_SUCCESS;
 	unsigned int ref191_12bits = 0;
 	unsigned int resistor_mohm = 0;
 	unsigned long long num = 0;
 	unsigned long long den = 0;
 	// Get bandgap measurement.
-	ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
+	adc_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
+	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Convert to uA.
-	num = (unsigned long long) trcs_ctx.trcs_iout_12bits;
+	num = (unsigned long long) trcs_ctx.iout_12bits;
 	num *= ADC_REF191_VOLTAGE_MV;
 	num *= 1000000;
-	resistor_mohm = trcs_range_table[trcs_ctx.trcs_current_range_idx].resistor_mohm;
+	resistor_mohm = trcs_range_table[trcs_ctx.current_range_idx].resistor_mohm;
 	den = (unsigned long long) ref191_12bits;
 	den *= TRCS_LT6105_VOLTAGE_GAIN;
 	den *= resistor_mohm;
-	trcs_ctx.trcs_iout_ua = (num / den);
+	trcs_ctx.iout_ua = (num / den);
+errors:
+	return status;
 }
 
 /*** TRCS functions ***/
@@ -115,6 +126,8 @@ static void TRCS_compute_iout(void) {
  * @return:	None.
  */
 void TRCS_init(void) {
+	// Local variables.
+	unsigned char idx = 0;
 	// Init GPIOs.
 	GPIO_configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
@@ -125,15 +138,14 @@ void TRCS_init(void) {
 	GPIO_write(&GPIO_TRCS_RANGE_MIDDLE, 0);
 	GPIO_write(&GPIO_TRCS_RANGE_LOW, 0);
 	// Init context.
-	unsigned char idx = 0;
-	trcs_ctx.trcs_current_range_idx = TRCS_RANGE_INDEX_HIGH;
-	trcs_ctx.trcs_previous_range_idx = TRCS_RANGE_INDEX_HIGH;
-	trcs_ctx.trcs_switch_pending = 0;
-	trcs_ctx.trcs_iout_ua = 0;
-	for (idx=0 ; idx<TRCS_ADC_SAMPLE_BUFFER_LENGTH ; idx++) trcs_ctx.trcs_iout_12bits_buf[idx] = 0;
-	trcs_ctx.trcs_iout_12bits_buf_idx = 0;
-	trcs_ctx.trcs_iout_12bits = 0;
-	trcs_ctx.trcs_bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
+	trcs_ctx.current_range_idx = TRCS_RANGE_INDEX_HIGH;
+	trcs_ctx.previous_range_idx = TRCS_RANGE_INDEX_HIGH;
+	trcs_ctx.switch_pending = 0;
+	trcs_ctx.iout_ua = 0;
+	for (idx=0 ; idx<TRCS_ADC_SAMPLE_BUFFER_LENGTH ; idx++) trcs_ctx.iout_12bits_buf[idx] = 0;
+	trcs_ctx.iout_12bits_buf_idx = 0;
+	trcs_ctx.iout_12bits = 0;
+	trcs_ctx.bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
 	// Enable bypass switch interrupt.
 	EXTI_configure_gpio(&GPIO_TRCS_BYPASS, EXTI_TRIGGER_ANY_EDGE);
 	NVIC_set_priority(NVIC_IT_EXTI_4_15, 2);
@@ -145,42 +157,48 @@ void TRCS_init(void) {
  * @param bypass_status:	Bypass switch status.
  * @return:					None.
  */
-void TRCS_task(void) {
-	// Increment recovery timer.
+TRCS_status_t TRCS_task(void) {
+	// Local variables.
+	TRCS_status_t status = TRCS_SUCCESS;
 	unsigned char idx = 0;
+	// Increment recovery timer.
 	for (idx=0 ; idx<TRCS_RANGE_INDEX_LAST ; idx++) {
 		trcs_range_table[idx].switch_timer_ms += (PSFE_ADC_CONVERSION_PERIOD_MS * trcs_range_table[idx].switch_request_pending);
 	}
 	// Update ADC result and output current.
-	TRCS_update_adc_data();
-	TRCS_compute_iout();
+	status = TRCS_update_adc_data();
+	if (status != TRCS_SUCCESS) goto errors;
+	status = TRCS_compute_iout();
+	if (status != TRCS_SUCCESS) goto errors;
 	// Compute range.
-	if (trcs_ctx.trcs_bypass_flag != 0) {
+	if (trcs_ctx.bypass_flag != 0) {
 		// Keep high range to ensure power continuity when bypassed will be disabled.
-		trcs_ctx.trcs_current_range_idx = TRCS_RANGE_INDEX_HIGH;
+		trcs_ctx.current_range_idx = TRCS_RANGE_INDEX_HIGH;
 	}
 	else {
 		// Check ADC result.
-		if (trcs_ctx.trcs_iout_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
-			trcs_ctx.trcs_current_range_idx += (!trcs_ctx.trcs_switch_pending);
+		if (trcs_ctx.iout_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
+			trcs_ctx.current_range_idx += (!trcs_ctx.switch_pending);
 		}
-		if ((trcs_ctx.trcs_iout_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) && (trcs_ctx.trcs_current_range_idx > 0)) {
-			trcs_ctx.trcs_current_range_idx -= (!trcs_ctx.trcs_switch_pending);
+		if ((trcs_ctx.iout_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) && (trcs_ctx.current_range_idx > 0)) {
+			trcs_ctx.current_range_idx -= (!trcs_ctx.switch_pending);
 		}
 	}
 	// Check if GPIO control is required.
-	if (trcs_ctx.trcs_current_range_idx > TRCS_RANGE_INDEX_HIGH) {
+	if (trcs_ctx.current_range_idx > TRCS_RANGE_INDEX_HIGH) {
 		// Disable all range (protection mode).
 		TRCS_off();
+		status = TRCS_ERROR_OVERFLOW;
+		goto errors;
 	}
 	else {
-		if (trcs_ctx.trcs_current_range_idx != trcs_ctx.trcs_previous_range_idx) {
+		if (trcs_ctx.current_range_idx != trcs_ctx.previous_range_idx) {
 			// Enable new range.
-			GPIO_write(trcs_range_table[trcs_ctx.trcs_current_range_idx].gpio, 1);
+			GPIO_write(trcs_range_table[trcs_ctx.current_range_idx].gpio, 1);
 			// Start off timer.
-			trcs_range_table[trcs_ctx.trcs_previous_range_idx].switch_timer_ms = 0;
-			trcs_range_table[trcs_ctx.trcs_previous_range_idx].switch_request_pending = 1;
-			trcs_ctx.trcs_switch_pending++;
+			trcs_range_table[trcs_ctx.previous_range_idx].switch_timer_ms = 0;
+			trcs_range_table[trcs_ctx.previous_range_idx].switch_request_pending = 1;
+			trcs_ctx.switch_pending++;
 		}
 		for (idx=0 ; idx<TRCS_RANGE_INDEX_LAST ; idx++) {
 			// Check recovery timer.
@@ -192,12 +210,14 @@ void TRCS_task(void) {
 				// Stop timer.
 				trcs_range_table[idx].switch_timer_ms = 0;
 				trcs_range_table[idx].switch_request_pending = 0;
-				trcs_ctx.trcs_switch_pending--;
+				trcs_ctx.switch_pending--;
 			}
 		}
 	}
 	// Update previous index.
-	trcs_ctx.trcs_previous_range_idx = trcs_ctx.trcs_current_range_idx;
+	trcs_ctx.previous_range_idx = trcs_ctx.current_range_idx;
+errors:
+	return status;
 }
 
 /* SET TRCS BYPASS STATUS (CALLED BY EXTI INTERRUPT).
@@ -206,7 +226,7 @@ void TRCS_task(void) {
  */
 void TRCS_set_bypass_flag(unsigned char bypass_state) {
 	// Set local flag.
-	trcs_ctx.trcs_bypass_flag = bypass_state;
+	trcs_ctx.bypass_flag = bypass_state;
 }
 
 /* GET CURRENT TRCS RANGE.
@@ -214,7 +234,7 @@ void TRCS_set_bypass_flag(unsigned char bypass_state) {
  * @return:			None.
  */
 void TRCS_get_range(volatile TRCS_range_t* range) {
-	(*range) = trcs_range_table[trcs_ctx.trcs_current_range_idx].range;
+	(*range) = trcs_range_table[trcs_ctx.current_range_idx].range;
 }
 
 /* GET CURRENT TRCS OUTPUT CURRENT.
@@ -222,7 +242,7 @@ void TRCS_get_range(volatile TRCS_range_t* range) {
  * @return:			None.
  */
 void TRCS_get_iout(volatile unsigned int* iout_ua) {
-	(*iout_ua) = trcs_ctx.trcs_iout_ua;
+	(*iout_ua) = trcs_ctx.iout_ua;
 }
 
 /* SWITCH TRCS BOARD OFF.
