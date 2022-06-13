@@ -24,8 +24,8 @@ typedef enum {
 void LPUART1_init(void);
 LPUART_status_t LPUART1_send_string(char* tx_string);
 
-#define LPUART1_status_check(error_base) { if (lpuart_status != LPUART_SUCCESS) { status = error_base + lpuart_status; goto errors; }}
-#define LPUART1_error_check() { ERROR_status_check(lpuart_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
-#define LPUART1_error_check_print() { ERROR_status_check_print(lpuart_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
+#define LPUART1_status_check(error_base) { if (lpuart1_status != LPUART_SUCCESS) { status = error_base + lpuart1_status; goto errors; }}
+#define LPUART1_error_check() { ERROR_status_check(lpuart1_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
+#define LPUART1_error_check_print() { ERROR_status_check_print(lpuart1_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }
 
 #endif /* __LPUART_H__ */

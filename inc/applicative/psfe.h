@@ -25,7 +25,9 @@ static const unsigned char psfe_vout_voltage_divider_ratio[PSFE_NUMBER_OF_BOARDS
 
 /*** PSFE functions ***/
 
-void PSFE_init(void);
+void PSFE_init_hw(void);
+void PSFE_init_context(void);
+void PSFE_start(void);
 void PSFE_task(void);
 void PSFE_set_bypass_flag(unsigned char bypass_state);
 void PSFE_adc_callback(void);

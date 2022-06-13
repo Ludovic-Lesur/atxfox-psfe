@@ -7,19 +7,30 @@
 
 #include "psfe.h"
 
+// Peripherals.
 #include "adc.h"
+#include "exti.h"
 #include "gpio.h"
-#include "lcd.h"
+#include "iwdg.h"
 #include "lptim.h"
 #include "lpuart.h"
 #include "mapping.h"
-#include "math.h"
 #include "mode.h"
+#include "nvic.h"
+#include "pwr.h"
+#include "rcc.h"
 #include "rtc.h"
-#include "string.h"
-#include "td1208.h"
 #include "tim.h"
+#include "usart.h"
+// Components.
+#include "lcd.h"
+#include "td1208.h"
 #include "trcs.h"
+// Utils.
+#include "string.h"
+// Applicative.
+#include "error.h"
+#include "version.h"
 
 /*** PSFE local macros ***/
 
@@ -91,17 +102,75 @@ static const unsigned int psfe_vout_voltage_divider_resistance[PSFE_NUMBER_OF_BO
 
 /*** PSFE functions ***/
 
-/* INIT PSFE CONTEXT.
+/* COMMON INIT FUNCTION FOR PERIPHERALS AND COMPONENTS.
  * @param:	None.
  * @return:	None.
  */
-void PSFE_init(void) {
+void PSFE_init_hw(void) {
+	// Local variables.
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	TIM_status_t tim21_status = TIM_SUCCESS;
+	RTC_status_t rtc_status = RTC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
+	LCD_status_t lcd_status = LCD_SUCCESS;
+	unsigned int lsi_frequency_hz = 0;
+#ifndef DEBUG
+	IWDG_status_t iwdg_status = IWDG_SUCCESS;
+#endif
+	// Init memory.
+	NVIC_init();
+	// Init GPIOs.
+	GPIO_init();
+	EXTI_init();
+	// Init clock.
+	RCC_init();
+	PWR_init();
+	// Reset RTC before starting oscillators.
+	RTC_reset();
+	// Start clocks.
+	rcc_status = RCC_switch_to_hsi();
+	RCC_error_check();
+	rcc_status = RCC_enable_lsi();
+	RCC_error_check();
+	// Init watchdog.
+#ifndef DEBUG
+	iwdg_status = IWDG_init();
+	IWDG_error_check();
+#endif
+	IWDG_reload();
+	// Get effective LSI frequency.
+	TIM21_init();
+	tim21_status = TIM21_get_lsi_frequency(&lsi_frequency_hz);
+	TIM21_error_check();
+	TIM21_disable();
+	// Init peripherals.
+	rtc_status = RTC_init(lsi_frequency_hz);
+	RTC_error_check();
+	TIM2_init(PSFE_ADC_CONVERSION_PERIOD_MS);
+	LPTIM1_init(lsi_frequency_hz);
+	adc1_status = ADC1_init();
+	ADC1_error_check();
+	USART2_init();
+	LPUART1_init();
+	// Init components.
+	lcd_status = LCD_init();
+	LCD_error_check();
+	TRCS_init();
+	TD1208_init();
+}
+
+/* COMMON INIT FUNCTION FOR MAIN CONTEXT.
+ * @param:	None.
+ * @return:	None.
+ */
+void PSFE_init_context(void) {
+	// Local variables.
+	unsigned char idx = 0;
 	// Init context.
 	psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
 	psfe_ctx.psfe_bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
 	psfe_ctx.psfe_init_done = 0;
 	// Analog measurements.
-	unsigned char idx = 0;
 	for (idx=0 ; idx<PSFE_VOUT_BUFFER_LENGTH ; idx++) psfe_ctx.psfe_vout_mv_buf[idx] = 0;
 	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.psfe_sigfox_id[idx] = 0x00;
 	for (idx=0 ; idx<PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES ; idx++) psfe_ctx.psfe_sigfox_uplink_data.raw_frame[idx] = (0x65 + idx);
@@ -111,9 +180,19 @@ void PSFE_init(void) {
 	psfe_ctx.psfe_vmcu_mv = 0;
 	psfe_ctx.psfe_tmcu_degrees = 0;
 	psfe_ctx.psfe_trcs_range = TRCS_RANGE_NONE;
+}
+
+/* START PSFE MODULE.
+ * @param:	None.
+ * @return:	None.
+ */
+void PSFE_start(void) {
+	// Local variables.
+	RTC_status_t rtc_status = RTC_SUCCESS;
 	// Start continuous timers.
 	TIM2_start();
-	RTC_start_wakeup_timer(PSFE_SIGFOX_PERIOD_S);
+	rtc_status = RTC_start_wakeup_timer(PSFE_SIGFOX_PERIOD_S);
+	RTC_error_check();
 }
 
 /* PSFE BOARD MAIN TASK.
@@ -121,6 +200,10 @@ void PSFE_init(void) {
  * @return:	None.
  */
 void PSFE_task(void) {
+	// Local variables.
+	LCD_status_t lcd_status = LCD_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	TD1208_status_t td1208_status = TD1208_SUCCESS;
 	// Perform state machine.
 	switch (psfe_ctx.psfe_state) {
 	// Supply voltage monitoring.
@@ -141,19 +224,31 @@ void PSFE_task(void) {
 		break;
 	// Init.
 	case PSFE_STATE_INIT:
-		// Print project name and HW versions.
-		LCD_print(0, 0, " ATXFox ", 8);
-		LCD_print(1, 0, " HW 1.0 ", 8);
-		LPTIM1_delay_milliseconds(2000, 0);
+		// Init TRCS board to supply output.
+		TRCS_init();
+		// Print board name and HW version.
+		lcd_status = LCD_print_hw_version();
+		LCD_error_check();
+		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
+		LPTIM1_error_check();
+		// Print SW version.
+		LCD_print_sw_version(GIT_MAJOR_VERSION, GIT_MINOR_VERSION, GIT_COMMIT_INDEX, GIT_DIRTY_FLAG);
+		LCD_error_check();
+		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
+		LPTIM1_error_check();
 		// Print Sigfox device ID.
-		TD1208_disable_echo_and_verbose();
-		TD1208_get_sigfox_id(psfe_ctx.psfe_sigfox_id);
-		LCD_print(0, 0, " SFX ID ", 8);
-		LCD_print_sigfox_id(1, psfe_ctx.psfe_sigfox_id);
+		td1208_status = TD1208_disable_echo_and_verbose();
+		TD1208_error_check();
+		td1208_status = TD1208_get_sigfox_id(psfe_ctx.psfe_sigfox_id);
+		TD1208_error_check();
+		lcd_status = LCD_print_sigfox_id(psfe_ctx.psfe_sigfox_id);
+		LCD_error_check();
 		// Send START message through Sigfox.
-		TD1208_send_bit(1);
+		td1208_status = TD1208_send_bit(1);
+		TD1208_error_check();
 		// Delay for Sigfox device ID printing.
-		LPTIM1_delay_milliseconds(2000, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
+		LPTIM1_error_check();
 		// Update flags.
 		psfe_ctx.psfe_init_done = 1;
 		// Compute next state.
@@ -191,7 +286,8 @@ void PSFE_task(void) {
 		psfe_ctx.psfe_sigfox_uplink_data.field.vmcu_mv = psfe_ctx.psfe_vmcu_mv;
 		psfe_ctx.psfe_sigfox_uplink_data.field.tmcu_degrees = psfe_ctx.psfe_tmcu_degrees;
 		// Send data.
-		TD1208_send_frame(psfe_ctx.psfe_sigfox_uplink_data.raw_frame, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
+		td1208_status = TD1208_send_frame(psfe_ctx.psfe_sigfox_uplink_data.raw_frame, PSFE_SIGFOX_UPLINK_DATA_LENGTH_BYTES);
+		TD1208_error_check();
 		// Compute next state.
 		psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
 		break;
@@ -199,12 +295,17 @@ void PSFE_task(void) {
 	case PSFE_STATE_OFF:
 		// Send Sigfox message and clear LCD screen.
 		if (psfe_ctx.psfe_init_done != 0) {
+			// Turn current sensor off.
 			TRCS_off();
-			LCD_clear();
-			TD1208_send_bit(0);
+			// Update flag.
+			psfe_ctx.psfe_init_done = 0;
+			// Clear LCD.
+			lcd_status = LCD_clear();
+			LCD_error_check();
+			// Send bit 0.
+			td1208_status = TD1208_send_bit(0);
+			TD1208_error_check();
 		}
-		// Update flag.
-		psfe_ctx.psfe_init_done = 0;
 		// Compute next state
 		psfe_ctx.psfe_state = PSFE_STATE_VMCU_MONITORING;
 		break;
@@ -228,11 +329,17 @@ void PSFE_set_bypass_flag(unsigned char bypass_state) {
  * @return:	None.
  */
 void PSFE_adc_callback(void) {
+	// Local variables.
+	ADC_status_t adc1_status = ADC_SUCCESS;
+	TRCS_status_t trcs_status = TRCS_SUCCESS;
 	// Perform measurements.
-	ADC1_perform_measurements();
-	TRCS_task();
+	adc1_status = ADC1_perform_measurements();
+	ADC1_error_check();
+	trcs_status = TRCS_task();
+	TRCS_error_check();
 	// Update local Vout.
-	ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (unsigned int*) &psfe_ctx.psfe_vout_mv_buf[psfe_ctx.psfe_vout_mv_buf_idx]);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (unsigned int*) &psfe_ctx.psfe_vout_mv_buf[psfe_ctx.psfe_vout_mv_buf_idx]);
+	ADC1_error_check();
 	psfe_ctx.psfe_vout_mv = MATH_average_u32((unsigned int*) psfe_ctx.psfe_vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH);
 	psfe_ctx.psfe_vout_mv_buf_idx++;
 	if (psfe_ctx.psfe_vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
@@ -253,7 +360,8 @@ void PSFE_adc_callback(void) {
 	}
 #endif
 	// Update local Vmcu and Tmcu.
-	ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (unsigned int*) &psfe_ctx.psfe_vmcu_mv);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (unsigned int*) &psfe_ctx.psfe_vmcu_mv);
+	ADC1_error_check();
 	ADC1_get_tmcu((signed char*) &psfe_ctx.psfe_tmcu_degrees);
 }
 
@@ -263,43 +371,66 @@ void PSFE_adc_callback(void) {
  */
 void PSFE_lcd_uart_callback(void) {
 	// Local variables.
+	LCD_status_t lcd_status = LCD_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
-	// Update display is enabled.
+	// Update display if enabled.
 	if (psfe_ctx.psfe_init_done != 0) {
 		// LCD Vout display.
 		if (psfe_ctx.psfe_vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
-			LCD_print_value_5_digits(0, 0, psfe_ctx.psfe_vout_mv);
-			LCD_print(0, 5, "  V", 3);
+			lcd_status = LCD_print_value_5_digits(0, 0, psfe_ctx.psfe_vout_mv);
+			LCD_error_check();
+			lcd_status = LCD_print(0, 5, "  V", 3);
+			LCD_error_check();
 		}
 		else {
-			LCD_print(0, 0, "NO INPUT", 8);
+			lcd_status = LCD_print(0, 0, "NO INPUT", 8);
+			LCD_error_check();
 		}
 		// LCD Iout display.
 		if (psfe_ctx.psfe_bypass_flag == 0) {
-			LCD_print_value_5_digits(1, 0, psfe_ctx.psfe_iout_ua);
-			LCD_print(1, 5, " mA", 3);
+			lcd_status = LCD_print_value_5_digits(1, 0, psfe_ctx.psfe_iout_ua);
+			LCD_error_check();
+			lcd_status = LCD_print(1, 5, " mA", 3);
+			LCD_error_check();
 		}
 		else {
-			LCD_print(1, 0, " BYPASS ", 8);
+			lcd_status = LCD_print(1, 0, " BYPASS ", 8);
+			LCD_error_check();
 		}
 	}
 	// UART.
-	LPUART1_send_string("Vout=");
-	STRING_value_to_string((int) psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
-	LPUART1_send_string(str_value);
-	LPUART1_send_string("mV Iout=");
+	lpuart1_status = LPUART1_send_string("Vout=");
+	LPUART1_error_check();
+	string_status = STRING_value_to_string((int) psfe_ctx.psfe_vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_error_check();
+	lpuart1_status = LPUART1_send_string(str_value);
+	LPUART1_error_check();
+	lpuart1_status = LPUART1_send_string("mV Iout=");
+	LPUART1_error_check();
 	if (psfe_ctx.psfe_bypass_flag == 0) {
 		STRING_value_to_string((int) psfe_ctx.psfe_iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
-		LPUART1_send_string(str_value);
-		LPUART1_send_string("uA Vmcu=");
+		STRING_error_check();
+		lpuart1_status = LPUART1_send_string(str_value);
+		LPUART1_error_check();
+		lpuart1_status = LPUART1_send_string("uA Vmcu=");
+		LPUART1_error_check();
 	}
 	else {
-		LPUART1_send_string("BYPASS Vmcu=");
+		lpuart1_status = LPUART1_send_string("BYPASS Vmcu=");
+		LPUART1_error_check();
 	}
-	STRING_value_to_string((int) psfe_ctx.psfe_vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
-	LPUART1_send_string(str_value);
-	LPUART1_send_string("mV Tmcu=");
-	STRING_value_to_string((int) psfe_ctx.psfe_tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
-	LPUART1_send_string(str_value);
-	LPUART1_send_string("dC\n");
+	string_status = STRING_value_to_string((int) psfe_ctx.psfe_vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_error_check();
+	lpuart1_status = LPUART1_send_string(str_value);
+	LPUART1_error_check();
+	lpuart1_status = LPUART1_send_string("mV Tmcu=");
+	LPUART1_error_check();
+	string_status = STRING_value_to_string((int) psfe_ctx.psfe_tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
+	STRING_error_check();
+	lpuart1_status = LPUART1_send_string(str_value);
+	LPUART1_error_check();
+	lpuart1_status = LPUART1_send_string("dC\n");
+	LPUART1_error_check();
 }

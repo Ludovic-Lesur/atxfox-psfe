@@ -76,9 +76,9 @@ static TRCS_range_info_t trcs_range_table[TRCS_RANGE_INDEX_LAST] = {{TRCS_RANGE_
 static TRCS_status_t TRCS_update_adc_data(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 	// Add sample
-	adc_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
 	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Update average.
 	trcs_ctx.iout_12bits = MATH_average_u32((unsigned int*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
@@ -98,13 +98,13 @@ errors:
 static TRCS_status_t TRCS_compute_iout(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
-	ADC_status_t adc_status = ADC_SUCCESS;
+	ADC_status_t adc1_status = ADC_SUCCESS;
 	unsigned int ref191_12bits = 0;
 	unsigned int resistor_mohm = 0;
 	unsigned long long num = 0;
 	unsigned long long den = 0;
 	// Get bandgap measurement.
-	adc_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
 	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Convert to uA.
 	num = (unsigned long long) trcs_ctx.iout_12bits;

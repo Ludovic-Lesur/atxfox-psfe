@@ -36,4 +36,8 @@ TD1208_status_t TD1208_send_bit(unsigned char uplink_bit);
 TD1208_status_t TD1208_send_frame(unsigned char* uplink_data, unsigned char uplink_data_length_bytes);
 void TD1208_fill_rx_buffer(unsigned char rx_byte);
 
+#define TD1208_status_check(error_base) { if (td1208_status != TD1208_SUCCESS) { status = error_base + td1208_status; goto errors; }}
+#define TD1208_error_check() { ERROR_status_check(td1208_status, TD1208_SUCCESS, ERROR_BASE_TD1208); }
+#define TD1208_error_check_print() { ERROR_status_check_print(td1208_status, TD1208_SUCCESS, ERROR_BASE_TD1208); }
+
 #endif /* COMPONENTS___TD1208_H___ */

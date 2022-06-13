@@ -40,4 +40,8 @@ void TRCS_get_range(volatile TRCS_range_t* range);
 void TRCS_get_iout(volatile unsigned int* iout_ua);
 void TRCS_off(void);
 
+#define TRCS_status_check(error_base) { if (trcs_status != TRCS_SUCCESS) { status = error_base + trcs_status; goto errors; }}
+#define TRCS_error_check() { ERROR_status_check(trcs_status, TRCS_SUCCESS, ERROR_BASE_TRCS); }
+#define TRCS_error_check_print() { ERROR_status_check_print(trcs_status, TRCS_SUCCESS, ERROR_BASE_TRCS); }
+
 #endif /* __TRCS_H__ */

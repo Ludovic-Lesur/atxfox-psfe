@@ -176,7 +176,7 @@ errors:
 ADC_status_t ADC1_init(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	unsigned char idx = 0;
 	unsigned int loop_count = 0;
 	// Configure analog GPIOs.
@@ -195,7 +195,7 @@ ADC_status_t ADC1_init(void) {
 	}
 	// Enable ADC voltage regulator.
 	ADC1 -> CR |= (0b1 << 28);
-	lptim_status = LPTIM1_delay_milliseconds(5, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(5, 0);
 	LPTIM1_status_check(ADC_ERROR_BASE_LPTIM);
 	// ADC configuration.
 	ADC1 -> CFGR2 |= (0b01 << 30); // Use (PCLK2/2) as ADCCLK = SYSCLK/2 (see RCC_init() function).
@@ -213,7 +213,7 @@ ADC_status_t ADC1_init(void) {
 	// Wake-up temperature sensor and internal voltage reference.
 	ADC1 -> CCR |= (0b11 << 22); // TSEN='1' and VREFEN='1'.
 	// Wait internal reference stabilization (max 3ms).
-	lptim_status = LPTIM1_delay_milliseconds(10, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
 	LPTIM1_status_check(ADC_ERROR_BASE_LPTIM);
 	// Enable ADC peripheral.
 	ADC1 -> CR |= (0b1 << 0); // ADEN='1'.

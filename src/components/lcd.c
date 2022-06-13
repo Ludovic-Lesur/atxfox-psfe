@@ -70,7 +70,7 @@ static void LCD_data(unsigned char lcd_data) {
 LCD_status_t LCD_init(void) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Init GPIOs.
 	GPIO_configure(&GPIO_LCD_E, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_LCD_RS, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -84,16 +84,16 @@ LCD_status_t LCD_init(void) {
 	GPIO_configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Initialization sequence.
 	GPIO_write(&GPIO_LCD_E, 0);
-	lptim_status = LPTIM1_delay_milliseconds(100, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(100, 0);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	lptim_status = LPTIM1_delay_milliseconds(30, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(30, 0);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	lptim_status = LPTIM1_delay_milliseconds(10, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x30);
-	lptim_status = LPTIM1_delay_milliseconds(10, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	LCD_command(0x38); // 8-bits / 2 lines mode.
 	LCD_command(0x08); // Display off.
@@ -144,10 +144,10 @@ errors:
 LCD_status_t LCD_clear(void) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
-	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Clear command.
 	LCD_command(0x01);
-	lptim_status = LPTIM1_delay_milliseconds(2, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(2, 0);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 errors:
 	return status;
@@ -157,7 +157,7 @@ errors:
  * @param sigfox_id:	ID to print.
  * @return status:		Function executions status.
  */
-LCD_status_t LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
+LCD_status_t LCD_print_sigfox_id(unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
@@ -168,8 +168,11 @@ LCD_status_t LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGF
 		string_status = STRING_value_to_string(sigfox_id[byte_idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_id_string[2 * byte_idx]));
 		STRING_status_check(LCD_ERROR_BASE_STRING);
 	}
+	status = LCD_print(0, 0, " SFX ID ", 8);
+	if (status != LCD_SUCCESS) goto errors;
 	// Print ID.
-	status = LCD_print(row, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
+	status = LCD_print(1, 0, sigfox_id_string, (2 * SIGFOX_DEVICE_ID_LENGTH_BYTES));
+	if (status != LCD_SUCCESS) goto errors;
 errors:
 	return status;
 }
@@ -254,6 +257,61 @@ LCD_status_t LCD_print_value_5_digits(unsigned char row, unsigned char column, u
 	}
 	// Print value.
 	status = LCD_print(row, column, value_string, 5);
+errors:
+	return status;
+}
+
+/* PRINT HARDWARE VERSION.
+ * @param:	None.
+ * @return:	None.
+ */
+LCD_status_t LCD_print_hw_version(void) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	// Print version.
+	status = LCD_print(0, 0, " ATXFox ", 8);
+	if (status != LCD_SUCCESS) goto errors;
+	status = LCD_print(1, 0, " HW 1.0 ", 8);
+errors:
+	return status;
+}
+
+/* PRINT SOFTWARE VERSION.
+ * @param major_version:	Software major version.
+ * @param minor_version:	Software minor version.
+ * @param commit_index:		Software git commit index.
+ * @param dirty_flag:		Software git dirty flag.
+ * @return status:			Function executions status.
+ */
+LCD_status_t LCD_print_sw_version(unsigned char major_version, unsigned char minor_version, unsigned char commit_index, unsigned char dirty_flag) {
+	// Local variables.
+	LCD_status_t status = LCD_SUCCESS;
+	STRING_status_t string_status = STRING_SUCCESS;
+	char sw_version_string[LCD_COLUMN_IDX_MAX + 1];
+	// Build string.
+	string_status = STRING_value_to_string((major_version / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[0]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	string_status = STRING_value_to_string((major_version - 10 * (major_version / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[1]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	sw_version_string[2] = STRING_CHAR_DOT;
+	string_status = STRING_value_to_string((minor_version / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[3]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	string_status = STRING_value_to_string((minor_version - 10 * (minor_version / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[4]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	sw_version_string[5] = STRING_CHAR_DOT;
+	string_status = STRING_value_to_string((commit_index / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[6]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	string_status = STRING_value_to_string((commit_index - 10 * (commit_index / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[7]));
+	STRING_status_check(LCD_ERROR_BASE_STRING);
+	// Print version.
+	if (dirty_flag == 0) {
+		status = LCD_print(0, 0, "   SW   ", 8);
+	}
+	else {
+		status = LCD_print(0, 0, "  SW !  ", 8);
+	}
+	if (status != LCD_SUCCESS) goto errors;
+	status = LCD_print(1, 0, sw_version_string, 8);
 errors:
 	return status;
 }

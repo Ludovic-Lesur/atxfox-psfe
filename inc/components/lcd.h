@@ -28,7 +28,13 @@ typedef enum {
 LCD_status_t LCD_init(void);
 LCD_status_t LCD_print(unsigned char row, unsigned char column, char* string, unsigned char string_length);
 LCD_status_t LCD_clear(void);
-LCD_status_t LCD_print_sigfox_id(unsigned char row, unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
+LCD_status_t LCD_print_sigfox_id(unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
 LCD_status_t LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value);
+LCD_status_t LCD_print_hw_version(void);
+LCD_status_t LCD_print_sw_version(unsigned char major_version, unsigned char minor_version, unsigned char commit_index, unsigned char dirty_flag);
+
+#define LCD_status_check(error_base) { if (lcd_status != LCD_SUCCESS) { status = error_base + lcd_status; goto errors; }}
+#define LCD_error_check() { ERROR_status_check(lcd_status, LCD_SUCCESS, ERROR_BASE_LCD); }
+#define LCD_error_check_print() { ERROR_status_check_print(lcd_status, LCD_SUCCESS, ERROR_BASE_LCD); }
 
 #endif /* __LCD_H__ */
