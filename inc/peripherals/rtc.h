@@ -8,6 +8,8 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
+#include "types.h"
+
 /*** RTC structures ***/
 
 typedef enum {
@@ -21,10 +23,10 @@ typedef enum {
 /*** RTC functions ***/
 
 void RTC_reset(void);
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned int lsi_freq_hz);
-RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds);
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint32_t lsi_freq_hz);
+RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds);
 RTC_status_t RTC_stop_wakeup_timer(void);
-volatile unsigned char RTC_get_wakeup_timer_flag(void);
+volatile uint8_t RTC_get_wakeup_timer_flag(void);
 void RTC_clear_wakeup_timer_flag(void);
 
 #define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}

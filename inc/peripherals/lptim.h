@@ -8,6 +8,8 @@
 #ifndef __LPTIM_H__
 #define __LPTIM_H__
 
+#include "types.h"
+
 /*** LPTIM structures ***/
 
 typedef enum {
@@ -20,8 +22,8 @@ typedef enum {
 
 /*** LPTIM functions ***/
 
-void LPTIM1_init(unsigned int lsi_freq_hz);
-LPTIM_status_t LPTIM1_delay_milliseconds(unsigned int delay_ms, unsigned char stop_mode);
+void LPTIM1_init(uint32_t lsi_freq_hz);
+LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, uint8_t stop_mode);
 
 #define LPTIM1_status_check(error_base) { if (lptim1_status != LPTIM_SUCCESS) { status = error_base + lptim1_status; goto errors; }}
 #define LPTIM1_error_check() { ERROR_status_check(lptim1_status, LPTIM_SUCCESS, ERROR_BASE_LPTIM1); }

@@ -9,6 +9,7 @@
 #define __LPUART_H__
 
 #include "lptim.h"
+#include "types.h"
 
 /*** LPUART structures ***/
 
@@ -22,7 +23,7 @@ typedef enum {
 /*** LPUART functions ***/
 
 void LPUART1_init(void);
-LPUART_status_t LPUART1_send_string(char* tx_string);
+LPUART_status_t LPUART1_send_string(char_t* tx_string);
 
 #define LPUART1_status_check(error_base) { if (lpuart1_status != LPUART_SUCCESS) { status = error_base + lpuart1_status; goto errors; }}
 #define LPUART1_error_check() { ERROR_status_check(lpuart1_status, LPUART_SUCCESS, ERROR_BASE_LPUART1); }

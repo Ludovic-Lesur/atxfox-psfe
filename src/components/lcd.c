@@ -27,7 +27,7 @@
  */
 static void LCD_enable_pulse(void) {
 	// Local variables.
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Pulse width > 460ns.
 	for (loop_count=0 ; loop_count<5 ; loop_count++) {
 		GPIO_write(&GPIO_LCD_E, ((loop_count > 0x01) ? 1 : 0));
@@ -39,7 +39,7 @@ static void LCD_enable_pulse(void) {
  * @param lcd_command:	Command to send.
  * @return:				None.
  */
-static void LCD_command(unsigned char lcd_command) {
+static void LCD_command(uint8_t lcd_command) {
 	// Put command on output port.
 	GPIOA -> ODR &= 0xFFFFFE01;
 	GPIOA -> ODR |= (lcd_command << 1);
@@ -52,7 +52,7 @@ static void LCD_command(unsigned char lcd_command) {
  * @param lcd_data:	Data to send.
  * @return:			None.
  */
-static void LCD_data(unsigned char lcd_data) {
+static void LCD_data(uint8_t lcd_data) {
 	// Put data on output port.
 	GPIOA -> ODR &= 0xFFFFFE01;
 	GPIOA -> ODR |= (lcd_data << 1);
@@ -110,7 +110,7 @@ errors:
  * @param string_length:	Number of characters to print.
  * @return status:			Function executions status.
  */
-LCD_status_t LCD_print(unsigned char row, unsigned char column, char* string, unsigned char string_length) {
+LCD_status_t LCD_print(uint8_t row, uint8_t column, char* string, uint8_t string_length) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	// Check parameters.
@@ -125,8 +125,8 @@ LCD_status_t LCD_print(unsigned char row, unsigned char column, char* string, un
 	// Set position.
 	LCD_command(((row * 0x40) + column) + 0x80);
 	// Print string.
-	unsigned char column_idx = column;
-	unsigned char string_idx = 0;
+	uint8_t column_idx = column;
+	uint8_t string_idx = 0;
 	// Loop until string is printed or screen edge is reached.
 	while ((column_idx <= LCD_COLUMN_IDX_MAX) && (column_idx < (column + string_length))) {
 		LCD_data(string[string_idx]);
@@ -157,12 +157,12 @@ errors:
  * @param sigfox_id:	ID to print.
  * @return status:		Function executions status.
  */
-LCD_status_t LCD_print_sigfox_id(unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
+LCD_status_t LCD_print_sigfox_id(uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	char sigfox_id_string[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
-	unsigned char byte_idx = 0;
+	uint8_t byte_idx = 0;
 	// Build corresponding string.
 	for (byte_idx=0 ; byte_idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; byte_idx++) {
 		string_status = STRING_value_to_string(sigfox_id[byte_idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_id_string[2 * byte_idx]));
@@ -181,12 +181,12 @@ errors:
  * @param value:	(value * 1000) to print.
  * @return status:	Function executions status.
  */
-LCD_status_t LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value) {
+LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t value) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	unsigned char u1, u2, u3, u4, u5;
-	unsigned char d1, d2, d3;
+	uint8_t u1, u2, u3, u4, u5;
+	uint8_t d1, d2, d3;
 	char value_string[5] = {0};
 	// Convert value to message.
 	if (value < 10000) {
@@ -283,7 +283,7 @@ errors:
  * @param dirty_flag:		Software git dirty flag.
  * @return status:			Function executions status.
  */
-LCD_status_t LCD_print_sw_version(unsigned char major_version, unsigned char minor_version, unsigned char commit_index, unsigned char dirty_flag) {
+LCD_status_t LCD_print_sw_version(uint8_t major_version, uint8_t minor_version, uint8_t commit_index, uint8_t dirty_flag) {
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;

@@ -14,29 +14,34 @@
 #include "math.h"
 #include "psfe.h"
 #include "rcc_reg.h"
+#include "types.h"
 
 /*** ADC local macros ***/
-
-#define ADC_CHANNEL_REF191			9
-#define ADC_CHANNEL_VOUT			8
-#define ADC_CHANNEL_IOUT			0
-#define ADC_CHANNEL_VREFINT			17
-#define ADC_CHANNEL_TMCU			18
 
 #define ADC_MEDIAN_FILTER_LENGTH	9
 #define ADC_CENTER_AVERAGE_LENGTH	3
 
 #define ADC_FULL_SCALE_12BITS		4095
 
+#define ADC_VREFINT_VOLTAGE_MV		((VREFINT_CAL * VREFINT_VCC_CALIB_MV) / (ADC_FULL_SCALE_12BITS))
 #define ADC_VMCU_DEFAULT_MV			3400
 
 #define ADC_TIMEOUT_COUNT			1000000
 
 /*** ADC local structures ***/
 
+typedef enum {
+	ADC_CHANNEL_IOUT = 0,
+	ADC_CHANNEL_VOUT = 8,
+	ADC_CHANNEL_REF191 = 9,
+	ADC_CHANNEL_VREFINT = 17,
+	ADC_CHANNEL_TMCU = 18,
+	ADC_CHANNEL_LAST = 19
+} ADC_channel_t;
+
 typedef struct {
-	unsigned int data[ADC_DATA_INDEX_LAST];
-	signed char tmcu_degrees;
+	uint32_t data[ADC_DATA_INDEX_LAST];
+	int8_t tmcu_degrees;
 } ADC_context_t;
 
 /*** ADC local global variables ***/
@@ -47,13 +52,22 @@ static ADC_context_t adc_ctx;
 
 /* PERFORM A SINGLE ADC CONVERSION.
  * @param adc_channel:			Channel to convert.
- * @param adc_result_12bits:	Pointer to int that will contain ADC raw result on 12 bits.
+ * @param adc_result_12bits:	Pointer to 32-bits value that will contain ADC raw result on 12 bits.
  * @return status:				Function execution status.
  */
-static ADC_status_t ADC1_single_conversion(unsigned char adc_channel, unsigned int* adc_result_12bits) {
+static ADC_status_t _ADC1_single_conversion(ADC_channel_t adc_channel, uint32_t* adc_result_12bits) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
+	// Check parameters.
+	if (adc_channel >= ADC_CHANNEL_LAST) {
+		status = ADC_ERROR_CHANNEL;
+		goto errors;
+	}
+	if (adc_result_12bits == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Select input channel.
 	ADC1 -> CHSELR &= 0xFFF80000; // Reset all bits.
 	ADC1 -> CHSELR |= (0b1 << adc_channel);
@@ -74,36 +88,47 @@ errors:
 	return status;
 }
 
-/* PERFORM SEVERAL CONVERSIONS FOLLOWED BY A MEDIAN FIILTER.
+/* PERFORM SEVERAL CONVERSIONS FOLLOWED BY A MEDIAN FILTER.
  * @param adc_channel:			Channel to convert.
- * @param adc_result_12bits:	Pointer to int that will contain ADC filtered result on 12 bits.
+ * @param adc_result_12bits:	Pointer to 32-bits value that will contain ADC filtered result on 12 bits.
  * @return status:				Function execution status.
  */
-static ADC_status_t ADC1_filtered_conversion(unsigned char adc_channel, unsigned int* adc_result_12bits) {
+static ADC_status_t _ADC1_filtered_conversion(ADC_channel_t adc_channel, uint32_t* adc_result_12bits) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	unsigned int adc_sample_buf[ADC_MEDIAN_FILTER_LENGTH] = {0x00};
-	unsigned char idx = 0;
+	MATH_status_t math_status = MATH_SUCCESS;
+	uint32_t adc_sample_buf[ADC_MEDIAN_FILTER_LENGTH] = {0x00};
+	uint8_t idx = 0;
+	// Check parameters.
+	if (adc_channel >= ADC_CHANNEL_LAST) {
+		status = ADC_ERROR_CHANNEL;
+		goto errors;
+	}
+	if (adc_result_12bits == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Perform all conversions.
 	for (idx=0 ; idx<ADC_MEDIAN_FILTER_LENGTH ; idx++) {
-		status = ADC1_single_conversion(adc_channel, &(adc_sample_buf[idx]));
+		status = _ADC1_single_conversion(adc_channel, &(adc_sample_buf[idx]));
 		if (status != ADC_SUCCESS) goto errors;
 	}
 	// Apply median filter.
-	(*adc_result_12bits) = MATH_median_filter_u32(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH);
+	math_status = MATH_median_filter_u32(adc_sample_buf, ADC_MEDIAN_FILTER_LENGTH, ADC_CENTER_AVERAGE_LENGTH, adc_result_12bits);
+	MATH_status_check(ADC_ERROR_BASE_MATH);
 errors:
 	return status;
 }
 
-/* UPDATE ADC CALIBRATION VALUE WITH EXTERNAL BANDGAP.
+/* PERFORM EXTERNAL REFERENCE VOLTAGE CONVERSION.
  * @param:			None.
  * @return status:	Function execution status.
  */
-static ADC_status_t ADC1_calibrate(void) {
+static ADC_status_t _ADC1_compute_vrefext(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	// Read raw reference voltage.
-	status = ADC1_filtered_conversion(ADC_CHANNEL_REF191, &adc_ctx.data[ADC_DATA_INDEX_REF191_12BITS]);
+	status = _ADC1_filtered_conversion(ADC_CHANNEL_REF191, &adc_ctx.data[ADC_DATA_INDEX_REF191_12BITS]);
 	return status;
 }
 
@@ -111,12 +136,12 @@ static ADC_status_t ADC1_calibrate(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static ADC_status_t ADC1_compute_vout(void) {
+static ADC_status_t _ADC1_compute_vout(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	unsigned int vout_12bits = 0;
+	uint32_t vout_12bits = 0;
 	// Get raw result.
-	status = ADC1_filtered_conversion(ADC_CHANNEL_VOUT, &vout_12bits);
+	status = _ADC1_filtered_conversion(ADC_CHANNEL_VOUT, &vout_12bits);
 	if (status != ADC_SUCCESS) goto errors;
 	// Convert to mV using bandgap result.
 	adc_ctx.data[ADC_DATA_INDEX_VOUT_MV] = (ADC_REF191_VOLTAGE_MV * vout_12bits * psfe_vout_voltage_divider_ratio[PSFE_BOARD_INDEX]) / (adc_ctx.data[ADC_DATA_INDEX_REF191_12BITS]);
@@ -128,11 +153,11 @@ errors:
  * @param:			None.
  * @return status:	Function execution status.
  */
-static ADC_status_t ADC1_compute_iout(void) {
+static ADC_status_t _ADC1_compute_iout(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	// Get raw result.
-	status = ADC1_filtered_conversion(ADC_CHANNEL_IOUT, &adc_ctx.data[ADC_DATA_INDEX_IOUT_12BITS]);
+	status = _ADC1_filtered_conversion(ADC_CHANNEL_IOUT, &adc_ctx.data[ADC_DATA_INDEX_IOUT_12BITS]);
 	return status;
 }
 
@@ -140,7 +165,7 @@ static ADC_status_t ADC1_compute_iout(void) {
  * @param:	None.
  * @return:	None.
  */
-static void ADC1_compute_vmcu(void) {
+static void _ADC1_compute_vmcu(void) {
 	// Retrieve supply voltage from bandgap result.
 	adc_ctx.data[ADC_DATA_INDEX_VMCU_MV] = (ADC_REF191_VOLTAGE_MV * ADC_FULL_SCALE_12BITS) / (adc_ctx.data[ADC_DATA_INDEX_REF191_12BITS]);
 }
@@ -149,19 +174,19 @@ static void ADC1_compute_vmcu(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static ADC_status_t ADC1_compute_tmcu(void) {
+static ADC_status_t _ADC1_compute_tmcu(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	unsigned int raw_temp_sensor_12bits = 0;
-	int raw_temp_calib_mv = 0;
-	int temp_calib_degrees = 0;
+	uint32_t raw_temp_sensor_12bits = 0;
+	int32_t raw_temp_calib_mv = 0;
+	int32_t temp_calib_degrees = 0;
 	// Read raw temperature.
-	status = ADC1_filtered_conversion(ADC_CHANNEL_TMCU, &raw_temp_sensor_12bits);
+	status = _ADC1_filtered_conversion(ADC_CHANNEL_TMCU, &raw_temp_sensor_12bits);
 	if (status != ADC_SUCCESS) goto errors;
 	// Compute temperature according to MCU factory calibration (see p.301 and p.847 of RM0377 datasheet).
-	raw_temp_calib_mv = ((int) raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_INDEX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
-	temp_calib_degrees = raw_temp_calib_mv * ((int) (TS_CAL2_TEMP-TS_CAL1_TEMP));
-	temp_calib_degrees = (temp_calib_degrees) / ((int) (TS_CAL2 - TS_CAL1));
+	raw_temp_calib_mv = ((int32_t) raw_temp_sensor_12bits * adc_ctx.data[ADC_DATA_INDEX_VMCU_MV]) / (TS_VCC_CALIB_MV) - TS_CAL1; // Equivalent raw measure for calibration power supply (VCC_CALIB).
+	temp_calib_degrees = raw_temp_calib_mv * ((int32_t) (TS_CAL2_TEMP-TS_CAL1_TEMP));
+	temp_calib_degrees = (temp_calib_degrees) / ((int32_t) (TS_CAL2 - TS_CAL1));
 	adc_ctx.tmcu_degrees = temp_calib_degrees + TS_CAL1_TEMP;
 errors:
 	return status;
@@ -177,8 +202,8 @@ ADC_status_t ADC1_init(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-	unsigned char idx = 0;
-	unsigned int loop_count = 0;
+	uint8_t idx = 0;
+	uint32_t loop_count = 0;
 	// Configure analog GPIOs.
 	GPIO_configure(&GPIO_BANDGAP, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_VOLTAGE_SENSE, GPIO_MODE_ANALOG, GPIO_TYPE_OPEN_DRAIN, GPIO_SPEED_LOW, GPIO_PULL_NONE);
@@ -238,15 +263,15 @@ ADC_status_t ADC1_perform_measurements(void) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
 	// Calibrate with bandgap.
-	status = ADC1_calibrate();
+	status = _ADC1_compute_vrefext();
 	if (status != ADC_SUCCESS) goto errors;
 	// Perform measurements.
-	status = ADC1_compute_vout();
+	status = _ADC1_compute_vout();
 	if (status != ADC_SUCCESS) goto errors;
-	status = ADC1_compute_iout();
+	status = _ADC1_compute_iout();
 	if (status != ADC_SUCCESS) goto errors;
-	ADC1_compute_vmcu();
-	status = ADC1_compute_tmcu();
+	_ADC1_compute_vmcu();
+	status = _ADC1_compute_tmcu();
 errors:
 	return status;
 }
@@ -256,12 +281,16 @@ errors:
  * @param data:		Pointer that will contain ADC data.
  * @return status:	Function execution status.
  */
-ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, unsigned int* data) {
+ADC_status_t ADC1_get_data(ADC_data_index_t data_idx, uint32_t* data) {
 	// Local variables.
 	ADC_status_t status = ADC_SUCCESS;
-	// Check index.
+	// Check parameters.
 	if (data_idx >= ADC_DATA_INDEX_LAST) {
 		status = ADC_ERROR_DATA_INDEX;
+		goto errors;
+	}
+	if (data == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
 		goto errors;
 	}
 	(*data) = adc_ctx.data[data_idx];
@@ -270,9 +299,18 @@ errors:
 }
 
 /* GET MCU TEMPERATURE.
- * @param tmcu_degrees:	Pointer to signed value that will contain MCU temperature in degrees (2-complement).
- * @return:				None.
+ * @param tmcu_degrees:	Pointer to 8-bits value that will contain MCU temperature in degrees (2-complement).
+ * @return status:		Function execution status.
  */
-void ADC1_get_tmcu(signed char* tmcu_degrees) {
+ADC_status_t ADC1_get_tmcu(int8_t* tmcu_degrees) {
+	// Local variables.
+	ADC_status_t status = ADC_SUCCESS;
+	// Check parameter.
+	if (tmcu_degrees == NULL) {
+		status = ADC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	(*tmcu_degrees) = adc_ctx.tmcu_degrees;
+errors:
+	return status;
 }

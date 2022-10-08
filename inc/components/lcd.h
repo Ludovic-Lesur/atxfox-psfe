@@ -11,6 +11,7 @@
 #include "lptim.h"
 #include "string.h"
 #include "td1208.h"
+#include "types.h"
 
 /*** LCD structures ***/
 
@@ -26,12 +27,12 @@ typedef enum {
 /*** LCD functions ***/
 
 LCD_status_t LCD_init(void);
-LCD_status_t LCD_print(unsigned char row, unsigned char column, char* string, unsigned char string_length);
+LCD_status_t LCD_print(uint8_t row, uint8_t column, char_t* string, uint8_t string_length);
 LCD_status_t LCD_clear(void);
-LCD_status_t LCD_print_sigfox_id(unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
-LCD_status_t LCD_print_value_5_digits(unsigned char row, unsigned char column, unsigned int value);
+LCD_status_t LCD_print_sigfox_id(uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
+LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t value);
 LCD_status_t LCD_print_hw_version(void);
-LCD_status_t LCD_print_sw_version(unsigned char major_version, unsigned char minor_version, unsigned char commit_index, unsigned char dirty_flag);
+LCD_status_t LCD_print_sw_version(uint8_t major_version, uint8_t minor_version, uint8_t commit_index, uint8_t dirty_flag);
 
 #define LCD_status_check(error_base) { if (lcd_status != LCD_SUCCESS) { status = error_base + lcd_status; goto errors; }}
 #define LCD_error_check() { ERROR_status_check(lcd_status, LCD_SUCCESS, ERROR_BASE_LCD); }

@@ -27,10 +27,10 @@
  * @param tx_byte:	Byte to append.
  * @return status:	Function execution status.
  */
-static LPUART_status_t LPUART1_fill_tx_buffer(unsigned char tx_byte) {
+static LPUART_status_t LPUART1_fill_tx_buffer(uint8_t tx_byte) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Fill transmit register.
 	LPUART1 -> TDR = tx_byte;
 	// Wait for transmission to complete.
@@ -54,7 +54,7 @@ errors:
  */
 void LPUART1_init(void) {
 	// Local variables.
-	unsigned int brr = 0;
+	uint32_t brr = 0;
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 #ifndef DEBUG
@@ -81,7 +81,7 @@ void LPUART1_init(void) {
 LPUART_status_t LPUART1_send_string(char* tx_string) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
-	unsigned int char_count = 0;
+	uint32_t char_count = 0;
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill transmit register.

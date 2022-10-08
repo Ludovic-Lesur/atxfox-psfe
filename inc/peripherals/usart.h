@@ -8,6 +8,8 @@
 #ifndef __USART_H__
 #define __USART_H__
 
+#include "types.h"
+
 /*** USART structures ***/
 
 typedef enum {
@@ -20,7 +22,7 @@ typedef enum {
 /*** USART functions ***/
 
 void USART2_init(void);
-USART_status_t USART2_send_string(char* tx_string);
+USART_status_t USART2_send_string(char_t* tx_string);
 
 #define USART_status_check(error_base) { if (usart_status != USART_SUCCESS) { status = error_base + usart_status; goto errors; }}
 #define USART_error_check() { ERROR_status_check(usart_status, USART_SUCCESS, ERROR_BASE_USART); }

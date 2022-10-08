@@ -30,7 +30,7 @@ void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
 	// Bypass switch (PB7).
 	if (((EXTI -> PR) & (0b1 << (GPIO_TRCS_BYPASS.pin_index))) != 0) {
 		// Set local flags.
-		unsigned char bypass_state = GPIO_read(&GPIO_TRCS_BYPASS);
+		uint8_t bypass_state = GPIO_read(&GPIO_TRCS_BYPASS);
 		PSFE_set_bypass_flag(bypass_state);
 		TRCS_set_bypass_flag(bypass_state);
 		// Clear flag.
@@ -42,7 +42,7 @@ void __attribute__((optimize("-O0"))) EXTI4_15_IRQHandler(void) {
  * @param bit_idx:	Interrupt index.
  * @return:			None.
  */
-static void EXTI_set_trigger(EXTI_trigger_t trigger, unsigned char bit_idx) {
+static void EXTI_set_trigger(EXTI_trigger_t trigger, uint8_t bit_idx) {
 	// Check index.
 	if (bit_idx > EXTI_RTSR_FTSR_MAX_INDEX) return;
 	// Select triggers.
@@ -83,19 +83,19 @@ void EXTI_init(void) {
 	EXTI -> IMR = 0;
 	// Clear all flags.
 	EXTI_clear_all_flags();
-	NVIC_set_priority(NVIC_IT_EXTI_4_15, 3);
+	NVIC_set_priority(NVIC_INTERRUPT_EXTI_4_15, 3);
 }
 
 /* CONFIGURE A GPIO AS EXTERNAL INTERRUPT SOURCE.
- * @param gpio:	GPIO to be attached to EXTI peripheral.
- * @trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
- * @return:		None.
+ * @param gpio:		GPIO to be attached to EXTI peripheral.
+ * @param trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
+ * @return:			None.
  */
 void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 	// Select GPIO port.
 	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] &= ~(0b1111 << (4 * ((gpio -> pin_index) % 4)));
 	SYSCFG -> EXTICR[((gpio -> pin_index) / 4)] |= ((gpio -> port_index) << (4 * ((gpio -> pin_index) % 4)));
-	// Set mask and trigger.
+	// Set mask.
 	EXTI -> IMR |= (0b1 << ((gpio -> pin_index))); // IMx='1'.
 	// Select triggers.
 	EXTI_set_trigger(trigger, (gpio -> pin_index));
@@ -103,7 +103,7 @@ void EXTI_configure_gpio(const GPIO_pin_t* gpio, EXTI_trigger_t trigger) {
 
 /* CONFIGURE A LINE AS INTERNAL INTERRUPT SOURCE.
  * @param line:		Line to configure (see EXTI_line_t enum).
- * @edge_trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
+ * @param trigger:	Interrupt edge trigger (see EXTI_trigger_t enum).
  * @return:			None.
  */
 void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger) {

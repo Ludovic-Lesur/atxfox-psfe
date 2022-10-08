@@ -26,8 +26,8 @@ typedef struct {
 	char command_buf[TD1208_BUFFER_LENGTH_BYTES];
 	// Response buffer.
 	volatile char response_buf[TD1208_BUFFER_LENGTH_BYTES];
-	volatile unsigned int response_buf_idx;
-	volatile unsigned char line_end_flag;
+	volatile uint32_t response_buf_idx;
+	volatile uint8_t line_end_flag;
 	PARSER_context_t parser;
 } TD1208_context_t;
 
@@ -43,7 +43,7 @@ static TD1208_context_t td1208_ctx;
  */
 static void TD1208_reset_parser(void) {
 	// Local variabless.
-    unsigned int idx = 0;
+    uint32_t idx = 0;
     // Reset buffers and indexes.
     for (idx=0; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
     	td1208_ctx.response_buf[idx] = STRING_CHAR_NULL;
@@ -65,7 +65,7 @@ static void TD1208_reset_parser(void) {
 static TD1208_status_t TD1208_wait_for_response(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Wait for AT command separator.
 	while (td1208_ctx.line_end_flag == 0) {
 		// Exit if timeout.
@@ -107,7 +107,7 @@ void TD1208_init(void) {
 	// Init buffers.
 	TD1208_reset_parser();
 	// Enable interrupt.
-	NVIC_enable_interrupt(NVIC_IT_USART2);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2);
 }
 
 /* DISABLE TD1208 ECHO ON UART.
@@ -155,12 +155,12 @@ errors:
  * @param sigfox_device_id:	Byte array that will contain device ID.
  * @return status:			Function execution status.
  */
-TD1208_status_t TD1208_get_sigfox_id(unsigned char* sigfox_device_id) {
+TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
 	PARSER_status_t parser_status = PARSER_SUCCESS;
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	char temp_id[TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR];
 	// Reset parser.
 	TD1208_reset_parser();
@@ -206,7 +206,7 @@ errors:
  * @param uplink_bit:	Bit to send.
  * @return:				None.
  */
-TD1208_status_t TD1208_send_bit(unsigned char uplink_bit) {
+TD1208_status_t TD1208_send_bit(uint8_t uplink_bit) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
@@ -238,12 +238,12 @@ errors:
  * @param uplink_frame_length:	Number of bytes to send.
  * @return:						None.
  */
-TD1208_status_t TD1208_send_frame(unsigned char* uplink_data, unsigned char uplink_data_length_bytes) {
+TD1208_status_t TD1208_send_frame(uint8_t* uplink_data, uint8_t uplink_data_length_bytes) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Reset parser.
 	TD1208_reset_parser();
 	// Header.
@@ -273,7 +273,7 @@ errors:
  * @param rx_byte:	Incoming byte to store.
  * @return:			None.
  */
-void TD1208_fill_rx_buffer(unsigned char rx_byte) {
+void TD1208_fill_rx_buffer(uint8_t rx_byte) {
 	// Append byte if LF flag is not allready set.
 	if (td1208_ctx.line_end_flag == 0) {
 		// Check ending characters.

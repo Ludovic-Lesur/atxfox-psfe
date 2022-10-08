@@ -22,7 +22,7 @@
 IWDG_status_t IWDG_init(void) {
 	// Local variables.
 	IWDG_status_t status = IWDG_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Configure peripheral.
 	IWDG -> KR = 0x0000CCCC; // Enable peripheral.
 	IWDG -> KR = 0x00005555; // Enable register access.

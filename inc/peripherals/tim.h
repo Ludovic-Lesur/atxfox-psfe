@@ -8,6 +8,8 @@
 #ifndef __TIM_H__
 #define __TIM_H__
 
+#include "types.h"
+
 /*** TIM structures ***/
 
 typedef enum {
@@ -19,13 +21,13 @@ typedef enum {
 /*** TIM functions ***/
 
 void TIM21_init(void);
-TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz);
+TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz);
 void TIM21_disable(void);
 
-void TIM2_init(unsigned int period_ms);
+void TIM2_init(uint32_t period_ms);
 void TIM2_start(void);
 
-void TIM22_init(unsigned int period_ms);
+void TIM22_init(uint32_t period_ms);
 void TIM22_start(void);
 void TIM22_stop(void);
 

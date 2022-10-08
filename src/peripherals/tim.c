@@ -19,8 +19,8 @@
 
 /*** TIM local global variables ***/
 
-static volatile unsigned char tim21_flag = 0;
-static volatile unsigned char tim2_irq_count = 0;
+static volatile uint8_t tim21_flag = 0;
+static volatile uint8_t tim2_irq_count = 0;
 
 /*** TIM local functions ***/
 
@@ -86,19 +86,19 @@ void TIM21_init(void) {
  * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
  * @return status:				Function execution status.
  */
-TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
+TIM_status_t TIM21_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
-	unsigned char tim21_interrupt_count = 0;
-	unsigned int tim21_ccr1_edge1 = 0;
-	unsigned int tim21_ccr1_edge8 = 0;
-	unsigned int loop_count = 0;
+	uint8_t tim21_interrupt_count = 0;
+	uint32_t tim21_ccr1_edge1 = 0;
+	uint32_t tim21_ccr1_edge8 = 0;
+	uint32_t loop_count = 0;
 	// Reset counter.
 	TIM21 -> CNT = 0;
 	TIM21 -> CCR1 = 0;
 	// Enable interrupt.
 	TIM21 -> SR &= 0xFFFFF9B8; // Clear all flags.
-	NVIC_enable_interrupt(NVIC_IT_TIM21);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_TIM21);
 	// Enable TIM21 peripheral.
 	TIM21 -> CR1 |= (0b1 << 0); // CEN='1'.
 	TIM21 -> CCER |= (0b1 << 0); // CC1E='1'.
@@ -126,7 +126,7 @@ TIM_status_t TIM21_get_lsi_frequency(unsigned int* lsi_frequency_hz) {
 	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
 errors:
 	// Disable interrupt.
-	NVIC_disable_interrupt(NVIC_IT_TIM21);
+	NVIC_disable_interrupt(NVIC_INTERRUPT_TIM21);
 	// Stop counter.
 	TIM21 -> CR1 &= ~(0b1 << 0); // CEN='0'.
 	TIM21 -> CCER &= ~(0b1 << 0); // CC1E='0'.
@@ -147,7 +147,7 @@ void TIM21_disable(void) {
  * @param period_ms:	Timer period in ms.
  * @return:				None.
  */
-void TIM2_init(unsigned int period_ms) {
+void TIM2_init(uint32_t period_ms) {
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Reset timer before configuration.
@@ -158,7 +158,7 @@ void TIM2_init(unsigned int period_ms) {
 	TIM2 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM2 -> DIER |= (0b1 << 0); // UIE='1'.
-	NVIC_set_priority(NVIC_IT_TIM2, 1);
+	NVIC_set_priority(NVIC_INTERRUPT_TIM2, 1);
 	// Generate event to update registers.
 	TIM2  -> EGR |= (0b1 << 0); // UG='1'.
 }
@@ -169,7 +169,7 @@ void TIM2_init(unsigned int period_ms) {
  */
 void TIM2_start(void) {
 	// Enable interrupt.
-	NVIC_enable_interrupt(NVIC_IT_TIM2);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_TIM2);
 	// Start timer.
 	TIM2 -> CR1 |= (0b1 << 0); // CEN='1'.
 }

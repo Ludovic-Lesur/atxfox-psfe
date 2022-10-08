@@ -64,42 +64,42 @@ typedef enum {
 
 typedef struct {
 	union {
-		unsigned char raw_frame[PSFE_SIGFOX_MONITORING_DATA_LENGTH];
+		uint8_t raw_frame[PSFE_SIGFOX_MONITORING_DATA_LENGTH];
 		struct {
 			unsigned vout_mv : 14;
 			unsigned trcs_range : 2;
 			unsigned iout_ua : 24;
 			unsigned vmcu_mv : 16;
 			unsigned tmcu_degrees : 8;
-		} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed)) field;
+		} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 	};
 } PSFE_sigfox_monitoring_data_t;
 
 typedef struct {
 	// State machine.
-	unsigned int lsi_frequency_hz;
+	uint32_t lsi_frequency_hz;
 	PSFE_state_t state;
-	unsigned char por_flag;
-	volatile unsigned char bypass_flag;
+	uint8_t por_flag;
+	volatile uint8_t bypass_flag;
 	// Analog measurements.
-	volatile unsigned int vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
-	volatile unsigned int vout_mv_buf_idx;
-	volatile unsigned int vout_mv;
-	volatile unsigned int iout_ua;
-	volatile unsigned int vmcu_mv;
-	volatile signed char tmcu_degrees;
+	volatile uint32_t vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
+	volatile uint32_t vout_mv_buf_idx;
+	volatile uint32_t vout_mv;
+	volatile uint32_t iout_ua;
+	volatile uint32_t vmcu_mv;
+	volatile int8_t tmcu_degrees;
 	volatile TRCS_range_t trcs_range;
 	// Sigfox.
-	unsigned char sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
+	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	PSFE_sigfox_monitoring_data_t sigfox_monitoring_data;
-	unsigned char sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
+	uint8_t sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
 } PSFE_context_t;
 
 /*** PSFE local global variables ***/
 
 static PSFE_context_t psfe_ctx;
 #ifdef PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
-static const unsigned int psfe_vout_voltage_divider_resistance[PSFE_NUMBER_OF_BOARDS] = {998000, 998000, 599000, 599000, 998000, 998000, 998000, 599000, 599000, 998000};
+static const uint32_t psfe_vout_voltage_divider_resistance[PSFE_NUMBER_OF_BOARDS] = {998000, 998000, 599000, 599000, 998000, 998000, 998000, 599000, 599000, 998000};
 #endif
 
 /*** PSFE functions ***/
@@ -115,7 +115,7 @@ void PSFE_init_hw(void) {
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	LCD_status_t lcd_status = LCD_SUCCESS;
-	unsigned int lsi_frequency_hz = 0;
+	uint32_t lsi_frequency_hz = 0;
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
@@ -167,7 +167,7 @@ void PSFE_init_hw(void) {
  */
 void PSFE_init_context(void) {
 	// Local variables.
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Init context.
 	psfe_ctx.state = PSFE_STATE_VMCU_MONITORING;
 	psfe_ctx.bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
@@ -277,17 +277,17 @@ void PSFE_task(void) {
 	// Send data through Sigfox.
 	case PSFE_STATE_SIGFOX:
 		// Build data.
-		psfe_ctx.sigfox_monitoring_data.field.vout_mv = psfe_ctx.vout_mv;
+		psfe_ctx.sigfox_monitoring_data.vout_mv = psfe_ctx.vout_mv;
 		if (psfe_ctx.bypass_flag != 0) {
-			psfe_ctx.sigfox_monitoring_data.field.trcs_range = TRCS_RANGE_NONE;
-			psfe_ctx.sigfox_monitoring_data.field.iout_ua = (TRCS_IOUT_ERROR_VALUE & 0x00FFFFFF);
+			psfe_ctx.sigfox_monitoring_data.trcs_range = TRCS_RANGE_NONE;
+			psfe_ctx.sigfox_monitoring_data.iout_ua = (TRCS_IOUT_ERROR_VALUE & 0x00FFFFFF);
 		}
 		else {
-			psfe_ctx.sigfox_monitoring_data.field.trcs_range = psfe_ctx.trcs_range;
-			psfe_ctx.sigfox_monitoring_data.field.iout_ua = psfe_ctx.iout_ua;
+			psfe_ctx.sigfox_monitoring_data.trcs_range = psfe_ctx.trcs_range;
+			psfe_ctx.sigfox_monitoring_data.iout_ua = psfe_ctx.iout_ua;
 		}
-		psfe_ctx.sigfox_monitoring_data.field.vmcu_mv = psfe_ctx.vmcu_mv;
-		psfe_ctx.sigfox_monitoring_data.field.tmcu_degrees = psfe_ctx.tmcu_degrees;
+		psfe_ctx.sigfox_monitoring_data.vmcu_mv = psfe_ctx.vmcu_mv;
+		psfe_ctx.sigfox_monitoring_data.tmcu_degrees = psfe_ctx.tmcu_degrees;
 		// Send data.
 		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.raw_frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
 		TD1208_error_check();
@@ -323,7 +323,7 @@ void PSFE_task(void) {
  * @param bypass_state:	Bypass switch state.
  * @return:				None.
  */
-void PSFE_set_bypass_flag(unsigned char bypass_state) {
+void PSFE_set_bypass_flag(uint8_t bypass_state) {
 	psfe_ctx.bypass_flag = bypass_state;
 }
 
@@ -341,9 +341,9 @@ void PSFE_adc_callback(void) {
 	trcs_status = TRCS_task();
 	TRCS_error_check();
 	// Update local Vout.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (unsigned int*) &psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx]);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (uint32_t*) &psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx]);
 	ADC1_error_check();
-	psfe_ctx.vout_mv = MATH_average_u32((unsigned int*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH);
+	MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, (uint32_t*) &psfe_ctx.vout_mv);
 	psfe_ctx.vout_mv_buf_idx++;
 	if (psfe_ctx.vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
 		psfe_ctx.vout_mv_buf_idx = 0;
@@ -353,7 +353,7 @@ void PSFE_adc_callback(void) {
 	TRCS_get_range((TRCS_range_t*) &psfe_ctx.trcs_range);
 #ifdef PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
 	// Compute ouput voltage divider current.
-	unsigned int vout_voltage_divider_current_ua = (psfe_ctx.vout_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_INDEX]);
+	uint32_t vout_voltage_divider_current_ua = (psfe_ctx.vout_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_INDEX]);
 	// Remove offset current.
 	if (psfe_ctx.iout_ua > vout_voltage_divider_current_ua) {
 		psfe_ctx.iout_ua -= vout_voltage_divider_current_ua;
@@ -363,9 +363,9 @@ void PSFE_adc_callback(void) {
 	}
 #endif
 	// Update local Vmcu and Tmcu.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (unsigned int*) &psfe_ctx.vmcu_mv);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (uint32_t*) &psfe_ctx.vmcu_mv);
 	ADC1_error_check();
-	ADC1_get_tmcu((signed char*) &psfe_ctx.tmcu_degrees);
+	ADC1_get_tmcu((int8_t*) &psfe_ctx.tmcu_degrees);
 }
 
 /* CALLBACK CALLED BY TIM22 INTERRUPT.

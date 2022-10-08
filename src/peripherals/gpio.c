@@ -139,7 +139,7 @@ static void GPIO_set_pull_resistor(const GPIO_pin_t* gpio, GPIO_pull_resistor_t 
  * @param alternate_function_index:	Alternate function number (0 to 15).
  * @return:							None.
  */
-static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, unsigned int alternate_function_index) {
+static void GPIO_set_alternate_function(const GPIO_pin_t* gpio, uint32_t alternate_function_index) {
 	// Clamp AF number.
 	alternate_function_index &= 0x0F;
 	// Select proper register to set.
@@ -188,7 +188,7 @@ void GPIO_init(void) {
  * @param state: 	GPIO output state ('0' or '1').
  * @return: 		None.
  */
-void __attribute__((optimize("-O0"))) GPIO_write(const GPIO_pin_t* gpio, unsigned char state) {
+void __attribute__((optimize("-O0"))) GPIO_write(const GPIO_pin_t* gpio, uint8_t state) {
 	// Set bit.
 	if (state == 0) {
 		(gpio -> port_address) -> ODR &= ~(0b1 << (gpio -> pin_index));
@@ -202,9 +202,9 @@ void __attribute__((optimize("-O0"))) GPIO_write(const GPIO_pin_t* gpio, unsigne
  * @param gpio:		GPIO structure.
  * @return state: 	Current GPIO input state ('0' or '1').
  */
-unsigned char __attribute__((optimize("-O0"))) GPIO_read(const GPIO_pin_t* gpio) {
+uint8_t __attribute__((optimize("-O0"))) GPIO_read(const GPIO_pin_t* gpio) {
 	// Check mode.
-	unsigned char state = 0;
+	uint8_t state = 0;
 	switch (GPIO_get_mode(gpio)) {
 	case GPIO_MODE_INPUT:
 		// GPIO configured as input -> read IDR register.

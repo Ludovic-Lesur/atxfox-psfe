@@ -28,7 +28,7 @@
 static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mode(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
-	unsigned int loop_count = 0;
+	uint32_t loop_count = 0;
 	// Enter key.
 	RTC -> WPR = 0xCA;
 	RTC -> WPR = 0x53;
@@ -61,7 +61,7 @@ static void __attribute__((optimize("-O0"))) RTC_exit_initialization_mode(void) 
  */
 void __attribute__((optimize("-O0"))) RTC_reset(void) {
 	// Local variables.
-	unsigned char j = 0;
+	uint8_t j = 0;
 	// Reset RTC peripheral.
 	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
 	for (j=0 ; j<100 ; j++);
@@ -72,7 +72,7 @@ void __attribute__((optimize("-O0"))) RTC_reset(void) {
  * @param lsi_freq_hz:	Effective LSI oscillator frequency used to compute the accurate prescaler value (only if LSI is used as source).
  * @return status:		Function execution status.
  */
-RTC_status_t __attribute__((optimize("-O0"))) RTC_init(unsigned int lsi_freq_hz) {
+RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint32_t lsi_freq_hz) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Use LSI clock.
@@ -103,7 +103,7 @@ errors:
  * @param delay_seconds:	Delay in seconds.
  * @return status:			Function execution status.
  */
-RTC_status_t RTC_start_wakeup_timer(unsigned int delay_seconds) {
+RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Check parameter.
@@ -155,7 +155,7 @@ errors:
  * @param:	None.
  * @return:	1 if the RTC interrupt occured, 0 otherwise.
  */
-volatile unsigned char RTC_get_wakeup_timer_flag(void) {
+volatile uint8_t RTC_get_wakeup_timer_flag(void) {
 	return (((RTC -> ISR) >> 10) & 0b1);
 }
 

@@ -28,9 +28,9 @@
 
 #define TRCS_LT6105_VOLTAGE_GAIN			59		// LT6105 with 100R and 5.9k resistors.
 
-static const unsigned int trcs_low_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = {52000, 52000, 53000, 51000, 53000, 53000, 50000, 53000, 52000, 50000};
-static const unsigned int trcs_middle_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = {510, 510, 510, 510, 530, 520, 500, 540, 520, 500};
-static const unsigned int trcs_high_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = 	{6, 5, 6, 6, 6, 6, 5, 7, 6, 5};
+static const uint32_t trcs_low_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = {52000, 52000, 53000, 51000, 53000, 53000, 50000, 53000, 52000, 50000};
+static const uint32_t trcs_middle_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = {510, 510, 510, 510, 530, 520, 500, 540, 520, 500};
+static const uint32_t trcs_high_range_resistor_mohms[PSFE_NUMBER_OF_BOARDS] = 	{6, 5, 6, 6, 6, 6, 5, 7, 6, 5};
 
 /*** TRCS local structures ***/
 
@@ -44,20 +44,20 @@ typedef enum {
 typedef struct {
 	const TRCS_range_t range;
 	const GPIO_pin_t* gpio;
-	const unsigned int resistor_mohm;
-	unsigned char switch_request_pending;
-	unsigned int switch_timer_ms;
+	const uint32_t resistor_mohm;
+	uint8_t switch_request_pending;
+	uint32_t switch_timer_ms;
 } TRCS_range_info_t;
 
 typedef struct {
-	unsigned char current_range_idx;
-	unsigned char previous_range_idx;
-	unsigned char switch_pending;
-	unsigned int iout_12bits_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
-	unsigned char iout_12bits_buf_idx;
-	unsigned int iout_12bits;
-	unsigned int iout_ua;
-	unsigned char bypass_flag;
+	uint8_t current_range_idx;
+	uint8_t previous_range_idx;
+	uint8_t switch_pending;
+	uint32_t iout_12bits_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
+	uint8_t iout_12bits_buf_idx;
+	uint32_t iout_12bits;
+	uint32_t iout_ua;
+	uint8_t bypass_flag;
 } TRCS_context_t;
 
 /*** TRCS local global variables ***/
@@ -78,10 +78,10 @@ static TRCS_status_t TRCS_update_adc_data(void) {
 	TRCS_status_t status = TRCS_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	// Add sample
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (unsigned int*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (uint32_t*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
 	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Update average.
-	trcs_ctx.iout_12bits = MATH_average_u32((unsigned int*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH);
+	MATH_average_u32((uint32_t*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (uint32_t*) &trcs_ctx.iout_12bits);
 	// Manage index.
 	trcs_ctx.iout_12bits_buf_idx++;
 	if (trcs_ctx.iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
@@ -99,19 +99,19 @@ static TRCS_status_t TRCS_compute_iout(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
-	unsigned int ref191_12bits = 0;
-	unsigned int resistor_mohm = 0;
-	unsigned long long num = 0;
-	unsigned long long den = 0;
+	uint32_t ref191_12bits = 0;
+	uint32_t resistor_mohm = 0;
+	uint64_t num = 0;
+	uint64_t den = 0;
 	// Get bandgap measurement.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, &ref191_12bits);
 	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Convert to uA.
-	num = (unsigned long long) trcs_ctx.iout_12bits;
+	num = (uint64_t) trcs_ctx.iout_12bits;
 	num *= ADC_REF191_VOLTAGE_MV;
 	num *= 1000000;
 	resistor_mohm = trcs_range_table[trcs_ctx.current_range_idx].resistor_mohm;
-	den = (unsigned long long) ref191_12bits;
+	den = (uint64_t) ref191_12bits;
 	den *= TRCS_LT6105_VOLTAGE_GAIN;
 	den *= resistor_mohm;
 	trcs_ctx.iout_ua = (num / den);
@@ -127,7 +127,7 @@ errors:
  */
 void TRCS_init(void) {
 	// Local variables.
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Init GPIOs.
 	GPIO_configure(&GPIO_TRCS_RANGE_LOW, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_TRCS_RANGE_MIDDLE, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
@@ -148,8 +148,8 @@ void TRCS_init(void) {
 	trcs_ctx.bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
 	// Enable bypass switch interrupt.
 	EXTI_configure_gpio(&GPIO_TRCS_BYPASS, EXTI_TRIGGER_ANY_EDGE);
-	NVIC_set_priority(NVIC_IT_EXTI_4_15, 2);
-	NVIC_enable_interrupt(NVIC_IT_EXTI_4_15);
+	NVIC_set_priority(NVIC_INTERRUPT_EXTI_4_15, 2);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_EXTI_4_15);
 }
 
 /* TRCS BOARD CONTROL FUNCTION.
@@ -160,7 +160,7 @@ void TRCS_init(void) {
 TRCS_status_t TRCS_task(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
-	unsigned char idx = 0;
+	uint8_t idx = 0;
 	// Increment recovery timer.
 	for (idx=0 ; idx<TRCS_RANGE_INDEX_LAST ; idx++) {
 		trcs_range_table[idx].switch_timer_ms += (PSFE_ADC_CONVERSION_PERIOD_MS * trcs_range_table[idx].switch_request_pending);
@@ -224,7 +224,7 @@ errors:
  * @param bypass_state:	Bypass switch state.
  * @return:				None.
  */
-void TRCS_set_bypass_flag(unsigned char bypass_state) {
+void TRCS_set_bypass_flag(uint8_t bypass_state) {
 	// Set local flag.
 	trcs_ctx.bypass_flag = bypass_state;
 }
@@ -241,7 +241,7 @@ void TRCS_get_range(volatile TRCS_range_t* range) {
  * @param iout_ua:	Pointer that will contain TRCS current in uA.
  * @return:			None.
  */
-void TRCS_get_iout(volatile unsigned int* iout_ua) {
+void TRCS_get_iout(volatile uint32_t* iout_ua) {
 	(*iout_ua) = trcs_ctx.iout_ua;
 }
 
