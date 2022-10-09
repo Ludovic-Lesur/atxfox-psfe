@@ -9,10 +9,10 @@
 
 #include "exti.h"
 #include "exti_reg.h"
-#include "mode.h"
 #include "nvic.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
+#include "types.h"
 
 /*** RTC local macros ***/
 
@@ -25,7 +25,7 @@
  * @param:			None.
  * @return status:	Function execution status.
  */
-static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mode(void) {
+static RTC_status_t __attribute__((optimize("-O0"))) _RTC_enter_initialization_mode(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	uint32_t loop_count = 0;
@@ -49,7 +49,7 @@ static RTC_status_t __attribute__((optimize("-O0"))) RTC_enter_initialization_mo
  * @param:	None.
  * @return:	None.
  */
-static void __attribute__((optimize("-O0"))) RTC_exit_initialization_mode(void) {
+static void __attribute__((optimize("-O0"))) _RTC_exit_initialization_mode(void) {
 	RTC -> ISR &= ~(0b1 << 7); // INIT='0'.
 }
 
@@ -80,10 +80,10 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint32_t lsi_freq_hz) {
 	// Enable RTC and register access.
 	RCC -> CSR |= (0b1 << 18); // RTCEN='1'.
 	// Switch to LSI if RTC failed to enter initialization mode.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) {
 		RTC_reset();
-		status = RTC_enter_initialization_mode();
+		status = _RTC_enter_initialization_mode();
 		if (status != RTC_SUCCESS) goto errors;
 	}
 	// Compute prescaler according to measured LSI frequency.
@@ -92,7 +92,7 @@ RTC_status_t __attribute__((optimize("-O0"))) RTC_init(uint32_t lsi_freq_hz) {
 	RTC -> CR |= (0b1 << 5); // BYPSHAD='1'.
 	// Configure wake-up timer.
 	RTC -> CR |= (0b100 << 0); // Wake-up timer clocked by RTC clock (1Hz).
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 	// Disable interrupts and clear all flags.
 	RTC -> ISR &= 0xFFFE0000;
 errors:
@@ -117,7 +117,7 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 		goto errors;
 	}
 	// Enable RTC and register access.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Configure wake-up timer.
 	RTC -> WUTR = (delay_seconds - 1);
@@ -127,7 +127,7 @@ RTC_status_t RTC_start_wakeup_timer(uint32_t delay_seconds) {
 	RTC -> CR |= (0b1 << 14); // WUTE='1'.
 	// Start timer.
 	RTC -> CR |= (0b1 << 10); // Enable wake-up timer.
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 errors:
 	return status;
 }
@@ -140,11 +140,11 @@ RTC_status_t RTC_stop_wakeup_timer(void) {
 	// Local variables.
 	RTC_status_t status = RTC_SUCCESS;
 	// Enable RTC and register access.
-	status = RTC_enter_initialization_mode();
+	status = _RTC_enter_initialization_mode();
 	if (status != RTC_SUCCESS) goto errors;
 	// Disable wake-up timer.
 	RTC -> CR &= ~(0b1 << 10);
-	RTC_exit_initialization_mode();
+	_RTC_exit_initialization_mode();
 	// Disable interrupt.
 	RTC -> CR &= ~(0b1 << 14); // WUTE='0'.
 errors:

@@ -49,7 +49,7 @@ void PWR_enter_stop_mode(void) {
 	PWR -> CR |= (0b1 << 2); // CWUF='1'.
 	// Enter stop mode when CPU enters deepsleep.
 	PWR -> CR &= ~(0b1 << 1); // PDDS='0'.
-	// Clear all EXTI line, peripherals interrupt pending bits.
+	// Clear all EXTI, RTC and peripherals interrupt pending bits.
 	RCC -> CICR |= 0x000001BF;
 	EXTI -> PR |= 0x007BFFFF; // PIFx='1'.
 	RTC -> ISR &= 0xFFFE035F; // Reset wake-up, tamper and timestamp flags.
@@ -60,4 +60,13 @@ void PWR_enter_stop_mode(void) {
 	// Enter stop mode.
 	SCB -> SCR |= (0b1 << 2); // SLEEPDEEP='1'.
 	__asm volatile ("wfi"); // Wait For Interrupt core instruction.
+}
+
+/* FUNCTION TO FORCE A SOFTWARE RESET.
+ * @param:	None.
+ * @return:	None.
+ */
+void PWR_software_reset(void) {
+	// Trigger software reset.
+	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
 }

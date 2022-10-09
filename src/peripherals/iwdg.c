@@ -8,6 +8,7 @@
 #include "iwdg.h"
 
 #include "iwdg_reg.h"
+#include "types.h"
 
 /*** IWDG local macros ***/
 
@@ -16,8 +17,8 @@
 /*** IWDG functions ***/
 
 /* INIT AND START INDEPENDENT WATCHDOG.
- * @param:				None.
- * @return status :		Function execution status.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
 IWDG_status_t IWDG_init(void) {
 	// Local variables.

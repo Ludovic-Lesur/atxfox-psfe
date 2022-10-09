@@ -1,7 +1,7 @@
 /*
  * lpuart.c
  *
- *  Created on: 9 juil. 2019
+ *  Created on: 9 jul. 2019
  *      Author: Ludo
  */
 
@@ -14,6 +14,7 @@
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
+#include "types.h"
 
 /*** LPUART local macros ***/
 
@@ -27,7 +28,7 @@
  * @param tx_byte:	Byte to append.
  * @return status:	Function execution status.
  */
-static LPUART_status_t LPUART1_fill_tx_buffer(uint8_t tx_byte) {
+static LPUART_status_t _LPUART1_fill_tx_buffer(uint8_t tx_byte) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
 	uint32_t loop_count = 0;
@@ -82,10 +83,15 @@ LPUART_status_t LPUART1_send_string(char* tx_string) {
 	// Local variables.
 	LPUART_status_t status = LPUART_SUCCESS;
 	uint32_t char_count = 0;
+	// Check parameter.
+	if (tx_string == NULL) {
+		status = LPUART_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Loop on all characters.
 	while (*tx_string) {
 		// Fill transmit register.
-		status = LPUART1_fill_tx_buffer(*(tx_string++));
+		status = _LPUART1_fill_tx_buffer(*(tx_string++));
 		if (status != LPUART_SUCCESS) goto errors;
 		// Check char count.
 		char_count++;

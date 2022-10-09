@@ -1,20 +1,20 @@
 /*
  * lpuart.h
  *
- *  Created on: 9 juil. 2019
+ *  Created on: 9 jul. 2019
  *      Author: Ludo
  */
 
 #ifndef __LPUART_H__
 #define __LPUART_H__
 
-#include "lptim.h"
 #include "types.h"
 
 /*** LPUART structures ***/
 
 typedef enum {
 	LPUART_SUCCESS = 0,
+	LPUART_ERROR_NULL_PARAMETER,
 	LPUART_ERROR_TX_TIMEOUT,
 	LPUART_ERROR_STRING_LENGTH,
 	LPUART_ERROR_BASE_LAST = 0x0100

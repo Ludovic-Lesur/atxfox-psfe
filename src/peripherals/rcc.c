@@ -10,6 +10,7 @@
 #include "flash.h"
 #include "rcc_reg.h"
 #include "tim.h"
+#include "types.h"
 
 /*** RCC local macros ***/
 
@@ -125,6 +126,11 @@ RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	TIM_status_t tim21_status = TIM_SUCCESS;
 	uint32_t lsi_frequency_sample = 0;
 	uint8_t sample_idx = 0;
+	// Check parameter.
+	if (lsi_frequency_hz == NULL) {
+		status = RCC_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Reset result.
 	(*lsi_frequency_hz) = 0;
 	// Init measurement timer.

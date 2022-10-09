@@ -5,7 +5,7 @@
  *      Author: Ludo
  */
 
-#include "scb_reg.h"
+#include "pwr.h"
 
 /* NON MASKABLE INTERRUPT HANDLER.
  * @param:	None.
@@ -13,7 +13,7 @@
  */
 void __attribute__((optimize("-O0"))) NMI_Handler(void) {
 	// Trigger software reset.
-	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
+	PWR_software_reset();
 }
 
 /* HARD FAULT INTERRUPT HANDLER.
@@ -22,7 +22,7 @@ void __attribute__((optimize("-O0"))) NMI_Handler(void) {
  */
 void __attribute__((optimize("-O0"))) HardFault_Handler(void) {
 	// Trigger software reset.
-	SCB -> AIRCR = 0x05FA0000 | ((SCB -> AIRCR) & 0x0000FFFF) | (0b1 << 2);
+	PWR_software_reset();
 }
 
 /* SVC INTERRUPT HANDLER.
