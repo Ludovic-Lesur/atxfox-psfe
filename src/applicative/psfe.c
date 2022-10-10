@@ -235,7 +235,7 @@ void PSFE_task(void) {
 		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
 		LPTIM1_error_check();
 		// Print SW version.
-		lcd_status = LCD_print_sw_version(GIT_MAJOR_VERSION, GIT_MINOR_VERSION, GIT_COMMIT_INDEX, GIT_DIRTY_FLAG);
+		lcd_status = LCD_print_sw_version();
 		LCD_error_check();
 		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
 		LPTIM1_error_check();
@@ -335,6 +335,7 @@ void PSFE_adc_callback(void) {
 	// Local variables.
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	TRCS_status_t trcs_status = TRCS_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	// Perform measurements.
 	adc1_status = ADC1_perform_measurements();
 	ADC1_error_check();
@@ -343,14 +344,17 @@ void PSFE_adc_callback(void) {
 	// Update local Vout.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (uint32_t*) &psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx]);
 	ADC1_error_check();
-	MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, (uint32_t*) &psfe_ctx.vout_mv);
+	math_status = MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, (uint32_t*) &psfe_ctx.vout_mv);
+	MATH_error_check();
 	psfe_ctx.vout_mv_buf_idx++;
 	if (psfe_ctx.vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
 		psfe_ctx.vout_mv_buf_idx = 0;
 	}
 	// Update local Iout.
-	TRCS_get_iout(&psfe_ctx.iout_ua);
-	TRCS_get_range((TRCS_range_t*) &psfe_ctx.trcs_range);
+	trcs_status = TRCS_get_iout(&psfe_ctx.iout_ua);
+	TRCS_error_check();
+	trcs_status = TRCS_get_range((TRCS_range_t*) &psfe_ctx.trcs_range);
+	TRCS_error_check();
 #ifdef PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
 	// Compute ouput voltage divider current.
 	uint32_t vout_voltage_divider_current_ua = (psfe_ctx.vout_mv * 1000) / (psfe_vout_voltage_divider_resistance[PSFE_BOARD_INDEX]);
@@ -365,7 +369,8 @@ void PSFE_adc_callback(void) {
 	// Update local Vmcu and Tmcu.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (uint32_t*) &psfe_ctx.vmcu_mv);
 	ADC1_error_check();
-	ADC1_get_tmcu((int8_t*) &psfe_ctx.tmcu_degrees);
+	adc1_status = ADC1_get_tmcu((int8_t*) &psfe_ctx.tmcu_degrees);
+	ADC1_error_check();
 }
 
 /* CALLBACK CALLED BY TIM22 INTERRUPT.

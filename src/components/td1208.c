@@ -18,6 +18,7 @@
 #define TD1208_BUFFER_LENGTH_BYTES			32
 #define TD1208_TIMEOUT_COUNT				1000000
 #define TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR	(2 * SIGFOX_DEVICE_ID_LENGTH_BYTES)
+#define TD1208_UPLINK_DATA_LENGTH_BYTES_MAX	12
 
 /*** TD1208 local structures ***/
 
@@ -41,7 +42,7 @@ static TD1208_context_t td1208_ctx;
  * @param:  None.
  * @return: None.
  */
-static void TD1208_reset_parser(void) {
+static void _TD1208_reset_parser(void) {
 	// Local variabless.
     uint32_t idx = 0;
     // Reset buffers and indexes.
@@ -62,7 +63,7 @@ static void TD1208_reset_parser(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static TD1208_status_t TD1208_wait_for_response(void) {
+static TD1208_status_t _TD1208_wait_for_response(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	uint32_t loop_count = 0;
@@ -82,12 +83,12 @@ static TD1208_status_t TD1208_wait_for_response(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static TD1208_status_t TD1208_wait_for_ok(void) {
+static TD1208_status_t _TD1208_wait_for_ok(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	PARSER_status_t parser_status = PARSER_SUCCESS;
 	// Wait for OK.
-	status = TD1208_wait_for_response();
+	status = _TD1208_wait_for_response();
 	if (status != TD1208_SUCCESS) goto errors;
 	// Parse response.
 	td1208_ctx.parser.rx_buf_length = td1208_ctx.response_buf_idx;
@@ -105,21 +106,21 @@ errors:
  */
 void TD1208_init(void) {
 	// Init buffers.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Enable interrupt.
 	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2);
 }
 
 /* DISABLE TD1208 ECHO ON UART.
- * @param:	None.
- * @return:	None.
+ * @param:			None.
+ * @return status:	Function execution status.
  */
 TD1208_status_t TD1208_disable_echo_and_verbose(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
 	// Reset parser.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Build AT command.
 	td1208_ctx.command_buf[0] = 'A';
 	td1208_ctx.command_buf[1] = 'T';
@@ -131,10 +132,10 @@ TD1208_status_t TD1208_disable_echo_and_verbose(void) {
 	usart_status = USART2_send_string(td1208_ctx.command_buf);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = TD1208_wait_for_response();
+	status = _TD1208_wait_for_response();
 	if (status != TD1208_SUCCESS) goto errors;
 	// Reset parser.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Build AT command.
 	td1208_ctx.command_buf[0] = 'A';
 	td1208_ctx.command_buf[1] = 'T';
@@ -146,7 +147,7 @@ TD1208_status_t TD1208_disable_echo_and_verbose(void) {
 	usart_status = USART2_send_string(td1208_ctx.command_buf);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = TD1208_wait_for_response();
+	status = _TD1208_wait_for_response();
 errors:
 	return status;
 }
@@ -162,8 +163,13 @@ TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id) {
 	PARSER_status_t parser_status = PARSER_SUCCESS;
 	uint8_t idx = 0;
 	char temp_id[TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR];
+	// Check parameter.
+	if (sigfox_device_id == NULL) {
+		status = TD1208_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	// Reset parser.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Build AT command.
 	td1208_ctx.command_buf[0] = 'A';
 	td1208_ctx.command_buf[1] = 'T';
@@ -175,7 +181,7 @@ TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id) {
 	usart_status = USART2_send_string(td1208_ctx.command_buf);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for ID.
-	status = TD1208_wait_for_response();
+	status = _TD1208_wait_for_response();
 	if (status != TD1208_SUCCESS) goto errors;
 	// Copy ID to temporary buffer.
 	for (idx=0 ; idx<td1208_ctx.response_buf_idx ; idx++) {
@@ -204,14 +210,14 @@ errors:
 
 /* SEND A BIT OVER SIGFOX NETWORK.
  * @param uplink_bit:	Bit to send.
- * @return:				None.
+ * @return status:		Function execution status.
  */
 TD1208_status_t TD1208_send_bit(uint8_t uplink_bit) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
 	// Reset parser.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Build AT command.
 	td1208_ctx.command_buf[0] = 'A';
 	td1208_ctx.command_buf[1] = 'T';
@@ -228,24 +234,33 @@ TD1208_status_t TD1208_send_bit(uint8_t uplink_bit) {
 	usart_status = USART2_send_string(td1208_ctx.command_buf);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = TD1208_wait_for_ok();
+	status = _TD1208_wait_for_ok();
 errors:
 	return status;
 }
 
 /* SEND A FRAME OVER SIGFOX NETWORK.
- * @param uplink_frame:			Byte array to send.
- * @param uplink_frame_length:	Number of bytes to send.
- * @return:						None.
+ * @param ul_payload:				Byte array to send.
+ * @param ul_payload_length_bytes:	Number of bytes to send.
+ * @return status:					Function execution status.
  */
-TD1208_status_t TD1208_send_frame(uint8_t* uplink_data, uint8_t uplink_data_length_bytes) {
+TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_length_bytes) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
 	uint8_t idx = 0;
+	// Check parameters.
+	if (ul_payload == NULL) {
+		status = TD1208_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
+	if (ul_payload_length_bytes > TD1208_UPLINK_DATA_LENGTH_BYTES_MAX) {
+		status = TD1208_ERROR_UL_PAYLOAD_LENGTH;
+		goto errors;
+	}
 	// Reset parser.
-	TD1208_reset_parser();
+	_TD1208_reset_parser();
 	// Header.
 	td1208_ctx.command_buf[idx++] = 'A';
 	td1208_ctx.command_buf[idx++] = 'T';
@@ -254,17 +269,17 @@ TD1208_status_t TD1208_send_frame(uint8_t* uplink_data, uint8_t uplink_data_leng
 	td1208_ctx.command_buf[idx++] = 'F';
 	td1208_ctx.command_buf[idx++] = '=';
 	// Data.
-	string_status = STRING_byte_array_to_hexadecimal_string(uplink_data, uplink_data_length_bytes, 0, &(td1208_ctx.command_buf[idx]));
+	string_status = STRING_byte_array_to_hexadecimal_string(ul_payload, ul_payload_length_bytes, 0, &(td1208_ctx.command_buf[idx]));
 	STRING_status_check(TD1208_ERROR_BASE_STRING);
 	// AT command end.
-	idx += (2 * uplink_data_length_bytes);
+	idx += (2 * ul_payload_length_bytes);
 	td1208_ctx.command_buf[idx++] = STRING_CHAR_CR;
 	td1208_ctx.command_buf[idx++] = STRING_CHAR_NULL;
 	// Send command through UART.
 	usart_status = USART2_send_string(td1208_ctx.command_buf);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = TD1208_wait_for_ok();
+	status = _TD1208_wait_for_ok();
 errors:
 	return status;
 }

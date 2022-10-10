@@ -17,6 +17,7 @@
 
 typedef enum {
 	LCD_SUCCESS = 0,
+	LCD_ERROR_NULL_PARAMETER,
 	LCD_ERROR_ROW_OVERFLOW,
 	LCD_ERROR_COLUMN_OVERFLOW,
 	LCD_ERROR_BASE_LPTIM = 0x0100,
@@ -32,7 +33,7 @@ LCD_status_t LCD_clear(void);
 LCD_status_t LCD_print_sigfox_id(uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
 LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t value);
 LCD_status_t LCD_print_hw_version(void);
-LCD_status_t LCD_print_sw_version(uint8_t major_version, uint8_t minor_version, uint8_t commit_index, uint8_t dirty_flag);
+LCD_status_t LCD_print_sw_version(void);
 
 #define LCD_status_check(error_base) { if (lcd_status != LCD_SUCCESS) { status = error_base + lcd_status; goto errors; }}
 #define LCD_error_check() { ERROR_status_check(lcd_status, LCD_SUCCESS, ERROR_BASE_LCD); }

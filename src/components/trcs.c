@@ -73,15 +73,17 @@ static TRCS_range_info_t trcs_range_table[TRCS_RANGE_INDEX_LAST] = {{TRCS_RANGE_
  * @param:			None.
  * @return status:	Function execution status.
  */
-static TRCS_status_t TRCS_update_adc_data(void) {
+static TRCS_status_t _TRCS_update_adc_data(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
+	MATH_status_t math_status = MATH_SUCCESS;
 	// Add sample
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (uint32_t*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
 	ADC1_status_check(TRCS_ERROR_BASE_ADC);
 	// Update average.
-	MATH_average_u32((uint32_t*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (uint32_t*) &trcs_ctx.iout_12bits);
+	math_status = MATH_average_u32((uint32_t*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (uint32_t*) &trcs_ctx.iout_12bits);
+	MATH_status_check(TRCS_ERROR_BASE_MATH);
 	// Manage index.
 	trcs_ctx.iout_12bits_buf_idx++;
 	if (trcs_ctx.iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
@@ -95,7 +97,7 @@ errors:
  * @param:			None.
  * @return status:	Function execution status.
  */
-static TRCS_status_t TRCS_compute_iout(void) {
+static TRCS_status_t _TRCS_compute_iout(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
@@ -155,7 +157,7 @@ void TRCS_init(void) {
 /* TRCS BOARD CONTROL FUNCTION.
  * @param trcs_current_ma:	Current measured by TRCS board in mA.
  * @param bypass_status:	Bypass switch status.
- * @return:					None.
+ * @return status:			Function execution status.
  */
 TRCS_status_t TRCS_task(void) {
 	// Local variables.
@@ -166,9 +168,9 @@ TRCS_status_t TRCS_task(void) {
 		trcs_range_table[idx].switch_timer_ms += (PSFE_ADC_CONVERSION_PERIOD_MS * trcs_range_table[idx].switch_request_pending);
 	}
 	// Update ADC result and output current.
-	status = TRCS_update_adc_data();
+	status = _TRCS_update_adc_data();
 	if (status != TRCS_SUCCESS) goto errors;
-	status = TRCS_compute_iout();
+	status = _TRCS_compute_iout();
 	if (status != TRCS_SUCCESS) goto errors;
 	// Compute range.
 	if (trcs_ctx.bypass_flag != 0) {
@@ -231,18 +233,36 @@ void TRCS_set_bypass_flag(uint8_t bypass_state) {
 
 /* GET CURRENT TRCS RANGE.
  * @param range:	Pointer that will contain current TRCS range.
- * @return:			None.
+ * @return status:	Function execution status.
  */
-void TRCS_get_range(volatile TRCS_range_t* range) {
+TRCS_status_t TRCS_get_range(volatile TRCS_range_t* range) {
+	// Local variables.
+	TRCS_status_t status = TRCS_SUCCESS;
+	// Check parameter.
+	if (range == NULL) {
+		status = TRCS_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	(*range) = trcs_range_table[trcs_ctx.current_range_idx].range;
+errors:
+	return status;
 }
 
 /* GET CURRENT TRCS OUTPUT CURRENT.
  * @param iout_ua:	Pointer that will contain TRCS current in uA.
- * @return:			None.
+ * @return status:	Function execution status.
  */
-void TRCS_get_iout(volatile uint32_t* iout_ua) {
+TRCS_status_t TRCS_get_iout(volatile uint32_t* iout_ua) {
+	// Local variables.
+	TRCS_status_t status = TRCS_SUCCESS;
+	// Check parameter.
+	if (iout_ua == NULL) {
+		status = TRCS_ERROR_NULL_PARAMETER;
+		goto errors;
+	}
 	(*iout_ua) = trcs_ctx.iout_ua;
+errors:
+	return status;
 }
 
 /* SWITCH TRCS BOARD OFF.

@@ -19,6 +19,8 @@
 
 typedef enum {
 	TD1208_SUCCESS,
+	TD1208_ERROR_NULL_PARAMETER,
+	TD1208_ERROR_UL_PAYLOAD_LENGTH,
 	TD1208_ERROR_TIMEOUT,
 	TD1208_ERROR_REPONSE,
 	TD1208_ERROR_BASE_USART = 0x0100,
@@ -31,7 +33,7 @@ typedef enum {
 
 void TD1208_init(void);
 TD1208_status_t TD1208_disable_echo_and_verbose(void);
-TD1208_status_t TD1208_get_sigfox_id(uint8_t sigfox_device_id[SIGFOX_DEVICE_ID_LENGTH_BYTES]);
+TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id);
 TD1208_status_t TD1208_send_bit(uint8_t uplink_bit);
 TD1208_status_t TD1208_send_frame(uint8_t* uplink_data, uint8_t uplink_data_length_bytes);
 void TD1208_fill_rx_buffer(uint8_t rx_byte);

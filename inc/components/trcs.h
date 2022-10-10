@@ -9,6 +9,7 @@
 #define __TRCS_H__
 
 #include "adc.h"
+#include "math.h"
 
 /*** TRCS macros ***/
 
@@ -18,9 +19,11 @@
 
 typedef enum {
 	TRCS_SUCCESS = 0,
+	TRCS_ERROR_NULL_PARAMETER,
 	TRCS_ERROR_OVERFLOW,
 	TRCS_ERROR_BASE_ADC = 0x0100,
-	TRCS_ERROR_BASE_LAST = (TRCS_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST)
+	TRCS_ERROR_BASE_MATH = (TRCS_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
+	TRCS_ERROR_BASE_LAST = (TRCS_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
 } TRCS_status_t;
 
 typedef enum {
@@ -36,8 +39,8 @@ typedef enum {
 void TRCS_init(void);
 TRCS_status_t TRCS_task(void);
 void TRCS_set_bypass_flag(uint8_t bypass_state);
-void TRCS_get_range(volatile TRCS_range_t* range);
-void TRCS_get_iout(volatile uint32_t* iout_ua);
+TRCS_status_t TRCS_get_range(volatile TRCS_range_t* range);
+TRCS_status_t TRCS_get_iout(volatile uint32_t* iout_ua);
 void TRCS_off(void);
 
 #define TRCS_status_check(error_base) { if (trcs_status != TRCS_SUCCESS) { status = error_base + trcs_status; goto errors; }}
