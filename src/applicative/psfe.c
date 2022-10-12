@@ -7,6 +7,8 @@
 
 #include "psfe.h"
 
+// Registers.
+#include "rcc_reg.h"
 // Peripherals.
 #include "adc.h"
 #include "exti.h"
@@ -45,8 +47,9 @@
 #define PSFE_VOUT_ERROR_THRESHOLD_MV				100
 #define PSFE_VOUT_RESISTOR_DIVIDER_COMPENSATION
 
-#define PSFE_SIGFOX_PERIOD_S						300
-#define PSFE_SIGFOX_MONITORING_DATA_LENGTH			8
+#define PSFE_SIGFOX_PERIOD_SECONDS					300
+#define PSFE_SIGFOX_STARTUP_DATA_LENGTH				8
+#define PSFE_SIGFOX_MONITORING_DATA_LENGTH			9
 #define PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH			(ERROR_STACK_DEPTH * 2)
 
 #define PSFE_STRING_VALUE_BUFFER_LENGTH				16
@@ -62,12 +65,25 @@ typedef enum {
 	PSFE_STATE_OFF,
 } PSFE_state_t;
 
+// Sigfox start-up frame data format.
+typedef union {
+	uint8_t frame[PSFE_SIGFOX_STARTUP_DATA_LENGTH];
+	struct {
+		unsigned reset_reason : 8;
+		unsigned major_version : 8;
+		unsigned minor_version : 8;
+		unsigned commit_index : 8;
+		unsigned commit_id : 28;
+		unsigned dirty_flag : 4;
+	} __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
+} PSFE_sigfox_startup_data_t;
+
 typedef struct {
 	union {
-		uint8_t raw_frame[PSFE_SIGFOX_MONITORING_DATA_LENGTH];
+		uint8_t frame[PSFE_SIGFOX_MONITORING_DATA_LENGTH];
 		struct {
-			unsigned vout_mv : 14;
-			unsigned trcs_range : 2;
+			unsigned vout_mv : 16;
+			unsigned trcs_range : 8;
 			unsigned iout_ua : 24;
 			unsigned vmcu_mv : 16;
 			unsigned tmcu_degrees : 8;
@@ -91,6 +107,7 @@ typedef struct {
 	volatile TRCS_range_t trcs_range;
 	// Sigfox.
 	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
+	PSFE_sigfox_startup_data_t sigfox_startup_data;
 	PSFE_sigfox_monitoring_data_t sigfox_monitoring_data;
 	uint8_t sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
 } PSFE_context_t;
@@ -175,7 +192,7 @@ void PSFE_init_context(void) {
 	// Init arrays.
 	for (idx=0 ; idx<PSFE_VOUT_BUFFER_LENGTH ; idx++) psfe_ctx.vout_mv_buf[idx] = 0;
 	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.sigfox_id[idx] = 0x00;
-	for (idx=0 ; idx<PSFE_SIGFOX_MONITORING_DATA_LENGTH ; idx++) psfe_ctx.sigfox_monitoring_data.raw_frame[idx] = 0x00;
+	for (idx=0 ; idx<PSFE_SIGFOX_MONITORING_DATA_LENGTH ; idx++) psfe_ctx.sigfox_monitoring_data.frame[idx] = 0x00;
 	for (idx=0 ; idx<PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) psfe_ctx.sigfox_error_stack_data[idx] = 0x00;
 	psfe_ctx.vout_mv_buf_idx = 0;
 	psfe_ctx.vout_mv = 0;
@@ -194,7 +211,7 @@ void PSFE_start(void) {
 	RTC_status_t rtc_status = RTC_SUCCESS;
 	// Start continuous timers.
 	TIM2_start();
-	rtc_status = RTC_start_wakeup_timer(PSFE_SIGFOX_PERIOD_S);
+	rtc_status = RTC_start_wakeup_timer(PSFE_SIGFOX_PERIOD_SECONDS);
 	RTC_error_check();
 }
 
@@ -232,7 +249,7 @@ void PSFE_task(void) {
 		// Print board name and HW version.
 		lcd_status = LCD_print_hw_version();
 		LCD_error_check();
-		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
 		LPTIM1_error_check();
 		// Reset Sigfox module.
 		td1208_status = TD1208_reset();
@@ -240,7 +257,7 @@ void PSFE_task(void) {
 		// Print SW version.
 		lcd_status = LCD_print_sw_version();
 		LCD_error_check();
-		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
 		LPTIM1_error_check();
 		// Read Sigfox device ID from module.
 		td1208_status = TD1208_get_sigfox_id(psfe_ctx.sigfox_id);
@@ -252,12 +269,18 @@ void PSFE_task(void) {
 			lcd_status = LCD_print(1, 0, "TD ERROR", 8);
 		}
 		LCD_error_check();
+		// Sens startup message through Sigfox.
+		psfe_ctx.sigfox_startup_data.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
+		psfe_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
+		psfe_ctx.sigfox_startup_data.minor_version = GIT_MINOR_VERSION;
+		psfe_ctx.sigfox_startup_data.commit_index = GIT_COMMIT_INDEX;
+		psfe_ctx.sigfox_startup_data.commit_id = GIT_COMMIT_ID;
+		psfe_ctx.sigfox_startup_data.dirty_flag = GIT_DIRTY_FLAG;
+		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_startup_data.frame, PSFE_SIGFOX_STARTUP_DATA_LENGTH);
+		TD1208_error_check();
 		// Send START message through Sigfox.
 		td1208_status = TD1208_send_bit(1);
 		TD1208_error_check();
-		// Delay for Sigfox device ID printing.
-		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
-		LPTIM1_error_check();
 		// Update flags.
 		psfe_ctx.por_flag = 0;
 		// Compute next state.
@@ -295,7 +318,7 @@ void PSFE_task(void) {
 		psfe_ctx.sigfox_monitoring_data.vmcu_mv = psfe_ctx.vmcu_mv;
 		psfe_ctx.sigfox_monitoring_data.tmcu_degrees = psfe_ctx.tmcu_degrees;
 		// Send data.
-		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.raw_frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
+		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
 		TD1208_error_check();
 		// Compute next state.
 		psfe_ctx.state = PSFE_STATE_VMCU_MONITORING;
