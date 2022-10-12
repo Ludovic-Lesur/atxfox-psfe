@@ -7,6 +7,7 @@
 
 #include "td1208.h"
 
+#include "lptim.h"
 #include "nvic.h"
 #include "parser.h"
 #include "string.h"
@@ -16,20 +17,28 @@
 /*** TD1208 local macros ***/
 
 #define TD1208_BUFFER_LENGTH_BYTES			32
-#define TD1208_TIMEOUT_COUNT				1000000
+#define TD1208_RESPONSE_BUFFER_DEPTH		8
+
+#define TD1208_RESPONSE_PARSING_DELAY_MS	100
+#define TD1208_RESPONSE_PARSING_TIMEOUT_MS	1000
+
 #define TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR	(2 * SIGFOX_DEVICE_ID_LENGTH_BYTES)
 #define TD1208_UPLINK_DATA_LENGTH_BYTES_MAX	12
 
 /*** TD1208 local structures ***/
 
 typedef struct {
-	// Command buffer.
-	char command_buf[TD1208_BUFFER_LENGTH_BYTES];
-	// Response buffer.
-	volatile char response_buf[TD1208_BUFFER_LENGTH_BYTES];
-	volatile uint32_t response_buf_idx;
-	volatile uint8_t line_end_flag;
+	volatile char_t buffer[TD1208_BUFFER_LENGTH_BYTES];
+	volatile uint8_t char_idx;
 	PARSER_context_t parser;
+} TD1208_response_buffer_t;
+
+typedef struct {
+	// Command buffer.
+	char command_buffer[TD1208_BUFFER_LENGTH_BYTES];
+	// Response buffers.
+	TD1208_response_buffer_t response[TD1208_RESPONSE_BUFFER_DEPTH];
+	uint8_t response_idx;
 } TD1208_context_t;
 
 /*** TD1208 local global variables ***/
@@ -39,43 +48,55 @@ static TD1208_context_t td1208_ctx;
 /*** TD1208 local functions ***/
 
 /* RESET PARSING VARIABLES.
- * @param:  None.
+ * @param:	None.
  * @return: None.
  */
-static void _TD1208_reset_parser(void) {
+static void _TD1208_reset_responses(void) {
 	// Local variabless.
-    uint32_t idx = 0;
-    // Reset buffers and indexes.
-    for (idx=0; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
-    	td1208_ctx.response_buf[idx] = STRING_CHAR_NULL;
-    	td1208_ctx.command_buf[idx] = STRING_CHAR_NULL;
+	uint8_t rep_idx = 0;
+    uint8_t char_idx = 0;
+    // Reset responses buffers.
+    for (rep_idx=0 ; rep_idx<TD1208_RESPONSE_BUFFER_DEPTH ; rep_idx++) {
+    	for (char_idx=0; char_idx<TD1208_BUFFER_LENGTH_BYTES ; char_idx++) {
+			td1208_ctx.response[rep_idx].buffer[char_idx] = STRING_CHAR_NULL;
+		}
+		// Increment
+		td1208_ctx.response[rep_idx].char_idx = 0;
+		// Reset parser.
+		td1208_ctx.response[rep_idx].parser.rx_buf = (char_t*) td1208_ctx.response[rep_idx].buffer;
+		td1208_ctx.response[rep_idx].parser.rx_buf_length = 0;
+		td1208_ctx.response[rep_idx].parser.separator_idx = 0;
+		td1208_ctx.response[rep_idx].parser.start_idx = 0;
     }
-    td1208_ctx.response_buf_idx = 0;
-    td1208_ctx.line_end_flag = 0;
-    // Reset parser.
-    td1208_ctx.parser.rx_buf = (char*) td1208_ctx.response_buf;
-	td1208_ctx.parser.rx_buf_length = 0;
-	td1208_ctx.parser.separator_idx = 0;
-	td1208_ctx.parser.start_idx = 0;
+    // Reset index and count.
+    td1208_ctx.response_idx = 0;
 }
 
-/* WAIT FOR RECEIVING A RESPONSE.
- * @param:			None.
- * @return status:	Function execution status.
+/* SEND A COMMAND TO THE TD1208 MODULE.
+ * @param command:	Command to send.
+ * @return: 		None.
  */
-static TD1208_status_t _TD1208_wait_for_response(void) {
+static TD1208_status_t _TD1208_send_command(char_t* command) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	uint32_t loop_count = 0;
-	// Wait for AT command separator.
-	while (td1208_ctx.line_end_flag == 0) {
-		// Exit if timeout.
-		loop_count++;
-		if (loop_count > TD1208_TIMEOUT_COUNT) {
-			status = TD1208_ERROR_TIMEOUT;
-			break;
-		}
+	USART_status_t usart_status = USART_SUCCESS;
+	uint8_t char_idx = 0;
+	// Check parameter.
+	if (command == NULL) {
+		status = TD1208_ERROR_NULL_PARAMETER;
+		goto errors;
 	}
+	// Fill command buffer.
+	while (*command) {
+		td1208_ctx.command_buffer[char_idx] = *(command++);
+		char_idx++;
+	}
+	td1208_ctx.command_buffer[char_idx++] = STRING_CHAR_CR;
+	td1208_ctx.command_buffer[char_idx++] = STRING_CHAR_NULL;
+	// Send command through UART.
+	usart_status = USART2_send_string(td1208_ctx.command_buffer);
+	USART_status_check(TD1208_ERROR_BASE_USART);
+errors:
 	return status;
 }
 
@@ -83,17 +104,34 @@ static TD1208_status_t _TD1208_wait_for_response(void) {
  * @param:			None.
  * @return status:	Function execution status.
  */
-static TD1208_status_t _TD1208_wait_for_ok(void) {
+static TD1208_status_t _TD1208_wait_for_string(char_t* ref) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	PARSER_status_t parser_status = PARSER_SUCCESS;
-	// Wait for OK.
-	status = _TD1208_wait_for_response();
-	if (status != TD1208_SUCCESS) goto errors;
-	// Parse response.
-	td1208_ctx.parser.rx_buf_length = td1208_ctx.response_buf_idx;
-	parser_status = PARSER_compare(&td1208_ctx.parser, PARSER_MODE_COMMAND, "0");
-	PARSER_status_check(TD1208_ERROR_BASE_PARSER);
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	uint8_t rep_idx = 0;
+	uint32_t parsing_time = 0;
+	do {
+		// Delay.
+		lptim1_status = LPTIM1_delay_milliseconds(TD1208_RESPONSE_PARSING_DELAY_MS, 0);
+		LPTIM1_status_check(TD1208_ERROR_BASE_LPTIM);
+		parsing_time += TD1208_RESPONSE_PARSING_DELAY_MS;
+		// Loop on all responses.
+		for (rep_idx=0 ; rep_idx<TD1208_RESPONSE_BUFFER_DEPTH ; rep_idx++) {
+			// Parse response.
+			td1208_ctx.response[rep_idx].parser.rx_buf_length = td1208_ctx.response[rep_idx].char_idx;
+			parser_status = PARSER_compare(&td1208_ctx.response[rep_idx].parser, PARSER_MODE_HEADER, ref);
+			// Update status.
+			if (parser_status == PARSER_SUCCESS) {
+				status = TD1208_SUCCESS;
+				break;
+			}
+			else {
+				status = (TD1208_ERROR_BASE_PARSER + parser_status);
+			}
+		}
+	}
+	while ((status != TD1208_SUCCESS) && (parsing_time < TD1208_RESPONSE_PARSING_TIMEOUT_MS));
 errors:
 	return status;
 }
@@ -106,48 +144,25 @@ errors:
  */
 void TD1208_init(void) {
 	// Init buffers.
-	_TD1208_reset_parser();
+	_TD1208_reset_responses();
 	// Enable interrupt.
 	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2);
 }
 
-/* DISABLE TD1208 ECHO ON UART.
- * @param:			None.
- * @return status:	Function execution status.
+/* RESET TD1208 MODULE
+ * @param:	None.
+ * @return:	None.
  */
-TD1208_status_t TD1208_disable_echo_and_verbose(void) {
+TD1208_status_t TD1208_reset(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	USART_status_t usart_status = USART_SUCCESS;
 	// Reset parser.
-	_TD1208_reset_parser();
-	// Build AT command.
-	td1208_ctx.command_buf[0] = 'A';
-	td1208_ctx.command_buf[1] = 'T';
-	td1208_ctx.command_buf[2] = 'E';
-	td1208_ctx.command_buf[3] = '0';
-	td1208_ctx.command_buf[4] = STRING_CHAR_CR;
-	td1208_ctx.command_buf[5] = STRING_CHAR_NULL;
-	// Send command through UART.
-	usart_status = USART2_send_string(td1208_ctx.command_buf);
-	USART_status_check(TD1208_ERROR_BASE_USART);
-	// Wait for response.
-	status = _TD1208_wait_for_response();
+	_TD1208_reset_responses();
+	// Send command.
+	status = _TD1208_send_command("ATZ");
 	if (status != TD1208_SUCCESS) goto errors;
-	// Reset parser.
-	_TD1208_reset_parser();
-	// Build AT command.
-	td1208_ctx.command_buf[0] = 'A';
-	td1208_ctx.command_buf[1] = 'T';
-	td1208_ctx.command_buf[2] = 'V';
-	td1208_ctx.command_buf[3] = '0';
-	td1208_ctx.command_buf[4] = STRING_CHAR_CR;
-	td1208_ctx.command_buf[5] = STRING_CHAR_NULL;
-	// Send command through UART.
-	usart_status = USART2_send_string(td1208_ctx.command_buf);
-	USART_status_check(TD1208_ERROR_BASE_USART);
-	// Wait for response.
-	status = _TD1208_wait_for_response();
+	// Wait for command completion.
+	status = _TD1208_wait_for_string("OK");
 errors:
 	return status;
 }
@@ -159,51 +174,71 @@ errors:
 TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	USART_status_t usart_status = USART_SUCCESS;
 	PARSER_status_t parser_status = PARSER_SUCCESS;
+	char_t temp_char = STRING_CHAR_NULL;
+	uint8_t rep_idx = 0;
 	uint8_t idx = 0;
-	char temp_id[TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR];
+	uint8_t line_length = 0;
+	uint8_t extracted_length = 0;
 	// Check parameter.
 	if (sigfox_device_id == NULL) {
 		status = TD1208_ERROR_NULL_PARAMETER;
 		goto errors;
 	}
 	// Reset parser.
-	_TD1208_reset_parser();
-	// Build AT command.
-	td1208_ctx.command_buf[0] = 'A';
-	td1208_ctx.command_buf[1] = 'T';
-	td1208_ctx.command_buf[2] = 'I';
-	td1208_ctx.command_buf[3] = '7';
-	td1208_ctx.command_buf[4] = STRING_CHAR_CR;
-	td1208_ctx.command_buf[5] = STRING_CHAR_NULL;
-	// Send command through UART.
-	usart_status = USART2_send_string(td1208_ctx.command_buf);
-	USART_status_check(TD1208_ERROR_BASE_USART);
-	// Wait for ID.
-	status = _TD1208_wait_for_response();
+	_TD1208_reset_responses();
+	// Send command.
+	status = _TD1208_send_command("ATI7");
 	if (status != TD1208_SUCCESS) goto errors;
-	// Copy ID to temporary buffer.
-	for (idx=0 ; idx<td1208_ctx.response_buf_idx ; idx++) {
-		temp_id[idx] = td1208_ctx.response_buf[idx];
-	}
-	for (; idx<TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR ; idx++) {
-		temp_id[idx] = '0';
-	}
-	// Pad most significant bits with zeroes.
-	for (idx=0 ; idx<TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR ; idx++) {
-		if (idx < (TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR - td1208_ctx.response_buf_idx)) {
-			td1208_ctx.response_buf[idx] = '0';
+	// Wait for command completion.
+	status = _TD1208_wait_for_string("OK");
+	if (status != TD1208_SUCCESS) goto errors;
+	// Search ID in all responses.
+	for (rep_idx=0 ; rep_idx<TD1208_RESPONSE_BUFFER_DEPTH ; rep_idx++) {
+		// Replace unwanted characters.
+		for (idx=0 ; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
+			temp_char = td1208_ctx.response[rep_idx].buffer[idx];
+			if ((temp_char == STRING_CHAR_CR) || (temp_char == STRING_CHAR_LF)) {
+				td1208_ctx.response[rep_idx].buffer[idx] = STRING_CHAR_NULL;
+			}
+		}
+		// Count the number of characters.
+		line_length = 0;
+		for (idx=0 ; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
+			if (td1208_ctx.response[rep_idx].buffer[idx] == STRING_CHAR_NULL) {
+				break;
+			}
+			else {
+				line_length++;
+			}
+		}
+		// Check length.
+		if ((line_length > 0) && (line_length <= TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR)) {
+			// Shift buffer.
+			for (idx=(TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR - 1) ; idx>=(TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR - line_length) ; idx--) {
+				td1208_ctx.response[rep_idx].buffer[idx] = td1208_ctx.response[rep_idx].buffer[idx - line_length];
+			}
+			// Pad most significant symbols with zeroes.
+			for (; idx>=0 ; idx--) {
+				td1208_ctx.response[rep_idx].buffer[idx] = '0';
+				if (idx == 0) break;
+			}
+			// Try parsing ID.
+			td1208_ctx.response[rep_idx].parser.rx_buf_length = TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR;
+			parser_status = PARSER_get_byte_array(&td1208_ctx.response[rep_idx].parser, STRING_CHAR_NULL, SIGFOX_DEVICE_ID_LENGTH_BYTES, 1, sigfox_device_id, &extracted_length);
+			// Update status.
+			if (parser_status == PARSER_SUCCESS) {
+				status = TD1208_SUCCESS;
+				break;
+			}
+			else {
+				status = (TD1208_ERROR_BASE_PARSER + parser_status);
+			}
 		}
 		else {
-			td1208_ctx.response_buf[idx] = temp_id[idx - ((TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR - td1208_ctx.response_buf_idx))];
+			status = (TD1208_ERROR_BASE_PARSER + PARSER_ERROR_BYTE_ARRAY_LENGTH);
 		}
 	}
-	td1208_ctx.response_buf[TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR] = STRING_CHAR_NULL;
-	// Read ID.
-	td1208_ctx.parser.rx_buf_length = TD1208_SIGFOX_DEVICE_ID_LENGTH_CHAR;
-	parser_status = PARSER_get_byte_array(&td1208_ctx.parser, STRING_CHAR_NULL, SIGFOX_DEVICE_ID_LENGTH_BYTES, 1, sigfox_device_id, &idx);
-	PARSER_status_check(TD1208_ERROR_BASE_PARSER);
 errors:
 	return status;
 }
@@ -217,24 +252,24 @@ TD1208_status_t TD1208_send_bit(uint8_t uplink_bit) {
 	TD1208_status_t status = TD1208_SUCCESS;
 	USART_status_t usart_status = USART_SUCCESS;
 	// Reset parser.
-	_TD1208_reset_parser();
+	_TD1208_reset_responses();
 	// Build AT command.
-	td1208_ctx.command_buf[0] = 'A';
-	td1208_ctx.command_buf[1] = 'T';
-	td1208_ctx.command_buf[2] = '$';
-	td1208_ctx.command_buf[3] = 'S';
-	td1208_ctx.command_buf[4] = 'B';
-	td1208_ctx.command_buf[5] = '=';
-	td1208_ctx.command_buf[6] = uplink_bit ? '1' : '0';
-	td1208_ctx.command_buf[7] = ',';
-	td1208_ctx.command_buf[8] = '2';
-	td1208_ctx.command_buf[9] = STRING_CHAR_CR;
-	td1208_ctx.command_buf[10] = STRING_CHAR_NULL;
+	td1208_ctx.command_buffer[0] = 'A';
+	td1208_ctx.command_buffer[1] = 'T';
+	td1208_ctx.command_buffer[2] = '$';
+	td1208_ctx.command_buffer[3] = 'S';
+	td1208_ctx.command_buffer[4] = 'B';
+	td1208_ctx.command_buffer[5] = '=';
+	td1208_ctx.command_buffer[6] = uplink_bit ? '1' : '0';
+	td1208_ctx.command_buffer[7] = ',';
+	td1208_ctx.command_buffer[8] = '2';
+	td1208_ctx.command_buffer[9] = STRING_CHAR_CR;
+	td1208_ctx.command_buffer[10] = STRING_CHAR_NULL;
 	// Send command through UART.
-	usart_status = USART2_send_string(td1208_ctx.command_buf);
+	usart_status = USART2_send_string(td1208_ctx.command_buffer);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = _TD1208_wait_for_ok();
+	status = _TD1208_wait_for_string("OK");
 errors:
 	return status;
 }
@@ -260,26 +295,26 @@ TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_length
 		goto errors;
 	}
 	// Reset parser.
-	_TD1208_reset_parser();
+	_TD1208_reset_responses();
 	// Header.
-	td1208_ctx.command_buf[idx++] = 'A';
-	td1208_ctx.command_buf[idx++] = 'T';
-	td1208_ctx.command_buf[idx++] = '$';
-	td1208_ctx.command_buf[idx++] = 'S';
-	td1208_ctx.command_buf[idx++] = 'F';
-	td1208_ctx.command_buf[idx++] = '=';
+	td1208_ctx.command_buffer[idx++] = 'A';
+	td1208_ctx.command_buffer[idx++] = 'T';
+	td1208_ctx.command_buffer[idx++] = '$';
+	td1208_ctx.command_buffer[idx++] = 'S';
+	td1208_ctx.command_buffer[idx++] = 'F';
+	td1208_ctx.command_buffer[idx++] = '=';
 	// Data.
-	string_status = STRING_byte_array_to_hexadecimal_string(ul_payload, ul_payload_length_bytes, 0, &(td1208_ctx.command_buf[idx]));
+	string_status = STRING_byte_array_to_hexadecimal_string(ul_payload, ul_payload_length_bytes, 0, &(td1208_ctx.command_buffer[idx]));
 	STRING_status_check(TD1208_ERROR_BASE_STRING);
 	// AT command end.
 	idx += (2 * ul_payload_length_bytes);
-	td1208_ctx.command_buf[idx++] = STRING_CHAR_CR;
-	td1208_ctx.command_buf[idx++] = STRING_CHAR_NULL;
+	td1208_ctx.command_buffer[idx++] = STRING_CHAR_CR;
+	td1208_ctx.command_buffer[idx++] = STRING_CHAR_NULL;
 	// Send command through UART.
-	usart_status = USART2_send_string(td1208_ctx.command_buf);
+	usart_status = USART2_send_string(td1208_ctx.command_buffer);
 	USART_status_check(TD1208_ERROR_BASE_USART);
 	// Wait for response.
-	status = _TD1208_wait_for_ok();
+	status = _TD1208_wait_for_string("OK");
 errors:
 	return status;
 }
@@ -289,21 +324,16 @@ errors:
  * @return:			None.
  */
 void TD1208_fill_rx_buffer(uint8_t rx_byte) {
-	// Append byte if LF flag is not allready set.
-	if (td1208_ctx.line_end_flag == 0) {
-		// Check ending characters.
-		if ((rx_byte == STRING_CHAR_CR) || (rx_byte == STRING_CHAR_LF)) {
-			td1208_ctx.response_buf[td1208_ctx.response_buf_idx] = STRING_CHAR_NULL;
-			td1208_ctx.line_end_flag = 1;
-		}
-		else {
-			// Store new byte.
-			td1208_ctx.response_buf[td1208_ctx.response_buf_idx] = rx_byte;
-			// Manage index.
-			td1208_ctx.response_buf_idx++;
-			if (td1208_ctx.response_buf_idx >= TD1208_BUFFER_LENGTH_BYTES) {
-				td1208_ctx.response_buf_idx = 0;
-			}
-		}
+	// Read current index.
+	uint8_t char_idx = td1208_ctx.response[td1208_ctx.response_idx].char_idx;
+	// Store new byte.
+	td1208_ctx.response[td1208_ctx.response_idx].buffer[char_idx] = rx_byte;
+	// Manage index.
+	char_idx = (char_idx + 1) % TD1208_BUFFER_LENGTH_BYTES;
+	td1208_ctx.response[td1208_ctx.response_idx].char_idx = char_idx;
+	// Check ending characters.
+	if (rx_byte == STRING_CHAR_LF) {
+		// Switch buffer.
+		td1208_ctx.response_idx = (td1208_ctx.response_idx + 1) % TD1208_RESPONSE_BUFFER_DEPTH;
 	}
 }

@@ -8,7 +8,9 @@
 #ifndef __TD1208_H__
 #define __TD1208_H__
 
+#include "lptim.h"
 #include "parser.h"
+#include "string.h"
 #include "usart.h"
 
 /*** TD1208 macros ***/
@@ -24,7 +26,8 @@ typedef enum {
 	TD1208_ERROR_TIMEOUT,
 	TD1208_ERROR_REPONSE,
 	TD1208_ERROR_BASE_USART = 0x0100,
-	TD1208_ERROR_BASE_STRING = (TD1208_ERROR_BASE_USART + USART_ERROR_BASE_LAST),
+	TD1208_ERROR_BASE_LPTIM = (TD1208_ERROR_BASE_USART + USART_ERROR_BASE_LAST),
+	TD1208_ERROR_BASE_STRING = (TD1208_ERROR_BASE_LPTIM + LPTIM_ERROR_BASE_LAST),
 	TD1208_ERROR_BASE_PARSER = (TD1208_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
 	TD1208_ERROR_BASE_LAST = (TD1208_ERROR_BASE_PARSER + PARSER_ERROR_BASE_LAST)
 } TD1208_status_t;
@@ -32,7 +35,7 @@ typedef enum {
 /*** TD1208 functions ***/
 
 void TD1208_init(void);
-TD1208_status_t TD1208_disable_echo_and_verbose(void);
+TD1208_status_t TD1208_reset(void);
 TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id);
 TD1208_status_t TD1208_send_bit(uint8_t uplink_bit);
 TD1208_status_t TD1208_send_frame(uint8_t* uplink_data, uint8_t uplink_data_length_bytes);

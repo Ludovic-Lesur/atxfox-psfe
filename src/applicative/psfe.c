@@ -234,17 +234,23 @@ void PSFE_task(void) {
 		LCD_error_check();
 		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
 		LPTIM1_error_check();
+		// Reset Sigfox module.
+		td1208_status = TD1208_reset();
+		TD1208_error_check();
 		// Print SW version.
 		lcd_status = LCD_print_sw_version();
 		LCD_error_check();
 		lptim1_status = LPTIM1_delay_milliseconds(3000, 0);
 		LPTIM1_error_check();
-		// Print Sigfox device ID.
-		td1208_status = TD1208_disable_echo_and_verbose();
-		TD1208_error_check();
+		// Read Sigfox device ID from module.
 		td1208_status = TD1208_get_sigfox_id(psfe_ctx.sigfox_id);
 		TD1208_error_check();
-		lcd_status = LCD_print_sigfox_id(psfe_ctx.sigfox_id);
+		if (td1208_status == TD1208_SUCCESS) {
+			lcd_status = LCD_print_sigfox_id(psfe_ctx.sigfox_id);
+		}
+		else {
+			lcd_status = LCD_print(1, 0, "TD ERROR", 8);
+		}
 		LCD_error_check();
 		// Send START message through Sigfox.
 		td1208_status = TD1208_send_bit(1);
@@ -373,7 +379,7 @@ void PSFE_adc_callback(void) {
 	ADC1_error_check();
 }
 
-/* CALLBACK CALLED BY TIM22 INTERRUPT.
+/* CALLBACK CALLED BY TIM2 INTERRUPT.
  * @param:	None.
  * @return:	None.
  */

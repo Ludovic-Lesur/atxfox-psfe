@@ -28,10 +28,6 @@ void TIM21_disable(void);
 void TIM2_init(uint32_t period_ms);
 void TIM2_start(void);
 
-void TIM22_init(uint32_t period_ms);
-void TIM22_start(void);
-void TIM22_stop(void);
-
 #define TIM21_status_check(error_base) { if (tim21_status != TIM_SUCCESS) { status = error_base + tim21_status; goto errors; }}
 #define TIM21_error_check() { ERROR_status_check(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
 #define TIM21_error_check_print() { ERROR_status_check_print(tim21_status, TIM_SUCCESS, ERROR_BASE_TIM21); }
