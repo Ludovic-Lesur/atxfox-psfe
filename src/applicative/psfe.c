@@ -109,6 +109,8 @@ typedef struct {
 	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	PSFE_sigfox_startup_data_t sigfox_startup_data;
 	PSFE_sigfox_monitoring_data_t sigfox_monitoring_data;
+	// Error stack.
+	ERROR_t error_stack[ERROR_STACK_DEPTH];
 	uint8_t sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
 } PSFE_context_t;
 
@@ -224,6 +226,7 @@ void PSFE_task(void) {
 	LCD_status_t lcd_status = LCD_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
+	uint8_t idx = 0;
 	// Perform state machine.
 	switch (psfe_ctx.state) {
 	// Supply voltage monitoring.
@@ -305,7 +308,7 @@ void PSFE_task(void) {
 		break;
 	// Send data through Sigfox.
 	case PSFE_STATE_SIGFOX:
-		// Build data.
+		// Build monitoring data.
 		psfe_ctx.sigfox_monitoring_data.vout_mv = psfe_ctx.vout_mv;
 		if (psfe_ctx.bypass_flag != 0) {
 			psfe_ctx.sigfox_monitoring_data.trcs_range = TRCS_RANGE_NONE;
@@ -317,9 +320,23 @@ void PSFE_task(void) {
 		}
 		psfe_ctx.sigfox_monitoring_data.vmcu_mv = psfe_ctx.vmcu_mv;
 		psfe_ctx.sigfox_monitoring_data.tmcu_degrees = psfe_ctx.tmcu_degrees;
-		// Send data.
+		// Send monitoring data.
 		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
 		TD1208_error_check();
+		// Check stack.
+		if (ERROR_stack_is_empty() == 0) {
+			// Read error stack.
+			ERROR_stack_read(psfe_ctx.error_stack);
+			// Convert to 8-bits little-endian array.
+			for (idx=0 ; idx<PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
+				psfe_ctx.sigfox_error_stack_data[idx] = psfe_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
+			}
+			// Send error stack data.
+			td1208_status = TD1208_send_frame(psfe_ctx.sigfox_error_stack_data, PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH);
+			TD1208_error_check();
+			// Reset error stack.
+			ERROR_stack_init();
+		}
 		// Compute next state.
 		psfe_ctx.state = PSFE_STATE_VMCU_MONITORING;
 		break;
