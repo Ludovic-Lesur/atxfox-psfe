@@ -96,6 +96,7 @@ typedef struct {
 	uint32_t lsi_frequency_hz;
 	PSFE_state_t state;
 	uint8_t por_flag;
+	uint8_t startup_frame_sent;
 	volatile uint8_t bypass_flag;
 	// Analog measurements.
 	volatile uint32_t vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
@@ -191,6 +192,7 @@ void PSFE_init_context(void) {
 	psfe_ctx.state = PSFE_STATE_VMCU_MONITORING;
 	psfe_ctx.bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
 	psfe_ctx.por_flag = 1;
+	psfe_ctx.startup_frame_sent = 0;
 	// Init arrays.
 	for (idx=0 ; idx<PSFE_VOUT_BUFFER_LENGTH ; idx++) psfe_ctx.vout_mv_buf[idx] = 0;
 	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.sigfox_id[idx] = 0x00;
@@ -272,16 +274,24 @@ void PSFE_task(void) {
 			lcd_status = LCD_print(1, 0, "TD ERROR", 8);
 		}
 		LCD_error_check();
-		// Sens startup message through Sigfox.
-		psfe_ctx.sigfox_startup_data.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
-		psfe_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
-		psfe_ctx.sigfox_startup_data.minor_version = GIT_MINOR_VERSION;
-		psfe_ctx.sigfox_startup_data.commit_index = GIT_COMMIT_INDEX;
-		psfe_ctx.sigfox_startup_data.commit_id = GIT_COMMIT_ID;
-		psfe_ctx.sigfox_startup_data.dirty_flag = GIT_DIRTY_FLAG;
-		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_startup_data.frame, PSFE_SIGFOX_STARTUP_DATA_LENGTH);
-		TD1208_error_check();
+		if (psfe_ctx.startup_frame_sent == 0) {
+			// Send startup message through Sigfox.
+			psfe_ctx.sigfox_startup_data.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
+			psfe_ctx.sigfox_startup_data.major_version = GIT_MAJOR_VERSION;
+			psfe_ctx.sigfox_startup_data.minor_version = GIT_MINOR_VERSION;
+			psfe_ctx.sigfox_startup_data.commit_index = GIT_COMMIT_INDEX;
+			psfe_ctx.sigfox_startup_data.commit_id = GIT_COMMIT_ID;
+			psfe_ctx.sigfox_startup_data.dirty_flag = GIT_DIRTY_FLAG;
+			td1208_status = TD1208_send_frame(psfe_ctx.sigfox_startup_data.frame, PSFE_SIGFOX_STARTUP_DATA_LENGTH);
+			TD1208_error_check();
+			// Update flag.
+			psfe_ctx.startup_frame_sent = 1;
+		}
 		// Send START message through Sigfox.
+		lcd_status = LCD_print(0, 0, " ATXFox ", 8);
+		LCD_error_check();
+		lcd_status = LCD_print(1, 0, "starting", 8);
+		LCD_error_check();
 		td1208_status = TD1208_send_bit(1);
 		TD1208_error_check();
 		// Update flags.
