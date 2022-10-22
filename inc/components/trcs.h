@@ -11,10 +11,6 @@
 #include "adc.h"
 #include "math.h"
 
-/*** TRCS macros ***/
-
-#define TRCS_IOUT_ERROR_VALUE	0xFFFFFFFF
-
 /*** TRCS structures ***/
 
 typedef enum {

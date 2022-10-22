@@ -54,6 +54,10 @@
 
 #define PSFE_STRING_VALUE_BUFFER_LENGTH				16
 
+#define PSFE_ERROR_VALUE_VOLTAGE_16BITS				0xFFFF
+#define PSFE_ERROR_VALUE_VOLTAGE_24BITS				0xFFFFFF
+#define PSFE_ERROR_VALUE_TEMPERATURE				0x7F
+
 /*** PSFE local structures ***/
 
 typedef enum {
@@ -104,7 +108,7 @@ typedef struct {
 	volatile uint32_t vout_mv;
 	volatile uint32_t iout_ua;
 	volatile uint32_t vmcu_mv;
-	volatile int8_t tmcu_degrees;
+	volatile uint8_t tmcu_degrees;
 	volatile TRCS_range_t trcs_range;
 	// Sigfox.
 	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
@@ -199,10 +203,10 @@ void PSFE_init_context(void) {
 	for (idx=0 ; idx<PSFE_SIGFOX_MONITORING_DATA_LENGTH ; idx++) psfe_ctx.sigfox_monitoring_data.frame[idx] = 0x00;
 	for (idx=0 ; idx<PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) psfe_ctx.sigfox_error_stack_data[idx] = 0x00;
 	psfe_ctx.vout_mv_buf_idx = 0;
-	psfe_ctx.vout_mv = 0;
-	psfe_ctx.iout_ua = 0;
-	psfe_ctx.vmcu_mv = 0;
-	psfe_ctx.tmcu_degrees = 0;
+	psfe_ctx.vout_mv = PSFE_ERROR_VALUE_VOLTAGE_16BITS;
+	psfe_ctx.iout_ua = PSFE_ERROR_VALUE_VOLTAGE_24BITS;
+	psfe_ctx.vmcu_mv = PSFE_ERROR_VALUE_VOLTAGE_16BITS;
+	psfe_ctx.tmcu_degrees = PSFE_ERROR_VALUE_TEMPERATURE;
 	psfe_ctx.trcs_range = TRCS_RANGE_NONE;
 }
 
@@ -322,13 +326,14 @@ void PSFE_task(void) {
 		psfe_ctx.sigfox_monitoring_data.vout_mv = psfe_ctx.vout_mv;
 		if (psfe_ctx.bypass_flag != 0) {
 			psfe_ctx.sigfox_monitoring_data.trcs_range = TRCS_RANGE_NONE;
-			psfe_ctx.sigfox_monitoring_data.iout_ua = (TRCS_IOUT_ERROR_VALUE & 0x00FFFFFF);
+			psfe_ctx.sigfox_monitoring_data.iout_ua = PSFE_ERROR_VALUE_VOLTAGE_24BITS;
 		}
 		else {
 			psfe_ctx.sigfox_monitoring_data.trcs_range = psfe_ctx.trcs_range;
 			psfe_ctx.sigfox_monitoring_data.iout_ua = psfe_ctx.iout_ua;
 		}
 		psfe_ctx.sigfox_monitoring_data.vmcu_mv = psfe_ctx.vmcu_mv;
+
 		psfe_ctx.sigfox_monitoring_data.tmcu_degrees = psfe_ctx.tmcu_degrees;
 		// Send monitoring data.
 		td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
@@ -392,19 +397,29 @@ void PSFE_adc_callback(void) {
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	TRCS_status_t trcs_status = TRCS_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
+	uint32_t generic_data_u32 = 0;
+	int8_t temperature = 0;
 	// Perform measurements.
 	adc1_status = ADC1_perform_measurements();
 	ADC1_error_check();
 	trcs_status = TRCS_task();
 	TRCS_error_check();
 	// Update local Vout.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, (uint32_t*) &psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx]);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, &generic_data_u32);
 	ADC1_error_check();
-	math_status = MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, (uint32_t*) &psfe_ctx.vout_mv);
-	MATH_error_check();
-	psfe_ctx.vout_mv_buf_idx++;
-	if (psfe_ctx.vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
-		psfe_ctx.vout_mv_buf_idx = 0;
+	if (adc1_status == ADC_SUCCESS) {
+		// Add value to buffer.
+		psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx] = generic_data_u32;
+		psfe_ctx.vout_mv_buf_idx++;
+		if (psfe_ctx.vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
+			psfe_ctx.vout_mv_buf_idx = 0;
+		}
+		// Compute average.
+		math_status = MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, &generic_data_u32);
+		MATH_error_check();
+		if (math_status == MATH_SUCCESS) {
+			psfe_ctx.vout_mv = generic_data_u32;
+		}
 	}
 	// Update local Iout.
 	trcs_status = TRCS_get_iout(&psfe_ctx.iout_ua);
@@ -423,10 +438,25 @@ void PSFE_adc_callback(void) {
 	}
 #endif
 	// Update local Vmcu and Tmcu.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, (uint32_t*) &psfe_ctx.vmcu_mv);
+	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32);
 	ADC1_error_check();
-	adc1_status = ADC1_get_tmcu((int8_t*) &psfe_ctx.tmcu_degrees);
+	psfe_ctx.vmcu_mv = (adc1_status == ADC_SUCCESS) ? generic_data_u32 : PSFE_ERROR_VALUE_VOLTAGE_16BITS;
+	adc1_status = ADC1_get_tmcu(&temperature);
 	ADC1_error_check();
+	if (adc1_status == ADC_SUCCESS) {
+		// Convert to 1-complement.
+		math_status = MATH_one_complement(temperature, 7, &generic_data_u32);
+		MATH_error_check();
+		if (math_status == MATH_SUCCESS) {
+			psfe_ctx.tmcu_degrees = (uint8_t) generic_data_u32;
+		}
+		else {
+			psfe_ctx.tmcu_degrees = PSFE_ERROR_VALUE_TEMPERATURE;
+		}
+	}
+	else {
+		psfe_ctx.tmcu_degrees = PSFE_ERROR_VALUE_TEMPERATURE;
+	}
 }
 
 /* CALLBACK CALLED BY TIM2 INTERRUPT.
