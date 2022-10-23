@@ -261,6 +261,7 @@ void PSFE_task(void) {
 		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
 		LPTIM1_error_check();
 		// Reset Sigfox module.
+		IWDG_reload();
 		td1208_status = TD1208_reset();
 		TD1208_error_check();
 		// Print SW version.
@@ -269,6 +270,7 @@ void PSFE_task(void) {
 		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
 		LPTIM1_error_check();
 		// Read Sigfox device ID from module.
+		IWDG_reload();
 		td1208_status = TD1208_get_sigfox_id(psfe_ctx.sigfox_id);
 		TD1208_error_check();
 		if (td1208_status == TD1208_SUCCESS) {
@@ -296,6 +298,7 @@ void PSFE_task(void) {
 		LCD_error_check();
 		lcd_status = LCD_print(1, 0, "starting", 8);
 		LCD_error_check();
+		IWDG_reload();
 		td1208_status = TD1208_send_bit(1);
 		TD1208_error_check();
 		// Update flags.
