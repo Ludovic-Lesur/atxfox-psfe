@@ -50,7 +50,7 @@
 #define PSFE_SIGFOX_PERIOD_SECONDS					300
 #define PSFE_SIGFOX_STARTUP_DATA_LENGTH				8
 #define PSFE_SIGFOX_MONITORING_DATA_LENGTH			9
-#define PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH			(ERROR_STACK_DEPTH * 2)
+#define PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH			12
 
 #define PSFE_STRING_VALUE_BUFFER_LENGTH				16
 
@@ -115,7 +115,6 @@ typedef struct {
 	PSFE_sigfox_startup_data_t sigfox_startup_data;
 	PSFE_sigfox_monitoring_data_t sigfox_monitoring_data;
 	// Error stack.
-	ERROR_t error_stack[ERROR_STACK_DEPTH];
 	uint8_t sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
 } PSFE_context_t;
 
@@ -232,6 +231,7 @@ void PSFE_task(void) {
 	LCD_status_t lcd_status = LCD_SUCCESS;
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
+	ERROR_t error_code = 0;
 	uint8_t idx = 0;
 	// Perform state machine.
 	switch (psfe_ctx.state) {
@@ -344,10 +344,10 @@ void PSFE_task(void) {
 		// Check stack.
 		if (ERROR_stack_is_empty() == 0) {
 			// Read error stack.
-			ERROR_stack_read(psfe_ctx.error_stack);
-			// Convert to 8-bits little-endian array.
-			for (idx=0 ; idx<PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) {
-				psfe_ctx.sigfox_error_stack_data[idx] = psfe_ctx.error_stack[idx / 2] >> (8 * ((idx + 1) % 2));
+			for (idx=0 ; idx<(PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH / 2) ; idx++) {
+				error_code = ERROR_stack_read();
+				psfe_ctx.sigfox_error_stack_data[(2 * idx) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
+				psfe_ctx.sigfox_error_stack_data[(2 * idx) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
 			}
 			// Send error stack data.
 			td1208_status = TD1208_send_frame(psfe_ctx.sigfox_error_stack_data, PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH);

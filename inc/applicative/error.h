@@ -27,10 +27,6 @@
 #include "parser.h"
 #include "string.h"
 
-/*** ERROR macros ***/
-
-#define ERROR_STACK_DEPTH	6
-
 /*** ERROR structures ***/
 
 typedef enum {
@@ -60,21 +56,13 @@ typedef enum {
 /*** ERROR functions ***/
 
 void ERROR_stack_init(void);
-void ERROR_stack_add(ERROR_t status);
-void ERROR_stack_read(ERROR_t* error_stack);
+void ERROR_stack_add(ERROR_t code);
+ERROR_t ERROR_stack_read(void);
 uint8_t ERROR_stack_is_empty(void);
 
 #define ERROR_status_check(status, success, error_base) { \
 	if (status != success) { \
 		ERROR_stack_add(error_base + status); \
-	} \
-}
-
-#define ERROR_status_check_print(status, success, error_base) { \
-	if (status != success) { \
-		ERROR_stack_add(error_base + status); \
-		AT_print_status(error_base + status); \
-		goto errors; \
 	} \
 }
 
