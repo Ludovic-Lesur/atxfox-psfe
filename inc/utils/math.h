@@ -8,7 +8,6 @@
 #ifndef __MATH_H__
 #define __MATH_H__
 
-#include "mode.h"
 #include "types.h"
 
 /*** MATH macros ***/

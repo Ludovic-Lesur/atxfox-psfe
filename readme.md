@@ -16,9 +16,10 @@ The PSFE board is based on the **STM32L031G6U6** microcontroller of the STMicroe
 
 ## Structure
 The project is organized as follow:
-* `inc` and `src`: **source code** split in 4 layers:
+* `inc` and `src`: **source code** split in 5 layers:
     * `registers`: MCU **registers** adress definition.
     * `peripherals`: internal MCU **peripherals** drivers.
+    * `utils`: **utility** functions.
     * `components`: external **components** drivers.
     * `applicative`: high-level **application** layers.
 * `startup`: MCU **startup** code (from ARM).
