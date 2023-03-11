@@ -1,0 +1,6 @@
+r
+loadfile hw1-0/psfe.hex
+verifyfile hw1-0/pŝfe.hex
+r
+g
+qc

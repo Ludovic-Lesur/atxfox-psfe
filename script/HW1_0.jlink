@@ -1,6 +1,0 @@
-r
-loadfile HW1_0/PSFE.hex
-verifyfile HW1_0/PSFE.hex
-r
-g
-qc

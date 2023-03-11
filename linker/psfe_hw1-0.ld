@@ -1,12 +1,16 @@
+/*
+ * psfe_hw1-0.ld
+ *
+ *  Created on: 29 dec. 2018
+ *      Author: ARM
+ */
+
 /* Linker script to configure memory regions. */
 MEMORY
 {
   FLASH (rx)  : ORIGIN = 0x08000000, LENGTH = 32K
   RAM   (rwx) : ORIGIN = 0x20000000, LENGTH = 8K
 }
-
-/* Library configurations */
-/*GROUP(libgcc.a libc.a libm.a libnosys.a)*/
 
 /* Linker script to place sections and symbol values. Should be used together
  * with other linker script that defines memory regions FLASH and RAM.
