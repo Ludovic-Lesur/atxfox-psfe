@@ -112,7 +112,7 @@ static TD1208_status_t _TD1208_wait_for_string(char_t* ref) {
 	uint32_t parsing_time = 0;
 	do {
 		// Delay.
-		lptim1_status = LPTIM1_delay_milliseconds(TD1208_REPLY_PARSING_DELAY_MS, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(TD1208_REPLY_PARSING_DELAY_MS, LPTIM_DELAY_MODE_ACTIVE);
 		LPTIM1_status_check(TD1208_ERROR_BASE_LPTIM);
 		parsing_time += TD1208_REPLY_PARSING_DELAY_MS;
 		// Loop on all replys.

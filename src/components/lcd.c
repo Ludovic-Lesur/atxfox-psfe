@@ -86,16 +86,16 @@ LCD_status_t LCD_init(void) {
 	GPIO_configure(&GPIO_LCD_DB7, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Initialization sequence.
 	GPIO_write(&GPIO_LCD_E, 0);
-	lptim1_status = LPTIM1_delay_milliseconds(100, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	_LCD_command(0x30);
-	lptim1_status = LPTIM1_delay_milliseconds(30, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(30, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	_LCD_command(0x30);
-	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(10, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	_LCD_command(0x30);
-	lptim1_status = LPTIM1_delay_milliseconds(10, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(10, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 	_LCD_command(0x38); // 8-bits / 2 lines mode.
 	_LCD_command(0x08); // Display off.
@@ -152,7 +152,7 @@ LCD_status_t LCD_clear(void) {
 	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
 	// Clear command.
 	_LCD_command(0x01);
-	lptim1_status = LPTIM1_delay_milliseconds(2, 0);
+	lptim1_status = LPTIM1_delay_milliseconds(2, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM1_status_check(LCD_ERROR_BASE_LPTIM);
 errors:
 	return status;

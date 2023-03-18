@@ -258,7 +258,7 @@ void PSFE_task(void) {
 		// Print board name and HW version.
 		lcd_status = LCD_print_hw_version();
 		LCD_error_check();
-		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
 		LPTIM1_error_check();
 		// Reset Sigfox module.
 		IWDG_reload();
@@ -267,7 +267,7 @@ void PSFE_task(void) {
 		// Print SW version.
 		lcd_status = LCD_print_sw_version();
 		LCD_error_check();
-		lptim1_status = LPTIM1_delay_milliseconds(2000, 0);
+		lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
 		LPTIM1_error_check();
 		// Read Sigfox device ID from module.
 		IWDG_reload();

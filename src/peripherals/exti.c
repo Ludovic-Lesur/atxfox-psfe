@@ -10,7 +10,6 @@
 #include "exti_reg.h"
 #include "gpio.h"
 #include "mapping.h"
-#include "mode.h"
 #include "nvic.h"
 #include "psfe.h"
 #include "rcc_reg.h"
@@ -116,6 +115,15 @@ void EXTI_configure_line(EXTI_line_t line, EXTI_trigger_t trigger) {
 	if ((line != EXTI_RTSR_FTSR_RESERVED_INDEX) || (line <= EXTI_RTSR_FTSR_MAX_INDEX)) {
 		_EXTI_set_trigger(trigger, line);
 	}
+}
+
+/* CLEAR EXTI FLAG.
+ * @param line:	Line to clear (see EXTI_line_t enum).
+ * @return:		None.
+ */
+void EXTI_clear_flag(EXTI_line_t line) {
+	// Clear flag.
+	EXTI -> PR |= line; // PIFx='1'.
 }
 
 /* CLEAR ALL EXTI FLAGS.
