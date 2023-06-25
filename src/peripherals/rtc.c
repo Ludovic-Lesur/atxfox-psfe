@@ -7,9 +7,12 @@
 
 #include "rtc.h"
 
+#include "mode.h"
 #include "rcc_reg.h"
 #include "rtc_reg.h"
 #include "types.h"
+
+#ifdef USE_SIGFOX_MONITORING
 
 /*** RTC local macros ***/
 
@@ -176,3 +179,5 @@ void RTC_clear_wakeup_timer_flag(void) {
 	// Clear flag.
 	RTC -> ISR &= ~(0b1 << 10); // WUTF='0'.
 }
+
+#endif /* USE_SIGFOX_MONITORING */

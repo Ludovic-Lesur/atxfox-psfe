@@ -9,6 +9,7 @@
 #define __TD1208_H__
 
 #include "lptim.h"
+#include "mode.h"
 #include "parser.h"
 #include "string.h"
 #include "usart.h"
@@ -32,6 +33,8 @@ typedef enum {
 	TD1208_ERROR_BASE_LAST = (TD1208_ERROR_BASE_PARSER + PARSER_ERROR_BASE_LAST)
 } TD1208_status_t;
 
+#ifdef USE_SIGFOX_MONITORING
+
 /*** TD1208 functions ***/
 
 void TD1208_init(void);
@@ -44,5 +47,7 @@ void TD1208_fill_rx_buffer(uint8_t rx_byte);
 #define TD1208_status_check(error_base) { if (td1208_status != TD1208_SUCCESS) { status = error_base + td1208_status; goto errors; }}
 #define TD1208_error_check() { ERROR_status_check(td1208_status, TD1208_SUCCESS, ERROR_BASE_TD1208); }
 #define TD1208_error_check_print() { ERROR_status_check_print(td1208_status, TD1208_SUCCESS, ERROR_BASE_TD1208); }
+
+#endif /* USE_SIGFOX_MONITORING */
 
 #endif /* COMPONENTS___TD1208_H___ */

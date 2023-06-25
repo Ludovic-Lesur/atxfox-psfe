@@ -8,11 +8,14 @@
 #include "td1208.h"
 
 #include "lptim.h"
+#include "mode.h"
 #include "nvic.h"
 #include "parser.h"
 #include "string.h"
 #include "tim.h"
 #include "usart.h"
+
+#ifdef USE_SIGFOX_MONITORING
 
 /*** TD1208 local macros ***/
 
@@ -336,3 +339,5 @@ void TD1208_fill_rx_buffer(uint8_t rx_byte) {
 		td1208_ctx.reply_idx = (td1208_ctx.reply_idx + 1) % TD1208_REPLY_BUFFER_DEPTH;
 	}
 }
+
+#endif /* USE_SIGFOX_MONITORING */

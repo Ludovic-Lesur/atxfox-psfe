@@ -8,6 +8,7 @@
 #ifndef __RTC_H__
 #define __RTC_H__
 
+#include "mode.h"
 #include "types.h"
 
 /*** RTC structures ***/
@@ -21,6 +22,8 @@ typedef enum {
 	RTC_ERROR_BASE_LAST = 0x0100
 } RTC_status_t;
 
+#ifdef USE_SIGFOX_MONITORING
+
 /*** RTC functions ***/
 
 void RTC_reset(void);
@@ -33,5 +36,7 @@ void RTC_clear_wakeup_timer_flag(void);
 #define RTC_status_check(error_base) { if (rtc_status != RTC_SUCCESS) { status = error_base + rtc_status; goto errors; }}
 #define RTC_error_check() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
 #define RTC_error_check_print() { ERROR_status_check(rtc_status, RTC_SUCCESS, ERROR_BASE_RTC); }
+
+#endif /* USE_SIGFOX_MONITORING */
 
 #endif /* __RTC_H__ */

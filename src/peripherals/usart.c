@@ -9,6 +9,7 @@
 
 #include "gpio.h"
 #include "mapping.h"
+#include "mode.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rcc_reg.h"
@@ -24,6 +25,7 @@
 
 /*** USART local functions ***/
 
+#ifdef USE_SIGFOX_MONITORING
 /* USART2 INTERRUPT HANDLER.
  * @param:	None.
  * @return:	None.
@@ -42,7 +44,9 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 		USART2 -> ICR |= (0b1 << 3);
 	}
 }
+#endif
 
+#ifdef USE_SIGFOX_MONITORING
 /* FILL USART TX BUFFER WITH A NEW BYTE.
  * @param tx_byte:	Byte to append.
  * @return status:	Function execution status.
@@ -65,6 +69,7 @@ static USART_status_t _USART2_fill_tx_buffer(uint8_t tx_byte) {
 errors:
 	return status;
 }
+#endif
 
 /*** USART functions ***/
 
@@ -73,6 +78,7 @@ errors:
  * @return:	None.
  */
 void USART2_init(void) {
+#ifdef USE_SIGFOX_MONITORING
 	// Enable peripheral clock.
 	RCC -> CR |= (0b1 << 1); // Enable HSI in stop mode (HSI16KERON='1').
 	RCC -> CCIPR |= (0b10 << 2); // Select HSI as USART clock.
@@ -90,8 +96,14 @@ void USART2_init(void) {
 	NVIC_set_priority(NVIC_INTERRUPT_USART2, 0);
 	// Enable peripheral.
 	USART2 -> CR1 |= (0b11 << 0);
+#else
+	// Configure TX and RX GPIOs as output low.
+	GPIO_configure(&GPIO_USART2_TX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_USART2_RX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+#endif
 }
 
+#ifdef USE_SIGFOX_MONITORING
 /* SEND A BYTE ARRAY THROUGH USART2.
  * @param tx_string:	Byte array to send.
  * @return status:		Function execution status.
@@ -120,3 +132,4 @@ USART_status_t USART2_send_string(char* tx_string) {
 errors:
 	return status;
 }
+#endif
