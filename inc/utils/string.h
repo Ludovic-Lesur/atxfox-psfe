@@ -13,12 +13,15 @@
 
 /*** STRING macros ***/
 
-#define STRING_CHAR_NULL	'\0'
-#define STRING_NULL			"\0"
-#define STRING_CHAR_CR		'\r'
-#define STRING_CHAR_LF		'\n'
-#define STRING_CHAR_MINUS	'-'
-#define STRING_CHAR_DOT		'.'
+#define STRING_CHAR_NULL			'\0'
+#define STRING_NULL					"\0"
+#define STRING_CHAR_CR				'\r'
+#define STRING_CHAR_LF				'\n'
+#define STRING_CHAR_MINUS			'-'
+#define STRING_CHAR_DOT				'.'
+#define STRING_CHAR_SPACE			' '
+
+#define STRING_DIGIT_FUNCTION_SIZE	5
 
 /*** STRING structures ***/
 
@@ -51,6 +54,8 @@ STRING_status_t STRING_byte_array_to_hexadecimal_string(uint8_t* data, uint8_t d
 
 STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value);
 STRING_status_t STRING_hexadecimal_string_to_byte_array(char_t* str, char_t end_char, uint8_t* data, uint8_t* extracted_length);
+
+STRING_status_t STRING_value_to_5_digits_string(int32_t value, char_t* str);
 
 #define STRING_status_check(error_base) { if (string_status != STRING_SUCCESS) { status = error_base + string_status; goto errors; }}
 #define STRING_error_check() { ERROR_status_check(string_status, STRING_SUCCESS, ERROR_BASE_STRING); }

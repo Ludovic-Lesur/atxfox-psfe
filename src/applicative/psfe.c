@@ -176,7 +176,9 @@ void PSFE_init_hw(void) {
 	adc1_status = ADC1_init();
 	ADC1_error_check();
 	USART2_init();
+#ifdef USE_SERIAL_MONITORING
 	LPUART1_init();
+#endif
 	// Init components.
 	lcd_status = LCD_init();
 	LCD_error_check();
@@ -469,9 +471,11 @@ void PSFE_adc_callback(void) {
 void PSFE_lcd_uart_callback(void) {
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
+#ifdef USE_SERIAL_MONITORING
 	STRING_status_t string_status = STRING_SUCCESS;
 	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
+#endif
 	// Update display if enabled.
 	if (psfe_ctx.por_flag == 0) {
 		// LCD Vout display.
@@ -497,7 +501,8 @@ void PSFE_lcd_uart_callback(void) {
 			LCD_error_check();
 		}
 	}
-	// UART.
+#ifdef USE_SERIAL_MONITORING
+	// UART print.
 	lpuart1_status = LPUART1_send_string("Vout=");
 	LPUART1_error_check();
 	string_status = STRING_value_to_string((int) psfe_ctx.vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
@@ -530,4 +535,5 @@ void PSFE_lcd_uart_callback(void) {
 	LPUART1_error_check();
 	lpuart1_status = LPUART1_send_string("dC\n");
 	LPUART1_error_check();
+#endif
 }

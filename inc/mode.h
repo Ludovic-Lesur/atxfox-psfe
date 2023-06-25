@@ -8,7 +8,11 @@
 #ifndef __MODE_H__
 #define __MODE_H__
 
-#define PSFE_BOARD_NUMBER	1	// 1.0.x
-//#define DEBUG					// Do not use LPUART1 when debugging (same pins).
+#define PSFE_BOARD_NUMBER	1		// 1.0.x
+
+//#define USE_SERIAL_MONITORING		// Use serial link to print data (LPUART1 on SWD pins).
+
+//#define DEBUG						// Debug mode.
+
 
 #endif /* __MODE_H__ */

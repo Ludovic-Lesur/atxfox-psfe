@@ -16,6 +16,8 @@
 #include "rcc_reg.h"
 #include "types.h"
 
+#ifdef USE_SERIAL_MONITORING
+
 /*** LPUART local macros ***/
 
 #define LPUART_BAUD_RATE 			9600
@@ -103,3 +105,5 @@ LPUART_status_t LPUART1_send_string(char* tx_string) {
 errors:
 	return status;
 }
+
+#endif /* USE_SERIAL_MONITORING */

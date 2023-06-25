@@ -195,78 +195,12 @@ LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t valu
 	// Local variables.
 	LCD_status_t status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	uint8_t u1, u2, u3, u4, u5;
-	uint8_t d1, d2, d3;
-	char_t value_string[5] = {0};
-	// Convert value to message.
-	if (value < 10000) {
-		// Format = u.ddd
-		u1 = (value) / (1000);
-		d1 = (value - (u1 * 1000)) / (100);
-		d2 = (value - (u1 * 1000) - (d1 * 100)) / (10);
-		d3 = value - (u1 * 1000) - (d1 * 100) - (d2 * 10);
-		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		value_string[1] = '.';
-		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(d3, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-	}
-	else if (value < 100000) {
-		// Format = uu.dd
-		u1 = (value) / (10000);
-		u2 = (value - (u1 * 10000)) / (1000);
-		d1 = (value - (u1 * 10000) - (u2 * 1000)) / (100);
-		d2 = (value - (u1 * 10000) - (u2 * 1000) - (d1 * 100)) / (10);
-		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		value_string[2] = '.';
-		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(d2, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-	}
-	else if (value < 1000000) {
-		// Format = uuu.d
-		u1 = (value) / (100000);
-		u2 = (value - (u1 * 100000)) / (10000);
-		u3 = (value - (u1 * 100000) - (u2 * 10000)) / (1000);
-		d1 = (value - (u1 * 100000) - (u2 * 10000) - (u3 * 1000)) / (100);
-		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		value_string[3] = '.';
-		string_status = STRING_value_to_string(d1, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-	}
-	else {
-		// Format = uuuuu
-		u1 = (value) / (10000000);
-		u2 = (value - (u1 * 10000000)) / (1000000);
-		u3 = (value - (u1 * 10000000) - (u2 * 1000000)) / (100000);
-		u4 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000)) / (10000);
-		u5 = (value - (u1 * 10000000) - (u2 * 1000000) - (u3 * 100000) - (u4 * 10000)) / (1000);
-		string_status = STRING_value_to_string(u1, STRING_FORMAT_DECIMAL, 0, &(value_string[0]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u2, STRING_FORMAT_DECIMAL, 0, &(value_string[1]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u3, STRING_FORMAT_DECIMAL, 0, &(value_string[2]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u4, STRING_FORMAT_DECIMAL, 0, &(value_string[3]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-		string_status = STRING_value_to_string(u5, STRING_FORMAT_DECIMAL, 0, &(value_string[4]));
-		STRING_status_check(LCD_ERROR_BASE_STRING);
-	}
+	char_t value_string[STRING_DIGIT_FUNCTION_SIZE] = {STRING_CHAR_NULL};
+	// Convert to 5 digits.
+	string_status = STRING_value_to_5_digits_string(value, value_string);
+	STRING_status_check(LCD_ERROR_BASE_STRING);
 	// Print value.
-	status = LCD_print(row, column, value_string, 5);
+	status = LCD_print(row, column, value_string, STRING_DIGIT_FUNCTION_SIZE);
 errors:
 	return status;
 }
