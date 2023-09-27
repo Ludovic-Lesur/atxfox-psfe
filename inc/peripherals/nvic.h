@@ -1,7 +1,7 @@
 /*
  * nvic.h
  *
- *  Created on: 29 dec. 2018
+ *  Created on: 18 apr. 2020
  *      Author: Ludo
  */
 
@@ -10,8 +10,12 @@
 
 #include "types.h"
 
-/*** NVIC interrupts vector ***/
+/*** NVIC structures ***/
 
+/*!******************************************************************
+ * \enum NVIC_interrupt_t
+ * \brief NVIC interrupt vector.
+ *******************************************************************/
 typedef enum {
 	NVIC_INTERRUPT_WWDG = 0,
 	NVIC_INTERRUPT_PVD = 1,
@@ -46,17 +50,54 @@ typedef enum {
 	NVIC_INTERRUPT_LAST
 } NVIC_interrupt_t;
 
+/*!******************************************************************
+ * \enum NVIC_priority_list_t
+ * \brief NVIC interrupt priorities list.
+ *******************************************************************/
 typedef enum {
-	NVIC_PRIORITY_MAX = 0,
-	NVIC_PRIORITY_MIN = 3,
-	NVIC_PRIORITY_LAST
-} NVIC_priority_t;
+	// Common.
+	NVIC_PRIORITY_RCC_CRS = 0,
+	NVIC_PRIORITY_TIM21 = 1,
+	NVIC_PRIORITY_LPTIM1 = 2,
+	NVIC_PRIORITY_RTC = 3,
+	// ADC sampling.
+	NVIC_PRIORITY_TIM2 = 0,
+	// TRCS bypass switch.
+	NVIC_PRIORITY_EXTI_4_15 = 1,
+	// TD1208.
+	NVIC_PRIORITY_USART2 = 2,
+	// Serial link.
+	NVIC_PRIORITY_LPUART1 = 2,
+} NVIC_priority_list_t;
 
 /*** NVIC functions ***/
 
+/*!******************************************************************
+ * \fn void NVIC_init(void)
+ * \brief Init interrupts vector.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void NVIC_init(void);
-void NVIC_enable_interrupt(NVIC_interrupt_t irq_index);
+
+/*!******************************************************************
+ * \fn void NVIC_enable_interrupt(NVIC_interrupt_t irq_index, uint8_t priority)
+ * \brief Enable interrupt.
+ * \param[in]  	irq_index: Interrupt to enable.
+ * \param[in]	priority: Interrupt priority to set.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void NVIC_enable_interrupt(NVIC_interrupt_t irq_index, uint8_t priority);
+
+/*!******************************************************************
+ * \fn void NVIC_disable_interrupt(NVIC_interrupt_t irq_index)
+ * \brief Disable interrupt.
+ * \param[in]  	irq_index: Interrupt to enable.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void NVIC_disable_interrupt(NVIC_interrupt_t irq_index);
-void NVIC_set_priority(NVIC_interrupt_t irq_index, uint8_t priority);
 
 #endif /* __NVIC_H__ */

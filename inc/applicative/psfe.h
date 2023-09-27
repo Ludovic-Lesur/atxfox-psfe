@@ -1,7 +1,7 @@
 /*
  * atxfox.h
  *
- *  Created on: 25 july 2020
+ *  Created on: 25 jul. 2020
  *      Author: Ludo
  */
 
@@ -13,25 +13,19 @@
 
 /*** PSFE macros ***/
 
-#define PSFE_NUMBER_OF_BOARDS			10
-#define PSFE_BOARD_INDEX				(PSFE_BOARD_NUMBER - 1)
-
-#define PSFE_ADC_CONVERSION_PERIOD_MS	100
-#define PSFE_LCD_UART_PRINT_PERIOD_MS	300
+#define PSFE_NUMBER_OF_BOARDS		10
+#define PSFE_BOARD_INDEX			(PSFE_BOARD_NUMBER - 1)
 
 /*** PSFE global variables ***/
 
-static const uint8_t psfe_trcs_number[PSFE_NUMBER_OF_BOARDS] = {5, 6, 1, 2, 7, 8, 9, 3, 4, 10};
-static const uint8_t psfe_vout_voltage_divider_ratio[PSFE_NUMBER_OF_BOARDS] = {2, 2, 6, 6, 2, 2, 2, 6, 6, 2};
+static const uint8_t PSFE_TRCS_NUMBER[PSFE_NUMBER_OF_BOARDS] = {5, 6, 1, 2, 7, 8, 9, 3, 4, 10};
+static const uint8_t PSFE_VOUT_VOLTAGE_DIVIDER_RATIO[PSFE_NUMBER_OF_BOARDS] = {2, 2, 6, 6, 2, 2, 2, 6, 6, 2};
+static const uint32_t PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE[PSFE_NUMBER_OF_BOARDS] = {998000, 998000, 599000, 599000, 998000, 998000, 998000, 599000, 599000, 998000};
 
-/*** PSFE functions ***/
+/*** Errors management ***/
 
-void PSFE_init_hw(void);
-void PSFE_init_context(void);
-void PSFE_start(void);
-void PSFE_task(void);
-void PSFE_set_bypass_flag(uint8_t bypass_state);
-void PSFE_adc_callback(void);
-void PSFE_lcd_uart_callback(void);
+#if (PSFE_BOARD_NUMBER == 0) || (PSFE_BOARD_NUMBER > PSFE_NUMBER_OF_BOARDS)
+#error "PSFE board number error."
+#endif
 
 #endif /* __PSFE_H__ */

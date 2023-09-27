@@ -7,44 +7,60 @@
 
 #include "rcc.h"
 
+#include "error.h"
 #include "flash.h"
+#include "nvic.h"
 #include "rcc_reg.h"
+#include "pwr.h"
 #include "tim.h"
 #include "types.h"
 
 /*** RCC local macros ***/
 
-#define RCC_TIMEOUT_COUNT				1000000
-#define RCC_MSI_RESET_FREQUENCY_KHZ		2100
+#define RCC_TIMEOUT_COUNT			1000000
 
-#define RCC_LSI_AVERAGING_COUNT			5
-#define RCC_LSI_FREQUENCY_MIN_HZ		26000
-#define RCC_LSI_FREQUENCY_MAX_HZ		56000
+#define RCC_LSI_AVERAGING_COUNT		5
+#define RCC_LSI_FREQUENCY_MIN_HZ	26000
+#define RCC_LSI_FREQUENCY_MAX_HZ	56000
 
-/*** RCC local global variables ***/
+/*** RCC local functions ***/
 
-static uint32_t rcc_sysclk_khz;
-
-/*** RCC functions ***/
-
-/* CONFIGURE PERIPHERALs CLOCK PRESCALER AND SOURCES.
- * @param:	None.
- * @return:	None.
- */
-void RCC_init(void) {
-	// Default prescalers (HCLK, PCLK1 and PCLK2 must not exceed 32MHz).
-	// HCLK = SYSCLK = 16MHz (HPRE='0000').
-	// PCLK1 = HCLK = 16MHz (PPRE1='000').
-	// PCLK2 = HCLK = 16MHz (PPRE2='000').
-	// All peripherals clocked via the corresponding APBx line.
-	// Reset clock is MSI 2.1MHz.
-	rcc_sysclk_khz = RCC_MSI_RESET_FREQUENCY_KHZ;
+/*******************************************************************/
+void __attribute__((optimize("-O0"))) RCC_IRQHandler(void) {
+	// Clear all flags.
+	RCC -> CICR |= (0b11 << 0);
 }
 
-/* CONFIGURE AND USE HSI AS SYSTEM CLOCK (16MHz INTERNAL RC).
- * @param:			None.
- * @return status:	Function execution status.
- */
+/*******************************************************************/
+void _RCC_enable_lsi(void) {
+	// Enable LSI.
+	RCC -> CSR |= (0b1 << 0); // LSION='1'.
+	// Enable interrupt.
+	RCC -> CIER |= (0b1 << 0);
+	NVIC_enable_interrupt(NVIC_INTERRUPT_RCC_CRS, NVIC_PRIORITY_RCC_CRS);
+	// Wait for LSI to be stable.
+	while (((RCC -> CSR) & (0b1 << 1)) == 0) {
+		PWR_enter_sleep_mode();
+	}
+	NVIC_disable_interrupt(NVIC_INTERRUPT_RCC_CRS);
+}
+/*** RCC functions ***/
+
+/*******************************************************************/
+RCC_status_t __attribute__((optimize("-O0"))) RCC_init(void) {
+	// Local variables.
+	RCC_status_t status = RCC_SUCCESS;
+	uint8_t i = 0;
+	// Reset backup domain.
+	RCC -> CSR |= (0b1 << 19); // RTCRST='1'.
+	for (i=0 ; i<100 ; i++);
+	RCC -> CSR &= ~(0b1 << 19); // RTCRST='0'.
+	// Enable low speed oscillators.
+	_RCC_enable_lsi();
+	return status;
+}
+
+/*******************************************************************/
 RCC_status_t RCC_switch_to_hsi(void) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
@@ -52,8 +68,8 @@ RCC_status_t RCC_switch_to_hsi(void) {
 	uint32_t loop_count = 0;
 	// Set flash latency.
 	flash_status = FLASH_set_latency(1);
-	FLASH_status_check(RCC_ERROR_BASE_FLASH);
-	// Init HSI.
+	FLASH_exit_error(RCC_ERROR_BASE_FLASH);
+	// Enable HSI.
 	RCC -> CR |= (0b1 << 0); // Enable HSI (HSI16ON='1').
 	// Wait for HSI to be stable.
 	while (((RCC -> CR) & (0b1 << 2)) == 0) {
@@ -77,50 +93,14 @@ RCC_status_t RCC_switch_to_hsi(void) {
 			goto errors;
 		}
 	}
-	// Disable MSI and HSE.
-	RCC -> CR &= ~(0b1 << 8); // Disable MSI (MSION='0').
-	RCC -> CR &= ~(0b1 << 16); // Disable HSE (HSEON='0').
-	// Update flag and frequency.
-	rcc_sysclk_khz = RCC_HSI_FREQUENCY_KHZ;
+	// Disable MSI.
+	RCC -> CR &= ~(0b1 << 8); // MSION='0'.
 errors:
 	return status;
 }
 
-/* RETURN THE CURRENT SYSTEM CLOCK FREQUENCY.
- * @param:					None.
- * @return rcc_sysclk_khz:	Current system clock frequency in kHz.
- */
-uint32_t RCC_get_sysclk_khz(void) {
-	return rcc_sysclk_khz;
-}
-
-/* CONFIGURE AND USE LSI AS LOW SPEED OSCILLATOR (32kHz INTERNAL RC).
- * @param:			None.
- * @return status:	Function execution status.
- */
-RCC_status_t RCC_enable_lsi(void) {
-	// Local variables.
-	RCC_status_t status = RCC_SUCCESS;
-	uint32_t loop_count = 0;
-	// Enable LSI.
-	RCC -> CSR |= (0b1 << 0); // LSION='1'.
-	// Wait for LSI to be stable.
-	while (((RCC -> CSR) & (0b1 << 1)) == 0) {
-		// Wait for LSIRDY='1' or timeout.
-		loop_count++;
-		if (loop_count > RCC_TIMEOUT_COUNT) {
-			status = RCC_ERROR_LSI_READY;
-			break;
-		}
-	}
-	return status;
-}
-
-/* COMPUTE EFFECTIVE LSI OSCILLATOR FREQUENCY.
- * @param lsi_frequency_hz:		Pointer that will contain measured LSI frequency in Hz.
- * @return status:				Function execution status.
- */
-RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
+/*******************************************************************/
+RCC_status_t RCC_measure_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	// Local variables.
 	RCC_status_t status = RCC_SUCCESS;
 	TIM_status_t tim21_status = TIM_SUCCESS;
@@ -132,14 +112,14 @@ RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 		goto errors;
 	}
 	// Reset result.
-	(*lsi_frequency_hz) = 0;
+	(*lsi_frequency_hz) = RCC_LSI_FREQUENCY_HZ;
 	// Init measurement timer.
 	TIM21_init();
 	// Compute average.
 	for (sample_idx=0 ; sample_idx<RCC_LSI_AVERAGING_COUNT ; sample_idx++) {
 		// Perform measurement.
-		tim21_status = TIM21_get_lsi_frequency(&lsi_frequency_sample);
-		TIM21_status_check(RCC_ERROR_BASE_TIM);
+		tim21_status = TIM21_measure_lsi_frequency(&lsi_frequency_sample);
+		TIM21_stack_error();
 		(*lsi_frequency_hz) = (((*lsi_frequency_hz) * sample_idx) + lsi_frequency_sample) / (sample_idx + 1);
 	}
 	// Check value.
@@ -149,6 +129,6 @@ RCC_status_t RCC_get_lsi_frequency(uint32_t* lsi_frequency_hz) {
 		status = RCC_ERROR_LSI_MEASUREMENT;
 	}
 errors:
-	TIM21_disable();
+	TIM21_de_init();
 	return status;
 }

@@ -1,7 +1,7 @@
 /*
  * error.h
  *
- *  Created on: 27 feb. 2022
+ *  Created on: 12 mar. 2022
  *      Author: Ludo
  */
 
@@ -18,17 +18,21 @@
 #include "rtc.h"
 #include "tim.h"
 #include "usart.h"
-// Components.
-#include "lcd.h"
-#include "td1208.h"
-#include "trcs.h"
 // Utils.
 #include "math.h"
 #include "parser.h"
 #include "string.h"
+// Components.
+#include "lcd.h"
+#include "td1208.h"
+#include "trcs.h"
 
 /*** ERROR structures ***/
 
+/*!******************************************************************
+ * \enum ERROR_base_t
+ * \brief Board error bases.
+ *******************************************************************/
 typedef enum {
 	SUCCESS = 0,
 	// Peripherals.
@@ -49,21 +53,61 @@ typedef enum {
 	ERROR_BASE_LCD = (ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
 	ERROR_BASE_TD1208 = (ERROR_BASE_LCD + LCD_ERROR_BASE_LAST),
 	ERROR_BASE_TRCS = (ERROR_BASE_TD1208 + TD1208_ERROR_BASE_LAST),
-	// Last index.
+	// Last base value.
 	ERROR_BASE_LAST
-} ERROR_t;
+} ERROR_base_t;
+
+/*!******************************************************************
+ * \enum ERROR_code_t
+ * \brief Board error code type.
+ *******************************************************************/
+typedef uint16_t ERROR_code_t;
 
 /*** ERROR functions ***/
 
+/*!******************************************************************
+ * \fn void ERROR_stack_init(void)
+ * \brief Init error stack.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
 void ERROR_stack_init(void);
-void ERROR_stack_add(ERROR_t code);
-ERROR_t ERROR_stack_read(void);
+
+/*!******************************************************************
+ * \fn void ERROR_stack_add(ERROR_code_t code)
+ * \brief Add error to stack.
+ * \param[in]  	code: Error to stack.
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void ERROR_stack_add(ERROR_code_t code);
+
+/*!******************************************************************
+ * \fn ERROR_code_t ERROR_stack_read(void)
+ * \brief Read error stack.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		Last error code stored.
+ *******************************************************************/
+ERROR_code_t ERROR_stack_read(void);
+
+/*!******************************************************************
+ * \fn uint8_t ERROR_stack_is_empty(void)
+ * \brief Check if error stack is empty.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		1 if the error stack is empty, 0 otherwise.
+ *******************************************************************/
 uint8_t ERROR_stack_is_empty(void);
 
-#define ERROR_status_check(status, success, error_base) { \
-	if (status != success) { \
-		ERROR_stack_add(error_base + status); \
-	} \
-}
+/*!******************************************************************
+ * \fn void ERROR_import_sigfox_stack(void)
+ * \brief Import the Sigfox EP lib error stack in the MCU stack.
+ * \param[in]  	none
+ * \param[out] 	none
+ * \retval		none
+ *******************************************************************/
+void ERROR_import_sigfox_stack(void);
 
 #endif /* __ERROR_H__ */
