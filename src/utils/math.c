@@ -321,7 +321,7 @@ MATH_status_t MATH_abs(int32_t x, uint32_t* result) {
 	// Check parameters.
 	_MATH_check_pointer(result);
 	// Check sign.
-	if (x > 0) (*result) = x;
+	if (x >= 0) (*result) = x;
 	if (x < 0) (*result) = (-1) * x;
 errors:
 	return status;
