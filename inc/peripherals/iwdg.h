@@ -8,6 +8,12 @@
 #ifndef __IWDG_H__
 #define __IWDG_H__
 
+/*** IWDG macros ***/
+
+// Based on worst case 56kHz LSI clock frequency, minimum IWDG period is 18 seconds.
+// Adding 3 second margin to perform reload operation, the maximum free delay is limited to 15 seconds.
+#define IWDG_FREE_DELAY_SECONDS_MAX		15
+
 /*** IWDG structures ***/
 
 /*!******************************************************************
