@@ -331,8 +331,6 @@ errors:
 MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha) {
 	// Local variables.
 	MATH_status_t status = MATH_SUCCESS;
-	int32_t local_x = x;
-	int32_t local_y = y;
 	uint32_t abs_x = 0;
 	uint32_t abs_y = 0;
 	// Check parameters.
@@ -341,14 +339,16 @@ MATH_status_t MATH_atan2(int32_t x, int32_t y, uint32_t* alpha) {
 		goto errors;
 	}
 	_MATH_check_pointer(alpha);
+	// Compute absolute values.
+	status = MATH_abs(x, &abs_x);
+	if (status != MATH_SUCCESS) goto errors;
+	status = MATH_abs(y, &abs_y);
+	if (status != MATH_SUCCESS) goto errors;
 	// Scale x and y to avoid overflow.
-	do {
-		status = MATH_abs(local_x, &abs_x);
-		if (status != MATH_SUCCESS) goto errors;
-		status = MATH_abs(local_y, &abs_y);
-		if (status != MATH_SUCCESS) goto errors;
+	while ((abs_x > 10000) || (abs_y > 10000)) {
+		abs_x >>= 1;
+		abs_y >>= 1;
 	}
-	while ((abs_x > 10000) || (abs_y > 10000));
 	// Use the quotient within [-1,1]
 	if (abs_x >= abs_y) {
 		// Use arctan approximation: arctan(z)=(pi/4)*z.
