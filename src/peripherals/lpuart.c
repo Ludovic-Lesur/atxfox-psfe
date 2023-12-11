@@ -25,13 +25,13 @@
 
 /*** LPUART local global variables ***/
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 static LPUART_rx_irq_cb_t lpuart1_rx_irq_callback = NULL;
 #endif
 
 /*** LPUART local functions ***/
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 void LPUART1_IRQHandler(void) {
 	// Local variables.
@@ -56,7 +56,7 @@ void LPUART1_IRQHandler(void) {
 }
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 static LPUART_status_t _LPUART1_fill_tx_buffer(uint8_t tx_byte) {
 	// Local variables.
@@ -80,7 +80,7 @@ errors:
 
 /*** LPUART functions ***/
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 void LPUART1_init(LPUART_rx_irq_cb_t irq_callback) {
 	// Local variables.
@@ -109,7 +109,7 @@ void LPUART1_init(LPUART_rx_irq_cb_t irq_callback) {
 }
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 void LPUART1_enable_rx(void) {
 	// Mute mode request.
@@ -125,7 +125,7 @@ void LPUART1_enable_rx(void) {
 }
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 void LPUART1_disable_rx(void) {
 	// Disable receiver.
@@ -138,7 +138,7 @@ void LPUART1_disable_rx(void) {
 }
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 LPUART_status_t LPUART1_write(uint8_t* data, uint32_t data_size_bytes) {
 	// Local variables.
@@ -169,7 +169,7 @@ errors:
 }
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
 LPUART_status_t LPUART1_write_string(char_t* str) {
 	// Local variables.

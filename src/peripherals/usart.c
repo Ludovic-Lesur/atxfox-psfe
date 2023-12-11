@@ -24,13 +24,13 @@
 
 /*** USART local global variables ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 static USART_rx_irq_cb_t usart2_rx_irq_callback = NULL;
 #endif
 
 /*** USART local functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 	// Local variables.
@@ -57,7 +57,7 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 
 /*** USART functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 void USART2_init(USART_rx_irq_cb_t irq_callback) {
 	// Local variables.
@@ -91,7 +91,7 @@ void USART2_init(USART_rx_irq_cb_t irq_callback) {
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 void USART2_de_init(void) {
 	// Disable USART alternate function.
@@ -104,7 +104,7 @@ void USART2_de_init(void) {
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 USART_status_t USART2_write(uint8_t* data, uint32_t data_size_bytes) {
 	// Local variables.

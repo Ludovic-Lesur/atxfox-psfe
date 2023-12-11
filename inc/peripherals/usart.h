@@ -34,7 +34,7 @@ typedef void (*USART_rx_irq_cb_t)(uint8_t data);
 
 /*** USART functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn void USART2_init(USART_rx_irq_cb_t irq_callback)
  * \brief Init USART2 peripheral.
@@ -45,7 +45,7 @@ typedef void (*USART_rx_irq_cb_t)(uint8_t data);
 void USART2_init(USART_rx_irq_cb_t irq_callback);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn void USART2_de_init(void)
  * \brief Release USART2 peripheral.
@@ -56,7 +56,7 @@ void USART2_init(USART_rx_irq_cb_t irq_callback);
 void USART2_de_init(void);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn USART_status_t USART2_write(uint8_t* data, uint32_t data_size_bytes)
  * \brief Send data over USART2.

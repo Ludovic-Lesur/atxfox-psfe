@@ -62,7 +62,7 @@
 typedef enum {
 	PSFE_STATE_VMCU_MONITORING,
 	PSFE_STATE_POR,
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	PSFE_STATE_PERIOD_CHECK,
 	PSFE_STATE_SIGFOX,
 #endif
@@ -114,7 +114,7 @@ typedef struct {
 	volatile uint32_t vmcu_mv;
 	volatile uint8_t tmcu_degrees;
 	volatile TRCS_range_t trcs_range;
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	uint32_t sigfox_next_time_seconds;
 	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	PSFE_sigfox_startup_data_t sigfox_startup_data;
@@ -181,7 +181,7 @@ void _PSFE_print_sw_version(void) {
 	IWDG_reload();
 }
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 void _PSFE_print_sigfox_ep_id(void) {
 	// Local variables.
@@ -291,7 +291,7 @@ void __attribute__((optimize("-O0"))) _PSFE_adc_sampling_callback(void) {
 void _PSFE_lcd_uart_callback(void) {
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
-#ifdef USE_SERIAL_MONITORING
+#ifdef PSFE_SERIAL_MONITORING
 	STRING_status_t string_status = STRING_SUCCESS;
 	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
 	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
@@ -321,7 +321,7 @@ void _PSFE_lcd_uart_callback(void) {
 			LCD_stack_error();
 		}
 	}
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 	// UART print.
 	lpuart1_status = LPUART1_write_string("Vout=");
 	LPUART1_stack_error();
@@ -380,7 +380,7 @@ static void _PSFE_init_hw(void) {
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
 	LCD_status_t lcd_status = LCD_SUCCESS;
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	RTC_status_t rtc_status = RTC_SUCCESS;
 #endif
 #ifndef DEBUG
@@ -404,7 +404,7 @@ static void _PSFE_init_hw(void) {
 	IWDG_reload();
 #endif
 	// Init peripherals.
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	rtc_status = RTC_init();
 	RTC_stack_error();
 #endif
@@ -412,14 +412,14 @@ static void _PSFE_init_hw(void) {
 	LPTIM1_init();
 	adc1_status = ADC1_init();
 	ADC1_stack_error();
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 	LPUART1_init(NULL);
 #endif
 	// Init components.
 	lcd_status = LCD_init();
 	LCD_stack_error();
 	TRCS_init();
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	TD1208_init();
 #endif
 }
@@ -440,7 +440,7 @@ void _PSFE_init_context(void) {
 	psfe_ctx.vmcu_mv = PSFE_ERROR_VALUE_VOLTAGE_16BITS;
 	psfe_ctx.tmcu_degrees = PSFE_ERROR_VALUE_TEMPERATURE;
 	psfe_ctx.trcs_range = TRCS_RANGE_NONE;
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	psfe_ctx.startup_frame_sent = 0;
 	psfe_ctx.sigfox_next_time_seconds = PSFE_SIGFOX_PERIOD_SECONDS;
 	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.sigfox_id[idx] = 0x00;
@@ -458,7 +458,7 @@ int main(void) {
 	_PSFE_init_context();
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
 	ERROR_code_t error_code = 0;
 	uint8_t idx = 0;
@@ -479,7 +479,7 @@ int main(void) {
 				if (psfe_ctx.por_flag != 0) {
 					psfe_ctx.state = PSFE_STATE_POR;
 				}
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 				else {
 					// Compute next state.
 					psfe_ctx.state = PSFE_STATE_PERIOD_CHECK;
@@ -491,7 +491,7 @@ int main(void) {
 		case PSFE_STATE_POR:
 			// Init TRCS board to supply output.
 			TRCS_init();
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 			// Reset Sigfox module.
 			td1208_status = TD1208_reset();
 			TD1208_stack_error();
@@ -501,7 +501,7 @@ int main(void) {
 			_PSFE_print_hw_version();
 			_PSFE_print_sw_version();
 			IWDG_reload();
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 			// Read Sigfox EP-ID from module.
 			_PSFE_print_sigfox_ep_id();
 			// Send startup_message if needed.
@@ -532,14 +532,14 @@ int main(void) {
 			// Update flags.
 			psfe_ctx.por_flag = 0;
 			// Compute next state.
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 			psfe_ctx.state = PSFE_STATE_PERIOD_CHECK;
 #else
 			psfe_ctx.state = PSFE_STATE_VMCU_MONITORING;
 #endif
 			IWDG_reload();
 			break;
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 		case PSFE_STATE_PERIOD_CHECK:
 			// Check Sigfox period with RTC wake-up timer.
 			if (RTC_get_time_seconds() >= psfe_ctx.sigfox_next_time_seconds) {
@@ -598,7 +598,7 @@ int main(void) {
 				// Clear LCD.
 				lcd_status = LCD_clear();
 				LCD_stack_error();
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 				// Send bit 0.
 				td1208_status = TD1208_send_bit(0);
 				TD1208_stack_error();

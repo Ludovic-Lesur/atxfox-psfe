@@ -38,7 +38,7 @@ typedef void (*LPUART_rx_irq_cb_t)(uint8_t data);
 
 /*** LPUART functions ***/
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
  * \fn void LPUART1_init(LPUART_rx_irq_cb_t irq_callback)
  * \brief Init LPUART1 peripheral.
@@ -50,7 +50,7 @@ typedef void (*LPUART_rx_irq_cb_t)(uint8_t data);
 void LPUART1_init(LPUART_rx_irq_cb_t irq_callback);
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
  * \fn void LPUART1_enable_rx(void)
  * \brief Enable LPUART1 RX operation.
@@ -61,7 +61,7 @@ void LPUART1_init(LPUART_rx_irq_cb_t irq_callback);
 void LPUART1_enable_rx(void);
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
  * \fn void LPUART1_disable_rx(void)
  * \brief Disable LPUART1 RX operation.
@@ -72,7 +72,7 @@ void LPUART1_enable_rx(void);
 void LPUART1_disable_rx(void);
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
  * \fn LPUART_status_t LPUART1_write(uint8_t* data, uint32_t data_size_bytes)
  * \brief Send data over LPUART1.
@@ -84,7 +84,7 @@ void LPUART1_disable_rx(void);
 LPUART_status_t LPUART1_write(uint8_t* data, uint32_t data_size_bytes);
 #endif
 
-#if (defined USE_SERIAL_MONITORING) && !(defined DEBUG)
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
  * \fn LPUART_status_t LPUART1_write_string(char_t* str)
  * \brief Send a NULL terminated string over LPUART1.

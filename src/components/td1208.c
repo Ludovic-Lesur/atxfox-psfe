@@ -46,13 +46,13 @@ typedef struct {
 
 /*** TD1208 local global variables ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 static TD1208_context_t td1208_ctx;
 #endif
 
 /*** TD1208 local functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 static void _TD1208_fill_rx_buffer(uint8_t rx_byte) {
 	// Read current index.
@@ -70,7 +70,7 @@ static void _TD1208_fill_rx_buffer(uint8_t rx_byte) {
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 static void _TD1208_reset_replies(void) {
 	// Local variables.
@@ -93,7 +93,7 @@ static void _TD1208_reset_replies(void) {
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 static TD1208_status_t _TD1208_send_command(char_t* command) {
 	// Local variables.
@@ -120,7 +120,7 @@ errors:
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 static TD1208_status_t _TD1208_wait_for_string(char_t* ref) {
 	// Local variables.
@@ -157,7 +157,7 @@ errors:
 
 /*** TD1208 functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 void TD1208_init(void) {
 	// Init buffers.
@@ -167,7 +167,7 @@ void TD1208_init(void) {
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 TD1208_status_t TD1208_reset(void) {
 	// Local variables.
@@ -184,7 +184,7 @@ errors:
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 	// Local variables.
@@ -259,7 +259,7 @@ errors:
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 TD1208_status_t TD1208_send_bit(uint8_t ul_bit) {
 	// Local variables.
@@ -288,7 +288,7 @@ errors:
 }
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
 TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_size_bytes) {
 	// Local variables.

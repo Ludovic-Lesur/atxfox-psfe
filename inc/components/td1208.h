@@ -42,7 +42,7 @@ typedef enum {
 
 /*** TD1208 functions ***/
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn void TD1208_init(void)
  * \brief Init TD1208 driver.
@@ -53,7 +53,7 @@ typedef enum {
 void TD1208_init(void);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn TD1208_status_t TD1208_reset(void)
  * \brief Reset TD1208 chip.
@@ -64,7 +64,7 @@ void TD1208_init(void);
 TD1208_status_t TD1208_reset(void);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id)
  * \brief Get TD1208 Sigfox EP-ID.
@@ -75,7 +75,7 @@ TD1208_status_t TD1208_reset(void);
 TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn TD1208_status_t TD1208_send_bit(uint8_t ul_bit)
  * \brief Send a bit over Sigfox network.
@@ -86,7 +86,7 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id);
 TD1208_status_t TD1208_send_bit(uint8_t ul_bit);
 #endif
 
-#ifdef USE_SIGFOX_MONITORING
+#ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
  * \fn TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_size_bytes)
  * \brief Send a frame over Sigfox network.
