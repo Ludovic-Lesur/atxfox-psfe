@@ -33,7 +33,7 @@ static LPUART_rx_irq_cb_t lpuart1_rx_irq_callback = NULL;
 
 #if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
-void LPUART1_IRQHandler(void) {
+void __attribute__((optimize("-O0"))) LPUART1_IRQHandler(void) {
 	// Local variables.
 	uint8_t rx_byte = 0;
 	// RXNE interrupt.
@@ -82,19 +82,25 @@ errors:
 
 #if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*******************************************************************/
-void LPUART1_init(LPUART_rx_irq_cb_t irq_callback) {
+LPUART_status_t LPUART1_init(LPUART_rx_irq_cb_t irq_callback) {
 	// Local variables.
+	LPUART_status_t status = LPUART_SUCCESS;
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	uint32_t lpuart_clock_hz = 0;
 	uint64_t brr = 0;
 	// Select HSI as clock source.
 	RCC -> CCIPR |= (0b10 << 10); // LPUART1SEL='10'.
+	// Get clock source frequency.
+	rcc_status = RCC_get_frequency_hz(RCC_CLOCK_HSI, &lpuart_clock_hz);
+	RCC_exit_error(LPUART_ERROR_BASE_RCC);
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 18); // LPUARTEN='1'.
 	// Configure peripheral.
 	LPUART1 -> CR3 |= (0b1 << 12); // No overrun detection (OVRDIS='0').
 	// Baud rate.
-	brr = ((uint64_t) RCC_HSI_FREQUENCY_KHZ * (uint64_t) 1000 * (uint64_t) 256);
+	brr = ((uint64_t) lpuart_clock_hz) << 8;
 	brr /= (uint64_t) LPUART_BAUD_RATE;
-	LPUART1 -> BRR = (((uint32_t) brr) & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
+	LPUART1 -> BRR = (uint32_t) (brr & 0x000FFFFF); // BRR = (256*fCK)/(baud rate). See p.730 of RM0377 datasheet.
 	// Configure interrupt.
 	EXTI_configure_line(EXTI_LINE_LPUART1, EXTI_TRIGGER_RISING_EDGE);
 	// Enable transmitter.
@@ -106,6 +112,21 @@ void LPUART1_init(LPUART_rx_irq_cb_t irq_callback) {
 	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Register callback.
 	lpuart1_rx_irq_callback = irq_callback;
+errors:
+	return status;
+}
+#endif
+
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
+/*******************************************************************/
+void LPUART1_de_init(void) {
+	// Disable LPUART alternate function.
+	GPIO_configure(&GPIO_LPUART1_TX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	GPIO_configure(&GPIO_LPUART1_RX, GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
+	// Disable peripheral.
+	LPUART1 -> CR1 &= ~(0b1 << 0); // UE='0'.
+	// Disable peripheral clock.
+	RCC -> APB1ENR &= ~(0b1 << 18); // LPUARTEN='0'.
 }
 #endif
 

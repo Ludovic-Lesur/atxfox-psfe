@@ -159,11 +159,17 @@ errors:
 
 #ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
-void TD1208_init(void) {
+TD1208_status_t TD1208_init(void) {
+	// Local variables.
+	TD1208_status_t status = TD1208_SUCCESS;
+	USART_status_t usart2_status = USART_SUCCESS;
 	// Init buffers.
 	_TD1208_reset_replies();
 	// Init USART.
-	USART2_init(&_TD1208_fill_rx_buffer);
+	usart2_status = USART2_init(&_TD1208_fill_rx_buffer);
+	USART2_exit_error(TD1208_ERROR_BASE_USART);
+errors:
+	return status;
 }
 #endif
 

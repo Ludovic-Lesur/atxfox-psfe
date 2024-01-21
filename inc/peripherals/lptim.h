@@ -8,6 +8,7 @@
 #ifndef __LPTIM_H__
 #define __LPTIM_H__
 
+#include "rcc.h"
 #include "types.h"
 
 /*** LPTIM structures ***/
@@ -24,8 +25,10 @@ typedef enum {
 	LPTIM_ERROR_DELAY_MODE,
 	LPTIM_ERROR_ARR_TIMEOUT,
 	LPTIM_ERROR_CLOCK_SOURCE,
+	// Low level drivers errors.
+	LPTIM_ERROR_BASE_RCC = 0x0100,
 	// Last base value.
-	LPTIM_ERROR_BASE_LAST = 0x0100
+	LPTIM_ERROR_BASE_LAST = (LPTIM_ERROR_BASE_RCC + RCC_ERROR_BASE_LAST)
 } LPTIM_status_t;
 
 /*!******************************************************************
@@ -46,9 +49,9 @@ typedef enum {
  * \brief Init LPTIM1 peripheral for delay operation.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void LPTIM1_init(void);
+LPTIM_status_t LPTIM1_init(void);
 
 /*!******************************************************************
  * \fn LPTIM_status_t LPTIM1_delay_milliseconds(uint32_t delay_ms, LPTIM_delay_mode_t delay_mode)

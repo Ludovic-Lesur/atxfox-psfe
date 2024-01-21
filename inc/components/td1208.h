@@ -48,9 +48,9 @@ typedef enum {
  * \brief Init TD1208 driver.
  * \param[in]  	none
  * \param[out] 	none
- * \retval		none
+ * \retval		Function execution status.
  *******************************************************************/
-void TD1208_init(void);
+TD1208_status_t TD1208_init(void);
 #endif
 
 #ifdef PSFE_SIGFOX_MONITORING

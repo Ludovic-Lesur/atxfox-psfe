@@ -15,12 +15,24 @@
 
 /*** TIM local macros ***/
 
-#define TIM_TIMEOUT_COUNT	1000000
+#define TIM_TIMEOUT_COUNT				1000000
+
+#define TIM21_INPUT_CAPTURE_PRESCALER	8
+
+/*** TIM local structures ***/
+
+/*******************************************************************/
+typedef struct {
+	volatile uint16_t ccr1_start;
+	volatile uint16_t ccr1_end;
+	volatile uint16_t capture_count;
+	volatile uint8_t capture_done;
+} TIM21_context_t;
 
 /*** TIM local global variables ***/
 
-static volatile TIM_completion_irq_cb_t tim2_update_irq_callback = NULL;
-static volatile uint8_t tim21_flag = 0;
+static TIM_completion_irq_cb_t tim2_update_irq_callback = NULL;
+static TIM21_context_t tim21_ctx;
 
 /*** TIM local functions ***/
 
@@ -43,7 +55,24 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
 	if (((TIM21 -> SR) & (0b1 << 1)) != 0) {
 		// Update flags.
 		if (((TIM21 -> DIER) & (0b1 << 1)) != 0) {
-			tim21_flag = 1;
+			// Check count.
+			if (tim21_ctx.capture_count == 0) {
+				// Store start value.
+				tim21_ctx.ccr1_start = (TIM21 -> CCR1);
+				tim21_ctx.capture_count++;
+			}
+			else {
+				// Check rollover.
+				if ((TIM21 -> CCR1) > tim21_ctx.ccr1_end) {
+					// Store new value.
+					tim21_ctx.ccr1_end = (TIM21 -> CCR1);
+					tim21_ctx.capture_count++;
+				}
+				else {
+					// Capture complete.
+					tim21_ctx.capture_done = 1;
+				}
+			}
 		}
 		TIM21 -> SR &= ~(0b1 << 1);
 	}
@@ -52,13 +81,20 @@ void __attribute__((optimize("-O0"))) TIM21_IRQHandler(void) {
 /*** TIM functions ***/
 
 /*******************************************************************/
-void TIM2_init(uint32_t period_ms, TIM_completion_irq_cb_t irq_callback) {
+TIM_status_t TIM2_init(uint32_t period_ms, TIM_completion_irq_cb_t irq_callback) {
+	// Local variables.
+	TIM_status_t status = TIM_SUCCESS;
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	uint32_t sysclk_hz = 0;
+	// Read system clock frequency.
+	rcc_status = RCC_get_frequency_hz(RCC_CLOCK_SYSTEM, &sysclk_hz);
+	RCC_exit_error(TIM_ERROR_BASE_RCC);
 	// Enable peripheral clock.
 	RCC -> APB1ENR |= (0b1 << 0); // TIM2EN='1'.
 	// Ensure timer if off.
 	TIM2 -> CR1 &= ~(0b1 << 0); // Disable TIM2 (CEN='0').
 	// Configure prescaler and period.
-	TIM2 -> PSC = RCC_SYSCLK_FREQUENCY_KHZ; // Timer is clocked by SYSCLK (see RCC_init() function).
+	TIM2 -> PSC = (sysclk_hz / 1000); // Timer is clocked by SYSCLK (see RCC_init() function).
 	TIM2 -> ARR = period_ms;
 	// Enable interrupt.
 	TIM2 -> DIER |= (0b1 << 0); // UIE='1'.
@@ -66,6 +102,8 @@ void TIM2_init(uint32_t period_ms, TIM_completion_irq_cb_t irq_callback) {
 	TIM2  -> EGR |= (0b1 << 0); // UG='1'.
 	// Register callback.
 	tim2_update_irq_callback = irq_callback;
+errors:
+	return status;
 }
 
 /*******************************************************************/
@@ -100,9 +138,9 @@ void TIM21_init(void) {
 	// Configure timer.
 	// Channel input on TI1.
 	// Capture done every 8 edges.
-	// CH1 mapped on LSI.
+	// CH1 mapped on MCO.
 	TIM21 -> CCMR1 |= (0b01 << 0) | (0b11 << 2);
-	TIM21 -> OR |= (0b101 << 2);
+	TIM21 -> OR |= (0b111 << 2);
 	// Enable interrupt.
 	TIM21 -> DIER |= (0b1 << 1); // CC1IE='1'.
 	// Generate event to update registers.
@@ -118,18 +156,20 @@ void TIM21_de_init(void) {
 }
 
 /*******************************************************************/
-TIM_status_t TIM21_measure_lsi_frequency(uint32_t* lsi_frequency_hz) {
+TIM_status_t TIM21_mco_capture(uint16_t* ref_clock_pulse_count, uint16_t* mco_pulse_count) {
 	// Local variables.
 	TIM_status_t status = TIM_SUCCESS;
-	uint8_t tim21_interrupt_count = 0;
-	uint32_t tim21_ccr1_edge1 = 0;
-	uint32_t tim21_ccr1_edge8 = 0;
 	uint32_t loop_count = 0;
 	// Check parameters.
-	if (lsi_frequency_hz == NULL) {
+	if ((ref_clock_pulse_count == NULL) || (mco_pulse_count == NULL)) {
 		status = TIM_ERROR_NULL_PARAMETER;
 		goto errors;
 	}
+	// Reset timer context.
+	tim21_ctx.ccr1_start = 0;
+	tim21_ctx.ccr1_end = 0;
+	tim21_ctx.capture_count = 0;
+	tim21_ctx.capture_done = 0;
 	// Reset counter.
 	TIM21 -> CNT = 0;
 	TIM21 -> CCR1 = 0;
@@ -139,28 +179,18 @@ TIM_status_t TIM21_measure_lsi_frequency(uint32_t* lsi_frequency_hz) {
 	// Enable TIM21 peripheral.
 	TIM21 -> CR1 |= (0b1 << 0); // CEN='1'.
 	TIM21 -> CCER |= (0b1 << 0); // CC1E='1'.
-	// Wait for 2 captures.
-	while (tim21_interrupt_count < 2) {
-		// Wait for interrupt.
-		tim21_flag = 0;
-		loop_count = 0;
-		while (tim21_flag == 0) {
-			loop_count++;
-			if (loop_count > TIM_TIMEOUT_COUNT) {
-				status = TIM_ERROR_INTERRUPT_TIMEOUT;
-				goto errors;
-			}
-		}
-		tim21_interrupt_count++;
-		if (tim21_interrupt_count == 1) {
-			tim21_ccr1_edge1 = (TIM21 -> CCR1);
-		}
-		else {
-			tim21_ccr1_edge8 = (TIM21 -> CCR1);
+	// Wait for capture to complete.
+	while (tim21_ctx.capture_done == 0) {
+		// Manage timeout.
+		loop_count++;
+		if (loop_count > TIM_TIMEOUT_COUNT) {
+			status = TIM_ERROR_CAPTURE_TIMEOUT;
+			goto errors;
 		}
 	}
-	// Compute LSI frequency.
-	(*lsi_frequency_hz) = (8 * RCC_HSI_FREQUENCY_KHZ * 1000) / (tim21_ccr1_edge8 - tim21_ccr1_edge1);
+	// Update results.
+	(*ref_clock_pulse_count) = (tim21_ctx.ccr1_end - tim21_ctx.ccr1_start);
+	(*mco_pulse_count) = (TIM21_INPUT_CAPTURE_PRESCALER * (tim21_ctx.capture_count - 1));
 errors:
 	// Disable interrupt.
 	NVIC_disable_interrupt(NVIC_INTERRUPT_TIM21);

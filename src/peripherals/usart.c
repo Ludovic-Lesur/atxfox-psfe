@@ -25,7 +25,7 @@
 /*** USART local global variables ***/
 
 #ifdef PSFE_SIGFOX_MONITORING
-static USART_rx_irq_cb_t usart2_rx_irq_callback = NULL;
+static USART_rx_irq_cb_t usart_rx_irq_callback = NULL;
 #endif
 
 /*** USART local functions ***/
@@ -40,8 +40,8 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 		// Read incoming byte.
 		rx_byte = (USART2 -> RDR);
 		// Transmit byte to upper layer.
-		if ((((USART2 -> CR1) & (0b1 << 5)) != 0) && (usart2_rx_irq_callback != NULL)) {
-			usart2_rx_irq_callback(rx_byte);
+		if ((((USART2 -> CR1) & (0b1 << 5)) != 0) && (usart_rx_irq_callback != NULL)) {
+			usart_rx_irq_callback(rx_byte);
 		}
 		// Clear RXNE flag.
 		USART2 -> RQR |= (0b1 << 3);
@@ -59,9 +59,15 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 
 #ifdef PSFE_SIGFOX_MONITORING
 /*******************************************************************/
-void USART2_init(USART_rx_irq_cb_t irq_callback) {
+USART_status_t USART2_init(USART_rx_irq_cb_t irq_callback) {
 	// Local variables.
+	USART_status_t status = USART_SUCCESS;
+	RCC_status_t rcc_status = RCC_SUCCESS;
+	uint32_t usart_clock_hz = 0;
 	uint32_t brr = 0;
+	// Get clock source frequency.
+	rcc_status = RCC_get_frequency_hz(RCC_CLOCK_HSI, &usart_clock_hz);
+	RCC_exit_error(USART_ERROR_BASE_RCC);
 	// Select HSI as peripheral clock.
 	RCC -> CCIPR &= ~(0b11 << 2); // Reset bits 2-3.
 	RCC -> CCIPR |= (0b10 << 2); // USART2SEL='10'.
@@ -72,8 +78,7 @@ void USART2_init(USART_rx_irq_cb_t irq_callback) {
 	RCC -> APB1SMENR |= (0b1 << 17); // Enable clock in sleep mode.
 	// Configure peripheral.
 	USART2 -> CR3 |= (0b1 << 12) | (0b1 << 23); // No overrun detection (OVRDIS='1') and clock enable in stop mode (UCESM='1').
-	brr = (RCC_HSI_FREQUENCY_KHZ * 1000);
-	brr /= USART_BAUD_RATE;
+	brr = (usart_clock_hz / USART_BAUD_RATE);
 	USART2 -> BRR = (brr & 0x000FFFFF); // BRR = (fCK)/(baud rate).
 	// Configure interrupt.
 	USART2 -> CR1 |= (0b1 << 5); // RXNEIE='1'.
@@ -85,9 +90,11 @@ void USART2_init(USART_rx_irq_cb_t irq_callback) {
 	GPIO_configure(&GPIO_USART2_TX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	GPIO_configure(&GPIO_USART2_RX, GPIO_MODE_ALTERNATE_FUNCTION, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
 	// Register callback.
-	usart2_rx_irq_callback = irq_callback;
+	usart_rx_irq_callback = irq_callback;
 	// Enable interrupt.
 	NVIC_enable_interrupt(NVIC_INTERRUPT_USART2, NVIC_PRIORITY_USART2);
+errors:
+	return status;
 }
 #endif
 

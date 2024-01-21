@@ -236,7 +236,7 @@ void __attribute__((optimize("-O0"))) _PSFE_adc_sampling_callback(void) {
 	ADC1_stack_error();
 	trcs_status = TRCS_process(PSFE_ADC_SAMPLING_PERIOD_MS);
 	TRCS_stack_error();
-	// Update local Vout.
+	// Update local VOUT.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, &generic_data_u32);
 	ADC1_stack_error();
 	if (adc1_status == ADC_SUCCESS) {
@@ -379,9 +379,15 @@ static void _PSFE_init_hw(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	ADC_status_t adc1_status = ADC_SUCCESS;
+	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	TIM_status_t tim2_status = TIM_SUCCESS;
 	LCD_status_t lcd_status = LCD_SUCCESS;
+#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
+	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
+#endif
 #ifdef PSFE_SIGFOX_MONITORING
 	RTC_status_t rtc_status = RTC_SUCCESS;
+	TD1208_status_t td1208_status = TD1208_SUCCESS;
 #endif
 #ifndef DEBUG
 	IWDG_status_t iwdg_status = IWDG_SUCCESS;
@@ -408,19 +414,23 @@ static void _PSFE_init_hw(void) {
 	rtc_status = RTC_init();
 	RTC_stack_error();
 #endif
-	TIM2_init(PSFE_TIM2_PERIOD_MS, &_PSFE_tim2_irq_callback);
-	LPTIM1_init();
+	tim2_status = TIM2_init(PSFE_TIM2_PERIOD_MS, &_PSFE_tim2_irq_callback);
+	TIM2_stack_error();
+	lptim1_status = LPTIM1_init();
+	LPTIM1_stack_error();
 	adc1_status = ADC1_init();
 	ADC1_stack_error();
 #if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
-	LPUART1_init(NULL);
+	lpuart1_status = LPUART1_init(NULL);
+	LPUART1_stack_error();
 #endif
 	// Init components.
 	lcd_status = LCD_init();
 	LCD_stack_error();
 	TRCS_init();
 #ifdef PSFE_SIGFOX_MONITORING
-	TD1208_init();
+	td1208_status = TD1208_init();
+	TD1208_stack_error();
 #endif
 }
 

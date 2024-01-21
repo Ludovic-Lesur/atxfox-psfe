@@ -57,17 +57,19 @@ void __attribute__((optimize("-O0"))) LPTIM1_IRQHandler(void) {
 /*** LPTIM functions ***/
 
 /*******************************************************************/
-void LPTIM1_init(void) {
+LPTIM_status_t __attribute__((optimize("-O0"))) LPTIM1_init(void) {
 	// Local variables.
+	LPTIM_status_t status = LPTIM_SUCCESS;
 	RCC_status_t rcc_status = RCC_SUCCESS;
-	uint32_t lsi_frequency_hz = 0;
-	// Get effective LSI frequency.
-	rcc_status = RCC_measure_lsi_frequency(&lsi_frequency_hz);
-	RCC_stack_error();
-	// Use LSI.
-	lptim_ctx.clock_frequency_hz = (lsi_frequency_hz >> 3);
+	uint32_t lptim_clock_hz = 0;
+	// Get clock source frequency.
+	rcc_status = RCC_get_frequency_hz(RCC_CLOCK_LSI, &lptim_clock_hz);
+	RCC_exit_error(LPTIM_ERROR_BASE_RCC);
+	lptim_ctx.clock_frequency_hz = (lptim_clock_hz >> 3);
 	// Enable LPTIM EXTI line.
 	EXTI_configure_line(EXTI_LINE_LPTIM1, EXTI_TRIGGER_RISING_EDGE);
+errors:
+	return status;
 }
 
 /*******************************************************************/
