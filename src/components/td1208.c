@@ -114,7 +114,7 @@ static TD1208_status_t _TD1208_send_command(char_t* command) {
 	td1208_ctx.command_buffer[char_idx++] = STRING_CHAR_NULL;
 	// Send command through UART.
 	usart2_status = USART2_write(td1208_ctx.command_buffer, char_idx);
-	USART2_exit_error(TD1208_ERROR_BASE_USART);
+	USART2_exit_error(TD1208_ERROR_BASE_USART2);
 errors:
 	return status;
 }
@@ -132,7 +132,7 @@ static TD1208_status_t _TD1208_wait_for_string(char_t* ref) {
 	do {
 		// Delay.
 		lptim1_status = LPTIM1_delay_milliseconds(TD1208_REPLY_PARSING_DELAY_MS, LPTIM_DELAY_MODE_ACTIVE);
-		LPTIM1_exit_error(TD1208_ERROR_BASE_LPTIM);
+		LPTIM1_exit_error(TD1208_ERROR_BASE_LPTIM1);
 		parsing_time += TD1208_REPLY_PARSING_DELAY_MS;
 		// Loop on all replies.
 		for (rep_idx=0 ; rep_idx<TD1208_REPLY_BUFFER_DEPTH ; rep_idx++) {
@@ -167,7 +167,7 @@ TD1208_status_t TD1208_init(void) {
 	_TD1208_reset_replies();
 	// Init USART.
 	usart2_status = USART2_init(&_TD1208_fill_rx_buffer);
-	USART2_exit_error(TD1208_ERROR_BASE_USART);
+	USART2_exit_error(TD1208_ERROR_BASE_USART2);
 errors:
 	return status;
 }
@@ -286,7 +286,7 @@ TD1208_status_t TD1208_send_bit(uint8_t ul_bit) {
 	td1208_ctx.command_buffer[9] = STRING_CHAR_CR;
 	// Send command through UART.
 	usart2_status = USART2_write(td1208_ctx.command_buffer, 10);
-	USART2_exit_error(TD1208_ERROR_BASE_USART);
+	USART2_exit_error(TD1208_ERROR_BASE_USART2);
 	// Wait for reply.
 	status = _TD1208_wait_for_string("OK");
 errors:
@@ -328,7 +328,7 @@ TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_size_b
 	td1208_ctx.command_buffer[idx++] = STRING_CHAR_CR;
 	// Send command through UART.
 	usart2_status = USART2_write(td1208_ctx.command_buffer, idx);
-	USART2_exit_error(TD1208_ERROR_BASE_USART);
+	USART2_exit_error(TD1208_ERROR_BASE_USART2);
 	// Wait for reply.
 	status = _TD1208_wait_for_string("OK");
 errors:

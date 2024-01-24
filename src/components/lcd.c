@@ -68,16 +68,16 @@ LCD_status_t LCD_init(void) {
 	// Initialization sequence.
 	GPIO_write(&GPIO_LCD_E, 0);
 	lptim1_status = LPTIM1_delay_milliseconds(100, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM1);
 	_LCD_command(0x30);
 	lptim1_status = LPTIM1_delay_milliseconds(30, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM1);
 	_LCD_command(0x30);
 	lptim1_status = LPTIM1_delay_milliseconds(10, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM1);
 	_LCD_command(0x30);
 	lptim1_status = LPTIM1_delay_milliseconds(10, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM1);
 	_LCD_command(0x38); // 8-bits / 2 lines mode.
 	_LCD_command(0x08); // Display off.
 	_LCD_command(0x0C); // Display on.
@@ -94,7 +94,7 @@ LCD_status_t LCD_clear(void) {
 	// Clear command.
 	_LCD_command(0x01);
 	lptim1_status = LPTIM1_delay_milliseconds(2, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM);
+	LPTIM1_exit_error(LCD_ERROR_BASE_LPTIM1);
 errors:
 	return status;
 }

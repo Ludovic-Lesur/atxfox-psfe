@@ -76,10 +76,10 @@ static TRCS_status_t _TRCS_update_adc_data(void) {
 	MATH_status_t math_status = MATH_SUCCESS;
 	// Get bandgap raw result.
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, (uint32_t*) &(trcs_ctx.ref191_12bits));
-	ADC1_exit_error(TRCS_ERROR_BASE_ADC);
+	ADC1_exit_error(TRCS_ERROR_BASE_ADC1);
 	// Add sample
 	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (uint32_t*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
-	ADC1_exit_error(TRCS_ERROR_BASE_ADC);
+	ADC1_exit_error(TRCS_ERROR_BASE_ADC1);
 	// Update average.
 	math_status = MATH_average_u32((uint32_t*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (uint32_t*) &trcs_ctx.iout_12bits);
 	MATH_exit_error(TRCS_ERROR_BASE_MATH);
