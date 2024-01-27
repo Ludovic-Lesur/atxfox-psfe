@@ -44,7 +44,7 @@ typedef enum {
 
 #ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
- * \fn void TD1208_init(void)
+ * \fn TD1208_status_t TD1208_init(void)
  * \brief Init TD1208 driver.
  * \param[in]  	none
  * \param[out] 	none
@@ -66,7 +66,7 @@ TD1208_status_t TD1208_reset(void);
 
 #ifdef PSFE_SIGFOX_MONITORING
 /*!******************************************************************
- * \fn TD1208_status_t TD1208_get_sigfox_id(uint8_t* sigfox_device_id)
+ * \fn TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id)
  * \brief Get TD1208 Sigfox EP-ID.
  * \param[in]  	none
  * \param[out] 	sigfox_ep_id: Pointer to byte array that will contain the Sigfox EP-ID.

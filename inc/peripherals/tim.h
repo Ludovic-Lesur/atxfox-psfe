@@ -37,7 +37,7 @@ typedef void (*TIM_completion_irq_cb_t)(void);
 /*** TIM functions ***/
 
 /*!******************************************************************
- * \fn void TIM2_init(void)
+ * \fn TIM_status_t TIM2_init(uint32_t period_ms, TIM_completion_irq_cb_t irq_callback)
  * \brief Init TIM2 peripheral for ADC sampling.
  * \param[in]  	none
  * \param[out] 	none

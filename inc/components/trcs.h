@@ -81,7 +81,7 @@ TRCS_status_t TRCS_process(uint32_t process_period_ms);
 uint8_t TRCS_get_bypass_switch_state(void);
 
 /*!******************************************************************
- * \fn TRCS_status_t TRCS_get_range(volatile TRCS_range_t* range)
+ * \fn TRCS_range_t TRCS_get_range(void)
  * \brief Get TRCS current range.
  * \param[in]  	none
  * \param[out] 	none
@@ -90,7 +90,7 @@ uint8_t TRCS_get_bypass_switch_state(void);
 TRCS_range_t TRCS_get_range(void);
 
 /*!******************************************************************
- * \fn TRCS_status_t TRCS_get_iout(volatile uint32_t* iout_ua)
+ * \fn uint32_t TRCS_get_iout(void)
  * \brief Get TRCS measured output current.
  * \param[in]  	none
  * \param[out] 	none

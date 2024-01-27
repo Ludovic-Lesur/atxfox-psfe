@@ -42,7 +42,7 @@ typedef void (*LPUART_rx_irq_cb_t)(uint8_t data);
 
 #if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
 /*!******************************************************************
- * \fn void LPUART1_init(LPUART_rx_irq_cb_t irq_callback)
+ * \fn LPUART_status_t LPUART1_init(LPUART_rx_irq_cb_t irq_callback)
  * \brief Init LPUART1 peripheral.
  * \param[in]  	irq_callback: Function to call on RX interrupt.
  * \param[out] 	none

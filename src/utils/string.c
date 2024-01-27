@@ -119,7 +119,6 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 	uint32_t str_idx = 0;
 	uint32_t idx = 0;
 	uint8_t generic_byte = 0;
-	uint32_t current_power = 0;
 	uint32_t previous_decade = 0;
 	uint32_t abs_value = 0;
 	// Check parameters.
@@ -181,10 +180,8 @@ STRING_status_t STRING_value_to_string(int32_t value, STRING_format_t format, ui
 			str[str_idx++] = 'd';
 		}
 		for (idx=(MATH_DECIMAL_DIGIT_MAX_NUMBER - 1) ; idx>=0 ; idx--) {
-			math_status = MATH_pow_10(idx, &current_power);
-			MATH_exit_error(STRING_ERROR_BASE_MATH);
-			generic_byte = (abs_value - previous_decade) / current_power;
-			previous_decade += generic_byte * current_power;
+			generic_byte = (abs_value - previous_decade) / (MATH_POWER_10[idx]);
+			previous_decade += (generic_byte * MATH_POWER_10[idx]);
 			if (generic_byte != 0) {
 				first_non_zero_found = 1;
 			}
@@ -226,12 +223,10 @@ errors:
 STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint8_t number_of_digits, int32_t* value) {
 	// Local variables.
 	STRING_status_t status = STRING_SUCCESS;
-	MATH_status_t math_status = MATH_SUCCESS;
 	uint8_t char_idx = 0;
 	uint8_t start_idx = 0;
 	uint8_t negative_flag = 0;
 	uint8_t digit_value = 0;
-	uint32_t math_power10 = 0;
 	// Check parameters.
 	_STRING_check_pointer(str);
 	_STRING_check_pointer(value);
@@ -297,11 +292,8 @@ STRING_status_t STRING_string_to_value(char_t* str, STRING_format_t format, uint
 			// Convert digit to value.
 			status = _STRING_decimal_char_to_value(str[start_idx + char_idx], &digit_value);
 			if (status != STRING_SUCCESS) goto errors;
-			// Compute power.
-			math_status = MATH_pow_10((number_of_digits -char_idx - 1), &math_power10);
-			MATH_exit_error(STRING_ERROR_BASE_MATH);
 			// Add digit to result.
-			(*value) += (math_power10 * digit_value);
+			(*value) += (digit_value * MATH_POWER_10[number_of_digits - char_idx - 1]);
 		}
 		break;
 	default:

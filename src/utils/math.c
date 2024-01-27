@@ -13,7 +13,9 @@
 
 #define MATH_MEDIAN_FILTER_LENGTH_MAX	0xFF
 
-static const uint32_t MATH_POW10[MATH_DECIMAL_DIGIT_MAX_NUMBER] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
+/*** MATH global variables ***/
+
+const uint32_t MATH_POWER_10[MATH_DECIMAL_DIGIT_MAX_NUMBER] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000};
 
 /*** MATH local functions ***/
 
@@ -295,21 +297,6 @@ MATH_status_t MATH_median_filter_u32(uint32_t* data, uint8_t median_size, uint8_
 	else {
 		(*result) = local_buf[(median_size / 2)];
 	}
-errors:
-	return status;
-}
-
-/*******************************************************************/
-MATH_status_t MATH_pow_10(uint8_t power, uint32_t* result) {
-	// Local variables.
-	MATH_status_t status = MATH_SUCCESS;
-	// Check parameters.
-	_MATH_check_pointer(result);
-	if (power >= MATH_DECIMAL_DIGIT_MAX_NUMBER) {
-		status = MATH_ERROR_OVERFLOW;
-		goto errors;
-	}
-	(*result) = MATH_POW10[power];
 errors:
 	return status;
 }
