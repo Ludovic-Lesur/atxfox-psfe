@@ -112,7 +112,7 @@ errors:
 }
 
 /*******************************************************************/
-volatile uint8_t RTC_get_wakeup_timer_flag(void) {
+uint8_t RTC_get_wakeup_timer_flag(void) {
 	return rtc_wakeup_timer_flag;
 }
 

@@ -46,13 +46,13 @@ typedef enum {
 RTC_status_t RTC_init(void);
 
 /*!******************************************************************
- * \fn volatile uint8_t RTC_get_wakeup_timer_flag(void)
+ * \fn uint8_t RTC_get_wakeup_timer_flag(void)
  * \brief Read RTC wakeup timer interrupt flag.
  * \param[in]  	none
  * \param[out] 	none
  * \retval		RTC wakeup timer flag.
  *******************************************************************/
-volatile uint8_t RTC_get_wakeup_timer_flag(void);
+uint8_t RTC_get_wakeup_timer_flag(void);
 
 /*!******************************************************************
  * \fn void RTC_clear_wakeup_timer_flag(void)

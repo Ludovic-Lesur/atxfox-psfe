@@ -125,6 +125,8 @@ typedef struct {
 
 /*** MAIN local global variables ***/
 
+static const uint32_t PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE[PSFE_NUMBER_OF_BOARDS] = {998000, 998000, 599000, 599000, 998000, 998000, 998000, 599000, 599000, 998000};
+
 static PSFE_context_t psfe_ctx;
 
 /*** MAIN local functions ***/
