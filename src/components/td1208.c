@@ -198,9 +198,9 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 	PARSER_status_t parser_status = PARSER_SUCCESS;
 	char_t temp_char = STRING_CHAR_NULL;
 	uint8_t rep_idx = 0;
-	uint8_t idx = 0;
 	uint8_t line_length = 0;
 	uint8_t extracted_length = 0;
+	int8_t idx = 0;
 	// Check parameter.
 	if (sigfox_ep_id == NULL) {
 		status = TD1208_ERROR_NULL_PARAMETER;
@@ -242,7 +242,6 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 			// Pad most significant symbols with zeroes.
 			for (; idx>=0 ; idx--) {
 				td1208_ctx.reply[rep_idx].buffer[idx] = '0';
-				if (idx == 0) break;
 			}
 			// Try parsing ID.
 			td1208_ctx.reply[rep_idx].parser.buffer_size = TD1208_SIGFOX_EP_ID_SIZE_CHAR;

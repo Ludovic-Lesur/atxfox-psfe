@@ -43,8 +43,6 @@ void __attribute__((optimize("-O0"))) USART2_IRQHandler(void) {
 		if ((((USART2 -> CR1) & (0b1 << 5)) != 0) && (usart_rx_irq_callback != NULL)) {
 			usart_rx_irq_callback(rx_byte);
 		}
-		// Clear RXNE flag.
-		USART2 -> RQR |= (0b1 << 3);
 	}
 	// Overrun error interrupt.
 	if (((USART2 -> ISR) & (0b1 << 3)) != 0) {
