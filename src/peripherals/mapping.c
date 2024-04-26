@@ -10,6 +10,8 @@
 #include "gpio.h"
 #include "gpio_reg.h"
 
+/*** MAPPING global variables ***/
+
 // Analog inputs.
 const GPIO_pin_t GPIO_ADC_IN9 =				(GPIO_pin_t) {GPIOB, 1, 1, 0};
 const GPIO_pin_t GPIO_ADC_IN8 =				(GPIO_pin_t) {GPIOB, 1, 0, 0};

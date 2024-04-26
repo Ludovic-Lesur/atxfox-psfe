@@ -10,6 +10,8 @@
 
 #include "gpio.h"
 
+/*** MAPPING global variables ***/
+
 // Analog inputs.
 extern const GPIO_pin_t GPIO_ADC_IN9;
 extern const GPIO_pin_t GPIO_ADC_IN8;
