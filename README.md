@@ -17,7 +17,10 @@ The boards were designed on **Circuit Maker V1.3**. Below is the list of hardwar
 
 ## Environment
 
-The embedded software is developed under **Eclipse IDE** version 2023-09 (4.29.0) and **GNU MCU** plugin. The `script` folder contains Eclipse run/debug configuration files and **JLink** scripts to flash the MCU.
+As of version `sw1.0.2` the embedded software is developed under **Eclipse IDE** version 2024-09 (4.33.0) and **GNU MCU** plugin. The `script` folder contains Eclipse run/debug configuration files and **JLink** scripts to flash the MCU.
+
+> [!WARNING]
+> To compile any version under `sw4.0`, the `git_version.sh` script must be patched when `sscanf` function is called: the `SW` prefix must be replaced by `sw` since Git tags have been renamed in this way.
 
 ## Target
 
@@ -27,11 +30,11 @@ The PSFE board is based on the **STM32L031G6U6** microcontroller of the STMicroe
 
 The project is organized as follow:
 
-* `inc` and `src`: **source code** split in 5 layers:
-    * `registers`: MCU **registers** adress definition.
-    * `peripherals`: internal MCU **peripherals** drivers.
-    * `utils`: **utility** functions.
-    * `components`: external **components** drivers.
-    * `applicative`: high-level **application** layers.
-* `startup`: MCU **startup** code (from ARM).
-* `linker`: MCU **linker** script (from ARM).
+* `startup` : MCU **startup** code (from ARM).
+* `linker` : MCU **linker** script (from ARM).
+* `drivers` :
+    * `registers` : MCU **registers** address definition.
+    * `peripherals` : internal MCU **peripherals** drivers.
+    * `components` : external **components** drivers.
+    * `utils` : **utility** functions.
+* `application` : Main **application**.
