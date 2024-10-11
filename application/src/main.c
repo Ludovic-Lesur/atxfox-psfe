@@ -8,15 +8,14 @@
 // Registers.
 #include "rcc_reg.h"
 // Peripherals.
-#include "adc.h"
 #include "exti.h"
 #include "gpio.h"
 #include "iwdg.h"
 #include "lptim.h"
 #include "lpuart.h"
-#include "mapping.h"
+#include "gpio_mapping.h"
 #include "mode.h"
-#include "nvic.h"
+#include "nvic_priority.h"
 #include "pwr.h"
 #include "rcc.h"
 #include "rtc.h"
@@ -27,17 +26,24 @@
 #include "td1208.h"
 #include "trcs.h"
 // Utils.
-#include "string.h"
-// Applicative.
 #include "error.h"
-#include "psfe.h"
+#include "string.h"
+#include "terminal.h"
+// Middleware
+#include "analog.h"
+// Applicative.
+#include "error_base.h"
+#include "mode.h"
 #include "version.h"
 
 /*** MAIN local macros ***/
 
-#define PSFE_TIM2_PERIOD_MS						100
+#define PSFE_COMMON_TIMER_INSTANCE              TIM_INSTANCE_TIM2
+#define PSFE_COMMON_TIMER_PERIOD_MS				100
 #define PSFE_ADC_SAMPLING_PERIOD_MS				100
-#define PSFE_LCD_UART_PRINT_PERIOD_MS			300
+#define PSFE_LCD_UART_TERMINAL_PERIOD_MS	    300
+
+#define PSFE_LOG_TERMINAL_INSTANCE              0
 
 #define PSFE_ON_VOLTAGE_THRESHOLD_MV			3300
 #define PSFE_OFF_VOLTAGE_THRESHOLD_MV			3200
@@ -55,6 +61,12 @@
 #define PSFE_ERROR_VALUE_VOLTAGE_16BITS			0xFFFF
 #define PSFE_ERROR_VALUE_VOLTAGE_24BITS			0xFFFFFF
 #define PSFE_ERROR_VALUE_TEMPERATURE			0x7F
+
+#if ((PSFE_BOARD_NUMBER == 1) || (PSFE_BOARD_NUMBER == 2) || (PSFE_BOARD_NUMBER == 5) || (PSFE_BOARD_NUMBER == 6) || (PSFE_BOARD_NUMBER == 7) || (PSFE_BOARD_NUMBER == 10))
+#define PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE    998000
+#else
+#define PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE    599000
+#endif
 
 /*** MAIN local structures ***/
 
@@ -107,12 +119,12 @@ typedef struct {
 	uint32_t adc_sampling_count_ms;
 	uint32_t lcd_uart_count_ms;
 	// Analog measurements.
-	volatile uint32_t vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
-	volatile uint32_t vout_mv_buf_idx;
-	volatile uint32_t vout_mv;
-	volatile uint32_t iout_ua;
-	volatile uint32_t vmcu_mv;
-	volatile uint8_t tmcu_degrees;
+	volatile int32_t vout_mv_buf[PSFE_VOUT_BUFFER_LENGTH];
+	volatile uint8_t vout_mv_buf_idx;
+	volatile int32_t vout_mv;
+	volatile int32_t iout_ua;
+	volatile int32_t vmcu_mv;
+	volatile int32_t tmcu_degrees;
 	volatile TRCS_range_t trcs_range;
 #ifdef PSFE_SIGFOX_MONITORING
 	uint32_t sigfox_next_time_seconds;
@@ -125,8 +137,6 @@ typedef struct {
 
 /*** MAIN local global variables ***/
 
-static const uint32_t PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE[PSFE_NUMBER_OF_BOARDS] = {998000, 998000, 599000, 599000, 998000, 998000, 998000, 599000, 599000, 998000};
-
 static PSFE_context_t psfe_ctx;
 
 /*** MAIN local functions ***/
@@ -135,14 +145,14 @@ static PSFE_context_t psfe_ctx;
 void _PSFE_print_hw_version(void) {
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Print version.
 	lcd_status = LCD_print_string(0, 0, " ATXFox ");
 	LCD_stack_error();
 	lcd_status = LCD_print_string(1, 0, " HW 1.0 ");
 	LCD_stack_error();
-	lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_stack_error();
+	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
+	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
 }
 
@@ -151,35 +161,35 @@ void _PSFE_print_sw_version(void) {
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	char_t sw_version_string[LCD_WIDTH_CHAR];
 	// Build string.
-	string_status = STRING_value_to_string((GIT_MAJOR_VERSION / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[0]));
-	STRING_stack_error();
-	string_status = STRING_value_to_string((GIT_MAJOR_VERSION - 10 * (GIT_MAJOR_VERSION / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[1]));
-	STRING_stack_error();
+	string_status = STRING_integer_to_string((GIT_MAJOR_VERSION / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[0]));
+	STRING_stack_error(ERROR_BASE_STRING);
+	string_status = STRING_integer_to_string((GIT_MAJOR_VERSION - 10 * (GIT_MAJOR_VERSION / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[1]));
+	STRING_stack_error(ERROR_BASE_STRING);
 	sw_version_string[2] = STRING_CHAR_DOT;
-	string_status = STRING_value_to_string((GIT_MINOR_VERSION / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[3]));
-	STRING_stack_error();
-	string_status = STRING_value_to_string((GIT_MINOR_VERSION - 10 * (GIT_MINOR_VERSION / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[4]));
-	STRING_stack_error();
+	string_status = STRING_integer_to_string((GIT_MINOR_VERSION / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[3]));
+	STRING_stack_error(ERROR_BASE_STRING);
+	string_status = STRING_integer_to_string((GIT_MINOR_VERSION - 10 * (GIT_MINOR_VERSION / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[4]));
+	STRING_stack_error(ERROR_BASE_STRING);
 	sw_version_string[5] = STRING_CHAR_DOT;
-	string_status = STRING_value_to_string((GIT_COMMIT_INDEX / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[6]));
-	STRING_stack_error();
-	string_status = STRING_value_to_string((GIT_COMMIT_INDEX - 10 * (GIT_COMMIT_INDEX / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[7]));
-	STRING_stack_error();
+	string_status = STRING_integer_to_string((GIT_COMMIT_INDEX / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[6]));
+	STRING_stack_error(ERROR_BASE_STRING);
+	string_status = STRING_integer_to_string((GIT_COMMIT_INDEX - 10 * (GIT_COMMIT_INDEX / 10)), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[7]));
+	STRING_stack_error(ERROR_BASE_STRING);
 	// Print version.
 	if (GIT_DIRTY_FLAG == 0) {
-		lcd_status = LCD_print_string(0, 0, "   SW   ");
+		lcd_status = LCD_print_string(0, 0, "   sw   ");
 	}
 	else {
-		lcd_status = LCD_print_string(0, 0, "  SW !  ");
+		lcd_status = LCD_print_string(0, 0, "sw dirty");
 	}
 	LCD_stack_error();
 	lcd_status = LCD_print_string(1, 0, sw_version_string);
 	LCD_stack_error();
-	lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_stack_error();
+	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
+	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
 }
 
@@ -190,7 +200,7 @@ void _PSFE_print_sigfox_ep_id(void) {
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	LCD_status_t lcd_status = LCD_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	uint8_t sigfox_ep_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	char_t sigfox_ep_id_str[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	uint8_t idx = 0;
@@ -199,8 +209,8 @@ void _PSFE_print_sigfox_ep_id(void) {
 	TD1208_stack_error();
 	// Build corresponding string.
 	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) {
-		string_status = STRING_value_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));
-		STRING_stack_error();
+		string_status = STRING_integer_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));
+		STRING_stack_error(ERROR_BASE_STRING);
 	}
 	lcd_status = LCD_print_string(0, 0, " EP  ID ");
 	LCD_stack_error();
@@ -212,54 +222,46 @@ void _PSFE_print_sigfox_ep_id(void) {
 		lcd_status = LCD_print_string(1, 0, "TD ERROR");
 	}
 	LCD_stack_error();
-	lptim1_status = LPTIM1_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
-	LPTIM1_stack_error();
+	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
+	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
 }
 #endif
 
 /*******************************************************************/
-void _PSFE_start(void) {
-	// Start continuous timers.
-	TIM2_start();
-}
-
-/*******************************************************************/
 void __attribute__((optimize("-O0"))) _PSFE_adc_sampling_callback(void) {
 	// Local variables.
-	ADC_status_t adc1_status = ADC_SUCCESS;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
 	TRCS_status_t trcs_status = TRCS_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
+	int32_t generic_data_s32 = 0;
 	uint32_t generic_data_u32 = 0;
-	int8_t temperature = 0;
-	uint32_t vout_voltage_divider_current_ua = 0;
+	int32_t vout_voltage_divider_current_ua = 0;
 	// Perform measurements.
-	adc1_status = ADC1_perform_measurements();
-	ADC1_stack_error();
 	trcs_status = TRCS_process(PSFE_ADC_SAMPLING_PERIOD_MS);
 	TRCS_stack_error();
 	// Update local VOUT.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VOUT_MV, &generic_data_u32);
-	ADC1_stack_error();
-	if (adc1_status == ADC_SUCCESS) {
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VOUT_MV, &generic_data_s32);
+	ANALOG_stack_error(ERROR_BASE_ANALOG);
+	if (analog_status == ANALOG_SUCCESS) {
 		// Add value to buffer.
-		psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx] = generic_data_u32;
+		psfe_ctx.vout_mv_buf[psfe_ctx.vout_mv_buf_idx] = generic_data_s32;
 		psfe_ctx.vout_mv_buf_idx++;
 		if (psfe_ctx.vout_mv_buf_idx >= PSFE_VOUT_BUFFER_LENGTH) {
 			psfe_ctx.vout_mv_buf_idx = 0;
 		}
 		// Compute average.
-		math_status = MATH_average_u32((uint32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, &generic_data_u32);
-		MATH_stack_error();
+		math_status = MATH_average((int32_t*) psfe_ctx.vout_mv_buf, PSFE_VOUT_BUFFER_LENGTH, &generic_data_s32);
+		MATH_stack_error(ERROR_BASE_MATH);
 		if (math_status == MATH_SUCCESS) {
-			psfe_ctx.vout_mv = generic_data_u32;
+			psfe_ctx.vout_mv = generic_data_s32;
 		}
 	}
 	// Update local range and IOUT.
 	psfe_ctx.trcs_range = TRCS_get_range();
 	psfe_ctx.iout_ua = TRCS_get_iout();
 	// Compute output voltage divider current.
-	vout_voltage_divider_current_ua = (psfe_ctx.vout_mv * 1000) / (PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE[PSFE_BOARD_INDEX]);
+	vout_voltage_divider_current_ua = (psfe_ctx.vout_mv * 1000) / (PSFE_VOUT_VOLTAGE_DIVIDER_RESISTANCE);
 	// Remove offset current.
 	if (psfe_ctx.iout_ua > vout_voltage_divider_current_ua) {
 		psfe_ctx.iout_ua -= vout_voltage_divider_current_ua;
@@ -268,15 +270,15 @@ void __attribute__((optimize("-O0"))) _PSFE_adc_sampling_callback(void) {
 		psfe_ctx.iout_ua = 0;
 	}
 	// Update local VMCU and TMCU.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_VMCU_MV, &generic_data_u32);
-	ADC1_stack_error();
-	psfe_ctx.vmcu_mv = (adc1_status == ADC_SUCCESS) ? generic_data_u32 : PSFE_ERROR_VALUE_VOLTAGE_16BITS;
-	adc1_status = ADC1_get_tmcu(&temperature);
-	ADC1_stack_error();
-	if (adc1_status == ADC_SUCCESS) {
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_VMCU_MV, &generic_data_s32);
+	ANALOG_stack_error(ERROR_BASE_ANALOG);
+	psfe_ctx.vmcu_mv = (analog_status == ANALOG_SUCCESS) ? generic_data_s32 : PSFE_ERROR_VALUE_VOLTAGE_16BITS;
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_TMCU_DEGREES, &generic_data_s32);
+	ANALOG_stack_error(ERROR_BASE_ANALOG);
+	if (analog_status == ANALOG_SUCCESS) {
 		// Convert to 1-complement.
-		math_status = MATH_int32_to_signed_magnitude((int32_t) temperature, 7, &generic_data_u32);
-		MATH_stack_error();
+		math_status = MATH_integer_to_signed_magnitude(generic_data_s32, 7, &generic_data_u32);
+		MATH_stack_error(ERROR_BASE_MATH);
 		if (math_status == MATH_SUCCESS) {
 			psfe_ctx.tmcu_degrees = (uint8_t) generic_data_u32;
 		}
@@ -294,17 +296,13 @@ void _PSFE_lcd_uart_callback(void) {
 	// Local variables.
 	LCD_status_t lcd_status = LCD_SUCCESS;
 #ifdef PSFE_SERIAL_MONITORING
-	STRING_status_t string_status = STRING_SUCCESS;
-	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
-	char str_value[PSFE_STRING_VALUE_BUFFER_LENGTH];
+	TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
 #endif
 	// Update display if enabled.
 	if (psfe_ctx.por_flag == 0) {
 		// LCD VOUT display.
 		if (psfe_ctx.vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
-			lcd_status = LCD_print_value_5_digits(0, 0, psfe_ctx.vout_mv);
-			LCD_stack_error();
-			lcd_status = LCD_print_string(0, 5, "  V");
+			lcd_status = LCD_print_value(0, psfe_ctx.vout_mv, 3, "V");
 			LCD_stack_error();
 		}
 		else {
@@ -313,64 +311,60 @@ void _PSFE_lcd_uart_callback(void) {
 		}
 		// LCD IOUT display.
 		if (TRCS_get_bypass_switch_state() == 0) {
-			lcd_status = LCD_print_value_5_digits(1, 0, psfe_ctx.iout_ua);
-			LCD_stack_error();
-			lcd_status = LCD_print_string(1, 5, " mA");
-			LCD_stack_error();
+		    if (psfe_ctx.iout_ua < 1000) {
+		        lcd_status = LCD_print_value(1, psfe_ctx.iout_ua, 0, "ua");
+                LCD_stack_error();
+		    }
+		    else {
+		        lcd_status = LCD_print_value(1, psfe_ctx.iout_ua, 3, "ma");
+                LCD_stack_error();
+		    }
 		}
 		else {
 			lcd_status = LCD_print_string(1, 0, " BYPASS ");
 			LCD_stack_error();
 		}
 	}
-#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
+#ifdef PSFE_SERIAL_MONITORING
 	// UART print.
-	lpuart1_status = LPUART1_write_string("Vout=");
-	LPUART1_stack_error();
-	string_status = STRING_value_to_string((int32_t) psfe_ctx.vout_mv, STRING_FORMAT_DECIMAL, 0, str_value);
-	STRING_stack_error();
-	lpuart1_status = LPUART1_write_string(str_value);
-	LPUART1_stack_error();
-	lpuart1_status = LPUART1_write_string("mV Iout=");
-	LPUART1_stack_error();
+	terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "Vout=");
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	terminal_status = TERMINAL_print_integer(PSFE_LOG_TERMINAL_INSTANCE, psfe_ctx.vout_mv, STRING_FORMAT_DECIMAL, 0);
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "mV Iout=");
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
 	if (TRCS_get_bypass_switch_state() == 0) {
-		STRING_value_to_string((int32_t) psfe_ctx.iout_ua, STRING_FORMAT_DECIMAL, 0, str_value);
-		STRING_stack_error();
-		lpuart1_status = LPUART1_write_string(str_value);
-		LPUART1_stack_error();
-		lpuart1_status = LPUART1_write_string("uA Vmcu=");
-		LPUART1_stack_error();
+	    terminal_status = TERMINAL_print_integer(PSFE_LOG_TERMINAL_INSTANCE, psfe_ctx.iout_ua, STRING_FORMAT_DECIMAL, 0);
+	    TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	    terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "uA Vmcu=");
+	    TERMINAL_stack_error(ERROR_BASE_TERMINAL);
 	}
 	else {
-		lpuart1_status = LPUART1_write_string("BYPASS Vmcu=");
-		LPUART1_stack_error();
+	    terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "BYPASS Vmcu=");
+	    TERMINAL_stack_error(ERROR_BASE_TERMINAL);
 	}
-	string_status = STRING_value_to_string((int32_t) psfe_ctx.vmcu_mv, STRING_FORMAT_DECIMAL, 0, str_value);
-	STRING_stack_error();
-	lpuart1_status = LPUART1_write_string(str_value);
-	LPUART1_stack_error();
-	lpuart1_status = LPUART1_write_string("mV Tmcu=");
-	LPUART1_stack_error();
-	string_status = STRING_value_to_string((int32_t) psfe_ctx.tmcu_degrees, STRING_FORMAT_DECIMAL, 0, str_value);
-	STRING_stack_error();
-	lpuart1_status = LPUART1_write_string(str_value);
-	LPUART1_stack_error();
-	lpuart1_status = LPUART1_write_string("dC\n");
-	LPUART1_stack_error();
+	terminal_status = TERMINAL_print_integer(PSFE_LOG_TERMINAL_INSTANCE, psfe_ctx.vmcu_mv, STRING_FORMAT_DECIMAL, 0);
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "mV Tmcu=");
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	terminal_status = TERMINAL_print_integer(PSFE_LOG_TERMINAL_INSTANCE, psfe_ctx.tmcu_degrees, STRING_FORMAT_DECIMAL, 0);
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+	terminal_status = TERMINAL_print_string(PSFE_LOG_TERMINAL_INSTANCE, "dC\n");
+	TERMINAL_stack_error(ERROR_BASE_TERMINAL);
 #endif
 }
 
 /*******************************************************************/
-static void _PSFE_tim2_irq_callback(void) {
+static void _PSFE_common_timer_irq_callback(void) {
 	// Increment counts.
-	psfe_ctx.adc_sampling_count_ms += PSFE_TIM2_PERIOD_MS;
-	psfe_ctx.lcd_uart_count_ms += PSFE_TIM2_PERIOD_MS;
+	psfe_ctx.adc_sampling_count_ms += PSFE_COMMON_TIMER_PERIOD_MS;
+	psfe_ctx.lcd_uart_count_ms += PSFE_COMMON_TIMER_PERIOD_MS;
 	// Check periods.
 	if (psfe_ctx.adc_sampling_count_ms >= PSFE_ADC_SAMPLING_PERIOD_MS) {
 		_PSFE_adc_sampling_callback();
 		psfe_ctx.adc_sampling_count_ms = 0;
 	}
-	if (psfe_ctx.lcd_uart_count_ms >= PSFE_LCD_UART_PRINT_PERIOD_MS) {
+	if (psfe_ctx.lcd_uart_count_ms >= PSFE_LCD_UART_TERMINAL_PERIOD_MS) {
 		_PSFE_lcd_uart_callback();
 		psfe_ctx.lcd_uart_count_ms = 0;
 	}
@@ -380,12 +374,11 @@ static void _PSFE_tim2_irq_callback(void) {
 static void _PSFE_init_hw(void) {
 	// Local variables.
 	RCC_status_t rcc_status = RCC_SUCCESS;
-	ADC_status_t adc1_status = ADC_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
-	TIM_status_t tim2_status = TIM_SUCCESS;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
+	TIM_status_t tim_status = TIM_SUCCESS;
 	LCD_status_t lcd_status = LCD_SUCCESS;
-#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
-	LPUART_status_t lpuart1_status = LPUART_SUCCESS;
+#ifdef PSFE_SERIAL_MONITORING
+	TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
 #endif
 #ifdef PSFE_SIGFOX_MONITORING
 	RTC_status_t rtc_status = RTC_SUCCESS;
@@ -400,36 +393,37 @@ static void _PSFE_init_hw(void) {
 	GPIO_init();
 	EXTI_init();
 	// Init clock.
-	RCC_init();
+	RCC_init(NVIC_PRIORITY_CLOCK);
 	PWR_init();
 	// Start clocks.
 	rcc_status = RCC_switch_to_hsi();
-	RCC_stack_error();
+	RCC_stack_error(ERROR_BASE_RCC);
 	// Init watchdog.
 #ifndef DEBUG
 	iwdg_status = IWDG_init();
-	IWDG_stack_error();
+	IWDG_stack_error(ERROR_BASE_IWDG);
 	IWDG_reload();
 #endif
 	// Init peripherals.
+	LPTIM_init(NVIC_PRIORITY_DELAY);
 #ifdef PSFE_SIGFOX_MONITORING
-	rtc_status = RTC_init();
-	RTC_stack_error();
+	rtc_status = RTC_init(NULL, NVIC_PRIORITY_RTC);
+	RTC_stack_error(ERROR_BASE_RTC);
 #endif
-	tim2_status = TIM2_init(PSFE_TIM2_PERIOD_MS, &_PSFE_tim2_irq_callback);
-	TIM2_stack_error();
-	lptim1_status = LPTIM1_init();
-	LPTIM1_stack_error();
-	adc1_status = ADC1_init();
-	ADC1_stack_error();
-#if (defined PSFE_SERIAL_MONITORING) && !(defined DEBUG)
-	lpuart1_status = LPUART1_init(NULL);
-	LPUART1_stack_error();
-#endif
+	tim_status = TIM_STD_init(PSFE_COMMON_TIMER_INSTANCE, NVIC_PRIORITY_ADC_SAMPLING_TIMER);
+	TIM_stack_error(ERROR_BASE_TIM_ADC_SAMPLING);
+	analog_status = ANALOG_init();
+	ANALOG_stack_error(ERROR_BASE_ANALOG);
+	analog_status = ANALOG_calibrate();
+    ANALOG_stack_error(ERROR_BASE_ANALOG);
 	// Init components.
 	lcd_status = LCD_init();
 	LCD_stack_error();
 	TRCS_init();
+#ifdef PSFE_SERIAL_MONITORING
+    terminal_status = TERMINAL_open(PSFE_LOG_TERMINAL_INSTANCE, NULL);
+    TERMINAL_stack_error(ERROR_BASE_TERMINAL);
+#endif
 #ifdef PSFE_SIGFOX_MONITORING
 	td1208_status = TD1208_init();
 	TD1208_stack_error();
@@ -476,7 +470,8 @@ int main(void) {
 	uint8_t idx = 0;
 #endif
 	// Start measurements.
-	_PSFE_start();
+    TIM_status_t tim_status = TIM_STD_start(PSFE_COMMON_TIMER_INSTANCE, (PSFE_COMMON_TIMER_PERIOD_MS * MATH_POWER_10[6]), &_PSFE_common_timer_irq_callback);
+    TIM_stack_error(ERROR_BASE_TIM_ADC_SAMPLING);
 	// Main loop.
 	while (1) {
 		// Perform state machine.
@@ -554,7 +549,7 @@ int main(void) {
 #ifdef PSFE_SIGFOX_MONITORING
 		case PSFE_STATE_PERIOD_CHECK:
 			// Check Sigfox period with RTC wake-up timer.
-			if (RTC_get_time_seconds() >= psfe_ctx.sigfox_next_time_seconds) {
+			if (RTC_get_uptime_seconds() >= psfe_ctx.sigfox_next_time_seconds) {
 				// Update next time.
 				psfe_ctx.sigfox_next_time_seconds += PSFE_SIGFOX_PERIOD_SECONDS;
 				psfe_ctx.state = PSFE_STATE_SIGFOX;

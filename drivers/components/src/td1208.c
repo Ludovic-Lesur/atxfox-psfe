@@ -7,9 +7,11 @@
 
 #include "td1208.h"
 
+#include "error.h"
+#include "gpio_mapping.h"
 #include "lptim.h"
 #include "mode.h"
-#include "nvic.h"
+#include "nvic_priority.h"
 #include "parser.h"
 #include "string.h"
 #include "tim.h"
@@ -17,9 +19,13 @@
 
 /*** TD1208 local macros ***/
 
+#define TD1208_USART_INSTANCE               USART_INSTANCE_USART2
+#define TD1208_USART_BAUD_RATE              9600
+
 #define TD1208_BUFFER_LENGTH_BYTES			32
 #define TD1208_REPLY_BUFFER_DEPTH			8
 
+#define TD1208_BOOT_DELAY_MS                1000
 #define TD1208_REPLY_PARSING_DELAY_MS		100
 #define TD1208_REPLY_PARSING_TIMEOUT_MS		7000
 
@@ -98,7 +104,7 @@ static void _TD1208_reset_replies(void) {
 static TD1208_status_t _TD1208_send_command(char_t* command) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	USART_status_t usart2_status = USART_SUCCESS;
+	USART_status_t usart_status = USART_SUCCESS;
 	uint8_t char_idx = 0;
 	// Check parameter.
 	if (command == NULL) {
@@ -113,8 +119,8 @@ static TD1208_status_t _TD1208_send_command(char_t* command) {
 	td1208_ctx.command_buffer[char_idx++] = STRING_CHAR_CR;
 	td1208_ctx.command_buffer[char_idx++] = STRING_CHAR_NULL;
 	// Send command through UART.
-	usart2_status = USART2_write(td1208_ctx.command_buffer, char_idx);
-	USART2_exit_error(TD1208_ERROR_BASE_USART2);
+	usart_status = USART_write(TD1208_USART_INSTANCE, td1208_ctx.command_buffer, char_idx);
+	USART_exit_error(TD1208_ERROR_BASE_USART2);
 errors:
 	return status;
 }
@@ -126,13 +132,13 @@ static TD1208_status_t _TD1208_wait_for_string(char_t* ref) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	PARSER_status_t parser_status = PARSER_SUCCESS;
-	LPTIM_status_t lptim1_status = LPTIM_SUCCESS;
+	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	uint8_t rep_idx = 0;
 	uint32_t parsing_time = 0;
 	do {
 		// Delay.
-		lptim1_status = LPTIM1_delay_milliseconds(TD1208_REPLY_PARSING_DELAY_MS, LPTIM_DELAY_MODE_ACTIVE);
-		LPTIM1_exit_error(TD1208_ERROR_BASE_LPTIM1);
+		lptim_status = LPTIM_delay_milliseconds(TD1208_REPLY_PARSING_DELAY_MS, LPTIM_DELAY_MODE_ACTIVE);
+		LPTIM_exit_error(TD1208_ERROR_BASE_LPTIM1);
 		parsing_time += TD1208_REPLY_PARSING_DELAY_MS;
 		// Loop on all replies.
 		for (rep_idx=0 ; rep_idx<TD1208_REPLY_BUFFER_DEPTH ; rep_idx++) {
@@ -162,12 +168,18 @@ errors:
 TD1208_status_t TD1208_init(void) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	USART_status_t usart2_status = USART_SUCCESS;
+	USART_status_t usart_status = USART_SUCCESS;
+	USART_configuration_t usart_config;
 	// Init buffers.
 	_TD1208_reset_replies();
 	// Init USART.
-	usart2_status = USART2_init(&_TD1208_fill_rx_buffer);
-	USART2_exit_error(TD1208_ERROR_BASE_USART2);
+	usart_config.baud_rate = TD1208_USART_BAUD_RATE;
+	usart_config.nvic_priority = NVIC_PRIORITY_TD1208_UART;
+	usart_config.rxne_callback = &_TD1208_fill_rx_buffer;
+	usart_status = USART_init(TD1208_USART_INSTANCE, &GPIO_TD1208_USART, &usart_config);
+	USART_exit_error(TD1208_ERROR_BASE_USART2);
+	usart_status = USART_enable_rx(TD1208_USART_INSTANCE);
+	USART_exit_error(TD1208_ERROR_BASE_USART2);
 errors:
 	return status;
 }
@@ -198,8 +210,8 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 	PARSER_status_t parser_status = PARSER_SUCCESS;
 	char_t temp_char = STRING_CHAR_NULL;
 	uint8_t rep_idx = 0;
-	uint8_t line_length = 0;
-	uint8_t extracted_length = 0;
+	uint8_t line_size = 0;
+	uint32_t extracted_size = 0;
 	int8_t idx = 0;
 	// Check parameter.
 	if (sigfox_ep_id == NULL) {
@@ -224,20 +236,20 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 			}
 		}
 		// Count the number of characters.
-		line_length = 0;
+		line_size = 0;
 		for (idx=0 ; idx<TD1208_BUFFER_LENGTH_BYTES ; idx++) {
 			if (td1208_ctx.reply[rep_idx].buffer[idx] == STRING_CHAR_NULL) {
 				break;
 			}
 			else {
-				line_length++;
+			    line_size++;
 			}
 		}
 		// Check length.
-		if ((line_length > 0) && (line_length <= TD1208_SIGFOX_EP_ID_SIZE_CHAR)) {
+		if ((line_size > 0) && (line_size <= TD1208_SIGFOX_EP_ID_SIZE_CHAR)) {
 			// Shift buffer.
-			for (idx=(TD1208_SIGFOX_EP_ID_SIZE_CHAR - 1) ; idx>=(TD1208_SIGFOX_EP_ID_SIZE_CHAR - line_length) ; idx--) {
-				td1208_ctx.reply[rep_idx].buffer[idx] = td1208_ctx.reply[rep_idx].buffer[idx - line_length];
+			for (idx=(TD1208_SIGFOX_EP_ID_SIZE_CHAR - 1) ; idx>=(TD1208_SIGFOX_EP_ID_SIZE_CHAR - line_size) ; idx--) {
+				td1208_ctx.reply[rep_idx].buffer[idx] = td1208_ctx.reply[rep_idx].buffer[idx - line_size];
 			}
 			// Pad most significant symbols with zeroes.
 			for (; idx>=0 ; idx--) {
@@ -245,7 +257,7 @@ TD1208_status_t TD1208_get_sigfox_ep_id(uint8_t* sigfox_ep_id) {
 			}
 			// Try parsing ID.
 			td1208_ctx.reply[rep_idx].parser.buffer_size = TD1208_SIGFOX_EP_ID_SIZE_CHAR;
-			parser_status = PARSER_get_byte_array(&td1208_ctx.reply[rep_idx].parser, STRING_CHAR_NULL, SIGFOX_DEVICE_ID_LENGTH_BYTES, 1, sigfox_ep_id, &extracted_length);
+			parser_status = PARSER_get_byte_array(&td1208_ctx.reply[rep_idx].parser, STRING_CHAR_NULL, SIGFOX_DEVICE_ID_LENGTH_BYTES, 1, sigfox_ep_id, &extracted_size);
 			// Update status.
 			if (parser_status == PARSER_SUCCESS) {
 				status = TD1208_SUCCESS;
@@ -269,7 +281,7 @@ errors:
 TD1208_status_t TD1208_send_bit(uint8_t ul_bit) {
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
-	USART_status_t usart2_status = USART_SUCCESS;
+	USART_status_t usart_status = USART_SUCCESS;
 	// Reset parser.
 	_TD1208_reset_replies();
 	// Build AT command.
@@ -284,8 +296,8 @@ TD1208_status_t TD1208_send_bit(uint8_t ul_bit) {
 	td1208_ctx.command_buffer[8] = '2';
 	td1208_ctx.command_buffer[9] = STRING_CHAR_CR;
 	// Send command through UART.
-	usart2_status = USART2_write(td1208_ctx.command_buffer, 10);
-	USART2_exit_error(TD1208_ERROR_BASE_USART2);
+	usart_status = USART_write(TD1208_USART_INSTANCE, td1208_ctx.command_buffer, 10);
+	USART_exit_error(TD1208_ERROR_BASE_USART2);
 	// Wait for reply.
 	status = _TD1208_wait_for_string("OK");
 errors:
@@ -299,7 +311,7 @@ TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_size_b
 	// Local variables.
 	TD1208_status_t status = TD1208_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	USART_status_t usart2_status = USART_SUCCESS;
+	USART_status_t usart_status = USART_SUCCESS;
 	uint8_t idx = 0;
 	// Check parameters.
 	if (ul_payload == NULL) {
@@ -326,8 +338,8 @@ TD1208_status_t TD1208_send_frame(uint8_t* ul_payload, uint8_t ul_payload_size_b
 	idx += (2 * ul_payload_size_bytes);
 	td1208_ctx.command_buffer[idx++] = STRING_CHAR_CR;
 	// Send command through UART.
-	usart2_status = USART2_write(td1208_ctx.command_buffer, idx);
-	USART2_exit_error(TD1208_ERROR_BASE_USART2);
+	usart_status = USART_write(TD1208_USART_INSTANCE, td1208_ctx.command_buffer, idx);
+	USART_exit_error(TD1208_ERROR_BASE_USART2);
 	// Wait for reply.
 	status = _TD1208_wait_for_string("OK");
 errors:

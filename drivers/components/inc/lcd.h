@@ -29,6 +29,7 @@ typedef enum {
 	LCD_ERROR_NULL_PARAMETER,
 	LCD_ERROR_ROW_OVERFLOW,
 	LCD_ERROR_COLUMN_OVERFLOW,
+	LCD_ERROR_UNIT_SIZE_OVERFLOW,
 	// Low level drivers errors.
 	LCD_ERROR_BASE_LPTIM1 = 0x0100,
 	LCD_ERROR_BASE_STRING = (LCD_ERROR_BASE_LPTIM1 + LPTIM_ERROR_BASE_LAST),
@@ -68,15 +69,16 @@ LCD_status_t LCD_clear(void);
 LCD_status_t LCD_print_string(uint8_t row, uint8_t column, char_t* str);
 
 /*!******************************************************************
- * \fn LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t value)
- * \brief Print a 5-digits value on LCD screen.
+ * \fn LCD_status_t LCD_print_value(uint8_t row, uint8_t column, int32_t value, uint8_t divider_exponent, char_t* unit)
+ * \brief Print a value with unit on LCD screen.
  * \param[in]  	row: Row where to print.
- * \param[in]	column: Column where to print.
  * \param[in]	value: Value to print.
+ * \param[in]   divider_exponent: Input value will be divider by 10^(divider_exponent) before being represented.
+ * \param[in]   unit: Unit to display after value.
  * \param[out] 	none
  * \retval		Function execution status.
  *******************************************************************/
-LCD_status_t LCD_print_value_5_digits(uint8_t row, uint8_t column, uint32_t value);
+LCD_status_t LCD_print_value(uint8_t row, int32_t value, uint8_t divider_exponent, char_t* unit);
 
 /*******************************************************************/
 #define LCD_exit_error(error_base) { if (lcd_status != LCD_SUCCESS) { status = error_base + lcd_status; goto errors; } }

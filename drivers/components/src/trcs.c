@@ -7,14 +7,15 @@
 
 #include "trcs.h"
 
-#include "adc.h"
+#include "analog.h"
+#include "error.h"
 #include "exti.h"
 #include "gpio.h"
-#include "mapping.h"
+#include "gpio_mapping.h"
 #include "math.h"
 #include "mode.h"
+#include "mode.h"
 #include "nvic.h"
-#include "psfe.h"
 
 /*** TRCS local macros ***/
 
@@ -23,8 +24,8 @@
 #define TRCS_RANGE_RECOVERY_DELAY_MS		100		// Recovery time when switching ranges.
 #define TRCS_RANGE_STABILIZATION_DELAY_MS	100		// Delay applied after switching operation.
 
-#define TRCS_RANGE_UP_THRESHOLD_12BITS		3900	// Range will be increased if ADC result is higher.
-#define TRCS_RANGE_DOWN_THRESHOLD_12BITS	30		// Range will be decreased if ADC result is lower.
+#define TRCS_RANGE_UP_THRESHOLD_MV		    3100	// Range will be increased if TRCS output voltage is higher.
+#define TRCS_RANGE_DOWN_THRESHOLD_MV	    25		// Range will be decreased if TRCS output voltage is lower.
 
 #define TRCS_LT6105_VOLTAGE_GAIN			59		// LT6105 with 100R and 5.9k resistors.
 
@@ -45,10 +46,9 @@ typedef struct {
 	TRCS_range_t current_range;
 	TRCS_range_t previous_range;
 	uint8_t switch_pending;
-	uint32_t ref191_12bits;
-	uint32_t iout_12bits_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
-	uint8_t iout_12bits_buf_idx;
-	uint32_t iout_12bits;
+	int32_t iout_mv_buf[TRCS_ADC_SAMPLE_BUFFER_LENGTH];
+	uint8_t iout_mv_buf_idx;
+	int32_t iout_mv;
 	uint8_t bypass_flag;
 } TRCS_context_t;
 
@@ -72,21 +72,18 @@ static TRCS_range_info_t trcs_range_table[TRCS_NUMER_OF_ACTIVE_RANGES] = {
 static TRCS_status_t _TRCS_update_adc_data(void) {
 	// Local variables.
 	TRCS_status_t status = TRCS_SUCCESS;
-	ADC_status_t adc1_status = ADC_SUCCESS;
+	ANALOG_status_t analog_status = ANALOG_SUCCESS;
 	MATH_status_t math_status = MATH_SUCCESS;
-	// Get bandgap raw result.
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_REF191_12BITS, (uint32_t*) &(trcs_ctx.ref191_12bits));
-	ADC1_exit_error(TRCS_ERROR_BASE_ADC1);
-	// Add sample
-	adc1_status = ADC1_get_data(ADC_DATA_INDEX_IOUT_12BITS, (uint32_t*) &trcs_ctx.iout_12bits_buf[trcs_ctx.iout_12bits_buf_idx]);
-	ADC1_exit_error(TRCS_ERROR_BASE_ADC1);
+	// Get raw data in mV.
+	analog_status = ANALOG_convert_channel(ANALOG_CHANNEL_IOUT_MV, (int32_t*) &trcs_ctx.iout_mv_buf[trcs_ctx.iout_mv_buf_idx]);
+	ANALOG_exit_error(TRCS_ERROR_BASE_ADC);
 	// Update average.
-	math_status = MATH_average_u32((uint32_t*) trcs_ctx.iout_12bits_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (uint32_t*) &trcs_ctx.iout_12bits);
+	math_status = MATH_average((int32_t*) trcs_ctx.iout_mv_buf, TRCS_ADC_SAMPLE_BUFFER_LENGTH, (int32_t*) &trcs_ctx.iout_mv);
 	MATH_exit_error(TRCS_ERROR_BASE_MATH);
 	// Manage index.
-	trcs_ctx.iout_12bits_buf_idx++;
-	if (trcs_ctx.iout_12bits_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
-		trcs_ctx.iout_12bits_buf_idx = 0;
+	trcs_ctx.iout_mv_buf_idx++;
+	if (trcs_ctx.iout_mv_buf_idx >= TRCS_ADC_SAMPLE_BUFFER_LENGTH) {
+		trcs_ctx.iout_mv_buf_idx = 0;
 	}
 errors:
 	return status;
@@ -111,10 +108,9 @@ void TRCS_init(void) {
 	trcs_ctx.current_range = TRCS_RANGE_HIGH;
 	trcs_ctx.previous_range = TRCS_RANGE_HIGH;
 	trcs_ctx.switch_pending = 0;
-	trcs_ctx.ref191_12bits = 0;
-	for (idx=0 ; idx<TRCS_ADC_SAMPLE_BUFFER_LENGTH ; idx++) trcs_ctx.iout_12bits_buf[idx] = 0;
-	trcs_ctx.iout_12bits_buf_idx = 0;
-	trcs_ctx.iout_12bits = 0;
+	for (idx=0 ; idx<TRCS_ADC_SAMPLE_BUFFER_LENGTH ; idx++) trcs_ctx.iout_mv_buf[idx] = 0;
+	trcs_ctx.iout_mv_buf_idx = 0;
+	trcs_ctx.iout_mv = 0;
 	trcs_ctx.bypass_flag = GPIO_read(&GPIO_TRCS_BYPASS);
 }
 
@@ -147,10 +143,10 @@ TRCS_status_t TRCS_process(uint32_t process_period_ms) {
 	}
 	else {
 		// Check ADC result.
-		if (trcs_ctx.iout_12bits > TRCS_RANGE_UP_THRESHOLD_12BITS) {
+		if (trcs_ctx.iout_mv > TRCS_RANGE_UP_THRESHOLD_MV) {
 			trcs_ctx.current_range += (!trcs_ctx.switch_pending);
 		}
-		if ((trcs_ctx.iout_12bits < TRCS_RANGE_DOWN_THRESHOLD_12BITS) && (trcs_ctx.current_range > 0)) {
+		if ((trcs_ctx.iout_mv < TRCS_RANGE_DOWN_THRESHOLD_MV) && (trcs_ctx.current_range > 0)) {
 			trcs_ctx.current_range -= (!trcs_ctx.switch_pending);
 		}
 	}
@@ -201,18 +197,14 @@ TRCS_range_t TRCS_get_range(void) {
 }
 
 /*******************************************************************/
-uint32_t TRCS_get_iout(void) {
+int32_t TRCS_get_iout(void) {
 	// Local variables.
-	uint32_t iout_ua = 0;
-	uint64_t num = 0;
-	uint64_t den = 0;
+	int32_t iout_ua = 0;
+	int64_t num = 0;
+	int64_t den = 0;
 	// Current conversion.
-	num = (uint64_t) (trcs_ctx.iout_12bits);
-	num *= (uint64_t) ADC_REF191_VOLTAGE_MV;
-	num *= (uint64_t) 1000000;
-	den = (uint64_t) trcs_ctx.ref191_12bits;
-	den *= (uint64_t) TRCS_LT6105_VOLTAGE_GAIN;
-	den *= (uint64_t) trcs_range_table[trcs_ctx.current_range].resistor_mohm;
+	num = (((int64_t) trcs_ctx.iout_mv) * ((int64_t) MATH_POWER_10[6]));
+	den = (((int64_t) TRCS_LT6105_VOLTAGE_GAIN) * ((int64_t) trcs_range_table[trcs_ctx.current_range].resistor_mohm));
 	// Compute IOUT.
 	iout_ua = (den == 0) ? 0 : (uint32_t) ((num) / (den));
 	return iout_ua;

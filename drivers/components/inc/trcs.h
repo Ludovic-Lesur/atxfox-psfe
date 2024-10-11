@@ -24,8 +24,8 @@ typedef enum {
 	TRCS_ERROR_NULL_PARAMETER,
 	TRCS_ERROR_OVERFLOW,
 	// Low level drivers errors.
-	TRCS_ERROR_BASE_ADC1 = 0x0100,
-	TRCS_ERROR_BASE_MATH = (TRCS_ERROR_BASE_ADC1 + ADC_ERROR_BASE_LAST),
+	TRCS_ERROR_BASE_ADC = 0x0100,
+	TRCS_ERROR_BASE_MATH = (TRCS_ERROR_BASE_ADC + ADC_ERROR_BASE_LAST),
 	// Last base value.
 	TRCS_ERROR_BASE_LAST = (TRCS_ERROR_BASE_MATH + MATH_ERROR_BASE_LAST)
 } TRCS_status_t;
@@ -90,13 +90,13 @@ uint8_t TRCS_get_bypass_switch_state(void);
 TRCS_range_t TRCS_get_range(void);
 
 /*!******************************************************************
- * \fn uint32_t TRCS_get_iout(void)
+ * \fn int32_t TRCS_get_iout(void)
  * \brief Get TRCS measured output current.
  * \param[in]  	none
  * \param[out] 	none
  * \retval		Measured output current in uA.
  *******************************************************************/
-uint32_t TRCS_get_iout(void);
+int32_t TRCS_get_iout(void);
 
 /*******************************************************************/
 #define TRCS_exit_error(error_base) { if (trcs_status != TRCS_SUCCESS) { status = error_base + trcs_status; goto errors; } }
