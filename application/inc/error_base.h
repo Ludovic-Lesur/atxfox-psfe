@@ -24,9 +24,12 @@
 #include "string.h"
 #include "terminal.h"
 // Components.
-#include "lcd.h"
+#include "st7066u.h"
 #include "td1208.h"
 #include "trcs.h"
+// Middleware.
+#include "analog.h"
+#include "hmi.h"
 
 /*** ERROR structures ***/
 
@@ -53,13 +56,14 @@ typedef enum {
 	ERROR_BASE_STRING = (ERROR_BASE_PARSER + PARSER_ERROR_BASE_LAST),
 	ERROR_BASE_TERMINAL = (ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
 	// Components.
-	ERROR_BASE_LCD = (ERROR_BASE_TERMINAL + TERMINAL_ERROR_BASE_LAST),
-	ERROR_BASE_TD1208 = (ERROR_BASE_LCD + LCD_ERROR_BASE_LAST),
+	ERROR_BASE_ST7066U = (ERROR_BASE_TERMINAL + TERMINAL_ERROR_BASE_LAST),
+	ERROR_BASE_TD1208 = (ERROR_BASE_ST7066U + ST7066U_ERROR_BASE_LAST),
 	ERROR_BASE_TRCS = (ERROR_BASE_TD1208 + TD1208_ERROR_BASE_LAST),
 	// Middleware.
     ERROR_BASE_ANALOG = (ERROR_BASE_TRCS + TRCS_ERROR_BASE_LAST),
+    ERROR_BASE_HMI = (ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST),
 	// Last base value.
-	ERROR_BASE_LAST
+	ERROR_BASE_LAST = (ERROR_BASE_HMI + HMI_ERROR_BASE_LAST)
 } ERROR_base_t;
 
 #endif /* __ERROR_BASE_H__ */

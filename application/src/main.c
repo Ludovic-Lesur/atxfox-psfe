@@ -22,7 +22,7 @@
 #include "tim.h"
 #include "usart.h"
 // Components.
-#include "lcd.h"
+#include "st7066u_driver_flags.h"
 #include "td1208.h"
 #include "trcs.h"
 // Utils.
@@ -31,6 +31,7 @@
 #include "terminal.h"
 // Middleware
 #include "analog.h"
+#include "hmi.h"
 // Applicative.
 #include "error_base.h"
 #include "mode.h"
@@ -144,13 +145,13 @@ static PSFE_context_t psfe_ctx;
 /*******************************************************************/
 void _PSFE_print_hw_version(void) {
 	// Local variables.
-	LCD_status_t lcd_status = LCD_SUCCESS;
+	HMI_status_t hmi_status = HMI_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	// Print version.
-	lcd_status = LCD_print_string(0, 0, " ATXFox ");
-	LCD_stack_error();
-	lcd_status = LCD_print_string(1, 0, " HW 1.0 ");
-	LCD_stack_error();
+	hmi_status = HMI_print_string(0, 0, " ATXFox ");
+	HMI_stack_error(ERROR_BASE_HMI);
+	hmi_status = HMI_print_string(1, 0, " HW 1.0 ");
+	HMI_stack_error(ERROR_BASE_HMI);
 	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
@@ -159,10 +160,10 @@ void _PSFE_print_hw_version(void) {
 /*******************************************************************/
 void _PSFE_print_sw_version(void) {
 	// Local variables.
-	LCD_status_t lcd_status = LCD_SUCCESS;
+	HMI_status_t hmi_status = HMI_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
-	char_t sw_version_string[LCD_WIDTH_CHAR];
+	char_t sw_version_string[ST7066U_DRIVER_SCREEN_WIDTH];
 	// Build string.
 	string_status = STRING_integer_to_string((GIT_MAJOR_VERSION / 10), STRING_FORMAT_DECIMAL, 0, &(sw_version_string[0]));
 	STRING_stack_error(ERROR_BASE_STRING);
@@ -180,14 +181,14 @@ void _PSFE_print_sw_version(void) {
 	STRING_stack_error(ERROR_BASE_STRING);
 	// Print version.
 	if (GIT_DIRTY_FLAG == 0) {
-		lcd_status = LCD_print_string(0, 0, "   sw   ");
+		hmi_status = HMI_print_string(0, 0, "   sw   ");
 	}
 	else {
-		lcd_status = LCD_print_string(0, 0, "sw dirty");
+		hmi_status = HMI_print_string(0, 0, "sw dirty");
 	}
-	LCD_stack_error();
-	lcd_status = LCD_print_string(1, 0, sw_version_string);
-	LCD_stack_error();
+	HMI_stack_error(ERROR_BASE_HMI);
+	hmi_status = HMI_print_string(1, 0, sw_version_string);
+	HMI_stack_error(ERROR_BASE_HMI);
 	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
@@ -199,7 +200,7 @@ void _PSFE_print_sigfox_ep_id(void) {
 	// Local variables.
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
 	STRING_status_t string_status = STRING_SUCCESS;
-	LCD_status_t lcd_status = LCD_SUCCESS;
+	HMI_status_t hmi_status = HMI_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
 	uint8_t sigfox_ep_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
 	char_t sigfox_ep_id_str[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
@@ -212,16 +213,16 @@ void _PSFE_print_sigfox_ep_id(void) {
 		string_status = STRING_integer_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));
 		STRING_stack_error(ERROR_BASE_STRING);
 	}
-	lcd_status = LCD_print_string(0, 0, " EP  ID ");
-	LCD_stack_error();
+	hmi_status = HMI_print_string(0, 0, " EP  ID ");
+	HMI_stack_error(ERROR_BASE_HMI);
 	// Print ID.
 	if (td1208_status == TD1208_SUCCESS) {
-		lcd_status = LCD_print_string(1, 0, sigfox_ep_id_str);
+		hmi_status = HMI_print_string(1, 0, sigfox_ep_id_str);
 	}
 	else {
-		lcd_status = LCD_print_string(1, 0, "TD ERROR");
+		hmi_status = HMI_print_string(1, 0, "TD ERROR");
 	}
-	LCD_stack_error();
+	HMI_stack_error(ERROR_BASE_HMI);
 	lptim_status = LPTIM_delay_milliseconds(2000, LPTIM_DELAY_MODE_ACTIVE);
 	LPTIM_stack_error(ERROR_BASE_LPTIM);
 	IWDG_reload();
@@ -294,7 +295,7 @@ void __attribute__((optimize("-O0"))) _PSFE_adc_sampling_callback(void) {
 /*******************************************************************/
 void _PSFE_lcd_uart_callback(void) {
 	// Local variables.
-	LCD_status_t lcd_status = LCD_SUCCESS;
+	HMI_status_t hmi_status = HMI_SUCCESS;
 #ifdef PSFE_SERIAL_MONITORING
 	TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
 #endif
@@ -302,27 +303,27 @@ void _PSFE_lcd_uart_callback(void) {
 	if (psfe_ctx.por_flag == 0) {
 		// LCD VOUT display.
 		if (psfe_ctx.vout_mv > PSFE_VOUT_ERROR_THRESHOLD_MV) {
-			lcd_status = LCD_print_value(0, psfe_ctx.vout_mv, 3, "V");
-			LCD_stack_error();
+			hmi_status = HMI_print_value(0, psfe_ctx.vout_mv, 3, "V");
+			HMI_stack_error(ERROR_BASE_HMI);
 		}
 		else {
-			lcd_status = LCD_print_string(0, 0, "NO INPUT");
-			LCD_stack_error();
+			hmi_status = HMI_print_string(0, 0, "NO INPUT");
+			HMI_stack_error(ERROR_BASE_HMI);
 		}
 		// LCD IOUT display.
 		if (TRCS_get_bypass_switch_state() == 0) {
 		    if (psfe_ctx.iout_ua < 1000) {
-		        lcd_status = LCD_print_value(1, psfe_ctx.iout_ua, 0, "ua");
-                LCD_stack_error();
+		        hmi_status = HMI_print_value(1, psfe_ctx.iout_ua, 0, "ua");
+                HMI_stack_error(ERROR_BASE_HMI);
 		    }
 		    else {
-		        lcd_status = LCD_print_value(1, psfe_ctx.iout_ua, 3, "ma");
-                LCD_stack_error();
+		        hmi_status = HMI_print_value(1, psfe_ctx.iout_ua, 3, "ma");
+                HMI_stack_error(ERROR_BASE_HMI);
 		    }
 		}
 		else {
-			lcd_status = LCD_print_string(1, 0, " BYPASS ");
-			LCD_stack_error();
+			hmi_status = HMI_print_string(1, 0, " BYPASS ");
+			HMI_stack_error(ERROR_BASE_HMI);
 		}
 	}
 #ifdef PSFE_SERIAL_MONITORING
@@ -376,7 +377,6 @@ static void _PSFE_init_hw(void) {
 	RCC_status_t rcc_status = RCC_SUCCESS;
 	ANALOG_status_t analog_status = ANALOG_SUCCESS;
 	TIM_status_t tim_status = TIM_SUCCESS;
-	LCD_status_t lcd_status = LCD_SUCCESS;
 #ifdef PSFE_SERIAL_MONITORING
 	TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
 #endif
@@ -398,6 +398,8 @@ static void _PSFE_init_hw(void) {
 	// Start clocks.
 	rcc_status = RCC_switch_to_hsi();
 	RCC_stack_error(ERROR_BASE_RCC);
+	rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
+	RCC_stack_error(ERROR_BASE_RCC);
 	// Init watchdog.
 #ifndef DEBUG
 	iwdg_status = IWDG_init();
@@ -417,8 +419,6 @@ static void _PSFE_init_hw(void) {
 	analog_status = ANALOG_calibrate();
     ANALOG_stack_error(ERROR_BASE_ANALOG);
 	// Init components.
-	lcd_status = LCD_init();
-	LCD_stack_error();
 	TRCS_init();
 #ifdef PSFE_SERIAL_MONITORING
     terminal_status = TERMINAL_open(PSFE_LOG_TERMINAL_INSTANCE, NULL);
@@ -463,7 +463,7 @@ int main(void) {
 	_PSFE_init_hw();
 	_PSFE_init_context();
 	// Local variables.
-	LCD_status_t lcd_status = LCD_SUCCESS;
+	HMI_status_t hmi_status = HMI_SUCCESS;
 #ifdef PSFE_SIGFOX_MONITORING
 	TD1208_status_t td1208_status = TD1208_SUCCESS;
 	ERROR_code_t error_code = 0;
@@ -496,6 +496,9 @@ int main(void) {
 			IWDG_reload();
 			break;
 		case PSFE_STATE_POR:
+		    // Init HMI.
+		    hmi_status = HMI_init();
+            HMI_stack_error(ERROR_BASE_HMI);
 			// Init TRCS board to supply output.
 			TRCS_init();
 #ifdef PSFE_SIGFOX_MONITORING
@@ -527,10 +530,10 @@ int main(void) {
 				psfe_ctx.startup_frame_sent = 1;
 			}
 			// Send start message through Sigfox.
-			lcd_status = LCD_print_string(0, 0, " ATXFox ");
-			LCD_stack_error();
-			lcd_status = LCD_print_string(1, 0, "starting");
-			LCD_stack_error();
+			hmi_status = HMI_print_string(0, 0, " ATXFox ");
+			HMI_stack_error(ERROR_BASE_HMI);
+			hmi_status = HMI_print_string(1, 0, "starting");
+			HMI_stack_error(ERROR_BASE_HMI);
 			IWDG_reload();
 			// Check status.
 			td1208_status = TD1208_send_bit(1);
@@ -603,8 +606,8 @@ int main(void) {
 				// Update flag.
 				psfe_ctx.por_flag = 1;
 				// Clear LCD.
-				lcd_status = LCD_clear();
-				LCD_stack_error();
+				hmi_status = HMI_clear();
+				HMI_stack_error(ERROR_BASE_HMI);
 #ifdef PSFE_SIGFOX_MONITORING
 				// Send bit 0.
 				td1208_status = TD1208_send_bit(0);
