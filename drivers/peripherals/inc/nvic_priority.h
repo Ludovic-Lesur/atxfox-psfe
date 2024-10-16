@@ -18,14 +18,14 @@ typedef enum {
     NVIC_PRIORITY_CLOCK_CALIBRATION = 1,
     NVIC_PRIORITY_DELAY = 2,
     NVIC_PRIORITY_RTC = 3,
-    // ADC sampling.
-    NVIC_PRIORITY_ADC_SAMPLING_TIMER = 0,
-    // TRCS bypass switch.
-    NVIC_PRIORITY_TRCS_BYPASS = 1,
     // TD1208.
-    NVIC_PRIORITY_TD1208_UART = 2,
+    NVIC_PRIORITY_TD1208_UART = 0,
+    // ADC sampling.
+    NVIC_PRIORITY_ADC_SAMPLING_TIMER = 1,
+    // TRCS bypass switch.
+    NVIC_PRIORITY_TRCS_BYPASS = 2,
     // Log interface
-    NVIC_PRIORITY_LOG = 2,
+    NVIC_PRIORITY_LOG = 3,
 } NVIC_priority_list_t;
 
 #endif /* __NVIC_PRIORITY_H__ */

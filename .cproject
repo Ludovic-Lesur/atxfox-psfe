@@ -60,6 +60,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/st7066u-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/td1208-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/hmi/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/application/inc&quot;"/>
@@ -84,6 +85,7 @@
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/utils/embedded-utils/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/st7066u-driver/inc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/drivers/components/td1208-driver/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/analog/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/middleware/hmi/inc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${ProjDirPath}/application/inc&quot;"/>

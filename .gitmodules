@@ -10,3 +10,6 @@
 [submodule "st7066u-driver"]
     path = drivers/components/st7066u-driver
     url = https://github.com/Ludovic-Lesur/st7066u-driver.git
+[submodule "td1208-driver"]
+    path = drivers/components/td1208-driver
+    url = https://github.com/Ludovic-Lesur/td1208-driver.git

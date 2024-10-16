@@ -129,7 +129,7 @@ typedef struct {
 	volatile TRCS_range_t trcs_range;
 #ifdef PSFE_SIGFOX_MONITORING
 	uint32_t sigfox_next_time_seconds;
-	uint8_t sigfox_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
+	uint8_t sigfox_id[TD1208_SIGFOX_EP_ID_SIZE_BYTES];
 	PSFE_sigfox_startup_data_t sigfox_startup_data;
 	PSFE_sigfox_monitoring_data_t sigfox_monitoring_data;
 	uint8_t sigfox_error_stack_data[PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH];
@@ -202,14 +202,14 @@ void _PSFE_print_sigfox_ep_id(void) {
 	STRING_status_t string_status = STRING_SUCCESS;
 	HMI_status_t hmi_status = HMI_SUCCESS;
 	LPTIM_status_t lptim_status = LPTIM_SUCCESS;
-	uint8_t sigfox_ep_id[SIGFOX_DEVICE_ID_LENGTH_BYTES];
-	char_t sigfox_ep_id_str[2 * SIGFOX_DEVICE_ID_LENGTH_BYTES];
+	uint8_t sigfox_ep_id[TD1208_SIGFOX_EP_ID_SIZE_BYTES];
+	char_t sigfox_ep_id_str[TD1208_SIGFOX_EP_ID_SIZE_BYTES * MATH_U8_SIZE_HEXADECIMAL_DIGITS];
 	uint8_t idx = 0;
 	// Read EP-ID.
 	td1208_status = TD1208_get_sigfox_ep_id((uint8_t*) sigfox_ep_id);
-	TD1208_stack_error();
+	TD1208_stack_error(ERROR_BASE_TD1208);
 	// Build corresponding string.
-	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) {
+	for (idx=0 ; idx<TD1208_SIGFOX_EP_ID_SIZE_BYTES ; idx++) {
 		string_status = STRING_integer_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));
 		STRING_stack_error(ERROR_BASE_STRING);
 	}
@@ -389,29 +389,32 @@ static void _PSFE_init_hw(void) {
 #endif
 	// Init memory.
 	NVIC_init();
-	// Init GPIOs.
-	GPIO_init();
-	EXTI_init();
-	// Init clock.
-	RCC_init(NVIC_PRIORITY_CLOCK);
+	// Init power module and clock tree.
 	PWR_init();
-	// Start clocks.
+	rcc_status = RCC_init(NVIC_PRIORITY_CLOCK);
+	RCC_stack_error(ERROR_BASE_RCC);
+	// Init GPIOs.
+    GPIO_init();
+    EXTI_init();
+#ifndef DEBUG
+    // Start independent watchdog.
+    iwdg_status = IWDG_init();
+    IWDG_stack_error(ERROR_BASE_IWDG);
+#endif
+    // High speed oscillator.
 	rcc_status = RCC_switch_to_hsi();
 	RCC_stack_error(ERROR_BASE_RCC);
+	// Calibrate clocks.
 	rcc_status = RCC_calibrate_internal_clocks(NVIC_PRIORITY_CLOCK_CALIBRATION);
 	RCC_stack_error(ERROR_BASE_RCC);
-	// Init watchdog.
-#ifndef DEBUG
-	iwdg_status = IWDG_init();
-	IWDG_stack_error(ERROR_BASE_IWDG);
-	IWDG_reload();
-#endif
-	// Init peripherals.
-	LPTIM_init(NVIC_PRIORITY_DELAY);
 #ifdef PSFE_SIGFOX_MONITORING
+	// Init RTC.
 	rtc_status = RTC_init(NULL, NVIC_PRIORITY_RTC);
 	RTC_stack_error(ERROR_BASE_RTC);
 #endif
+	// Init delay timer.
+	LPTIM_init(NVIC_PRIORITY_DELAY);
+	// Init peripherals.
 	tim_status = TIM_STD_init(PSFE_COMMON_TIMER_INSTANCE, NVIC_PRIORITY_ADC_SAMPLING_TIMER);
 	TIM_stack_error(ERROR_BASE_TIM_ADC_SAMPLING);
 	analog_status = ANALOG_init();
@@ -426,7 +429,7 @@ static void _PSFE_init_hw(void) {
 #endif
 #ifdef PSFE_SIGFOX_MONITORING
 	td1208_status = TD1208_init();
-	TD1208_stack_error();
+	TD1208_stack_error(ERROR_BASE_TD1208);
 #endif
 }
 
@@ -449,7 +452,7 @@ void _PSFE_init_context(void) {
 #ifdef PSFE_SIGFOX_MONITORING
 	psfe_ctx.startup_frame_sent = 0;
 	psfe_ctx.sigfox_next_time_seconds = PSFE_SIGFOX_PERIOD_SECONDS;
-	for (idx=0 ; idx<SIGFOX_DEVICE_ID_LENGTH_BYTES ; idx++) psfe_ctx.sigfox_id[idx] = 0x00;
+	for (idx=0 ; idx<TD1208_SIGFOX_EP_ID_SIZE_BYTES ; idx++) psfe_ctx.sigfox_id[idx] = 0x00;
 	for (idx=0 ; idx<PSFE_SIGFOX_MONITORING_DATA_LENGTH ; idx++) psfe_ctx.sigfox_monitoring_data.frame[idx] = 0x00;
 	for (idx=0 ; idx<PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH ; idx++) psfe_ctx.sigfox_error_stack_data[idx] = 0x00;
 #endif
@@ -504,13 +507,12 @@ int main(void) {
 #ifdef PSFE_SIGFOX_MONITORING
 			// Reset Sigfox module.
 			td1208_status = TD1208_reset();
-			TD1208_stack_error();
+			TD1208_stack_error(ERROR_BASE_TD1208);
 			IWDG_reload();
 #endif
 			// Init screens.
 			_PSFE_print_hw_version();
 			_PSFE_print_sw_version();
-			IWDG_reload();
 #ifdef PSFE_SIGFOX_MONITORING
 			// Read Sigfox EP-ID from module.
 			_PSFE_print_sigfox_ep_id();
@@ -525,7 +527,7 @@ int main(void) {
 				psfe_ctx.sigfox_startup_data.dirty_flag = GIT_DIRTY_FLAG;
 				// Send startup message through Sigfox.
 				td1208_status = TD1208_send_frame(psfe_ctx.sigfox_startup_data.frame, PSFE_SIGFOX_STARTUP_DATA_LENGTH);
-				TD1208_stack_error();
+				TD1208_stack_error(ERROR_BASE_TD1208);
 				// Update flag.
 				psfe_ctx.startup_frame_sent = 1;
 			}
@@ -537,7 +539,7 @@ int main(void) {
 			IWDG_reload();
 			// Check status.
 			td1208_status = TD1208_send_bit(1);
-			TD1208_stack_error();
+			TD1208_stack_error(ERROR_BASE_TD1208);
 #endif
 			// Update flags.
 			psfe_ctx.por_flag = 0;
@@ -578,7 +580,7 @@ int main(void) {
 			psfe_ctx.sigfox_monitoring_data.tmcu_degrees = psfe_ctx.tmcu_degrees;
 			// Send monitoring data.
 			td1208_status = TD1208_send_frame(psfe_ctx.sigfox_monitoring_data.frame, PSFE_SIGFOX_MONITORING_DATA_LENGTH);
-			TD1208_stack_error();
+			TD1208_stack_error(ERROR_BASE_TD1208);
 			// Check stack.
 			if (ERROR_stack_is_empty() == 0) {
 				// Read error stack.
@@ -589,7 +591,7 @@ int main(void) {
 				}
 				// Send error stack data.
 				td1208_status = TD1208_send_frame(psfe_ctx.sigfox_error_stack_data, PSFE_SIGFOX_ERROR_STACK_DATA_LENGTH);
-				TD1208_stack_error();
+				TD1208_stack_error(ERROR_BASE_TD1208);
 				// Reset error stack.
 				ERROR_stack_init();
 			}
@@ -611,7 +613,7 @@ int main(void) {
 #ifdef PSFE_SIGFOX_MONITORING
 				// Send bit 0.
 				td1208_status = TD1208_send_bit(0);
-				TD1208_stack_error();
+				TD1208_stack_error(ERROR_BASE_TD1208);
 #endif
 			}
 			// Compute next state
