@@ -11,10 +11,9 @@
 /*** Board modes ***/
 
 //#define DEBUG
-
 /*** Board options ***/
 
-#define PSFE_BOARD_NUMBER	    1 // 1.0.x
+#define PSFE_BOARD_NUMBER       1 // 1.0.x
 
 //#define PSFE_SERIAL_MONITORING
 //#define PSFE_SIGFOX_MONITORING

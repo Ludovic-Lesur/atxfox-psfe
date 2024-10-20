@@ -34,13 +34,13 @@
 typedef union {
     uint8_t frame[SIGFOX_STARTUP_DATA_LENGTH];
     struct {
-        unsigned reset_reason : 8;
-        unsigned major_version : 8;
-        unsigned minor_version : 8;
-        unsigned commit_index : 8;
-        unsigned commit_id : 28;
-        unsigned dirty_flag : 4;
-    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
+        unsigned reset_reason :8;
+        unsigned major_version :8;
+        unsigned minor_version :8;
+        unsigned commit_index :8;
+        unsigned commit_id :28;
+        unsigned dirty_flag :4;
+    } __attribute__((scalar_storage_order("big-endian")))__attribute__((packed));
 } SIGFOX_startup_data_t;
 
 /*******************************************************************/
@@ -48,21 +48,21 @@ typedef struct {
     union {
         uint8_t frame[SIGFOX_MONITORING_DATA_LENGTH];
         struct {
-            unsigned vout_mv : 16;
-            unsigned iout_range : 8;
-            unsigned iout_ua : 24;
-            unsigned vmcu_mv : 16;
-            unsigned tmcu_degrees : 8;
-        } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
+            unsigned vout_mv :16;
+            unsigned iout_range :8;
+            unsigned iout_ua :24;
+            unsigned vmcu_mv :16;
+            unsigned tmcu_degrees :8;
+        } __attribute__((scalar_storage_order("big-endian")))__attribute__((packed));
     };
 } SIGFOX_monitoring_data_t;
 
 /*******************************************************************/
 typedef union {
     struct {
-        unsigned ep_id_read : 1;
-        unsigned startup_frame_sent : 1;
-        unsigned enable : 1;
+        unsigned ep_id_read :1;
+        unsigned startup_frame_sent :1;
+        unsigned enable :1;
     };
     uint8_t all;
 } SIGFOX_flags_t;
@@ -171,7 +171,7 @@ SIGFOX_status_t SIGFOX_process(void) {
             // Set flag.
             sigfox_ctx.flags.startup_frame_sent = 1;
             // Build startup frame.
-            startup_frame.reset_reason = ((RCC -> CSR) >> 24) & 0xFF;
+            startup_frame.reset_reason = ((RCC->CSR) >> 24) & 0xFF;
             startup_frame.major_version = GIT_MAJOR_VERSION;
             startup_frame.minor_version = GIT_MINOR_VERSION;
             startup_frame.commit_index = GIT_COMMIT_INDEX;
@@ -209,7 +209,7 @@ SIGFOX_status_t SIGFOX_process(void) {
         // Check stack.
         if (ERROR_stack_is_empty() == 0) {
             // Read error stack.
-            for (idx=0 ; idx<(SIGFOX_ERROR_STACK_DATA_LENGTH >> 1) ; idx++) {
+            for (idx = 0; idx < (SIGFOX_ERROR_STACK_DATA_LENGTH >> 1); idx++) {
                 error_code = ERROR_stack_read();
                 error_stack_frame[(idx << 1) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
                 error_stack_frame[(idx << 1) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);

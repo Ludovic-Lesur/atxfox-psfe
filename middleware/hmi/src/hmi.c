@@ -64,7 +64,7 @@ static HMI_status_t _HMI_print_value(uint8_t row, int32_t value, uint8_t divider
     HMI_status_t status = HMI_SUCCESS;
     ST7066U_status_t st7066u_status = ST7066U_SUCCESS;
     STRING_status_t string_status = STRING_SUCCESS;
-    char_t lcd_string[ST7066U_DRIVER_SCREEN_WIDTH] = {STRING_CHAR_NULL};
+    char_t lcd_string[ST7066U_DRIVER_SCREEN_WIDTH] = { STRING_CHAR_NULL };
     uint8_t number_of_digits = 0;
     uint32_t str_size = 0;
     // Check if unit is provided.
@@ -165,7 +165,7 @@ static HMI_status_t _HMI_print_sigfox_ep_id(void) {
     sigfox_status = SIGFOX_get_ep_id((uint8_t*) sigfox_ep_id);
     SIGFOX_stack_error(ERROR_BASE_SIGFOX);
     // Build corresponding string.
-    for (idx=0 ; idx<TD1208_SIGFOX_EP_ID_SIZE_BYTES ; idx++) {
+    for (idx = 0; idx < TD1208_SIGFOX_EP_ID_SIZE_BYTES; idx++) {
         string_status = STRING_integer_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));
         STRING_exit_error(HMI_ERROR_BASE_STRING);
     }
@@ -207,26 +207,26 @@ static HMI_status_t _HMI_process(void) {
         // Check delay.
         if (hmi_ctx.uptime_ms >= (hmi_ctx.state_switch_time_ms + HMI_HW_VERSION_PRINT_DURATION_MS)) {
             // Print SW version.
-           _HMI_print_sw_version();
-           // Update state.
-           hmi_ctx.state_switch_time_ms = hmi_ctx.uptime_ms;
-           hmi_ctx.state = HMI_STATE_SW_VERSION;
+            _HMI_print_sw_version();
+            // Update state.
+            hmi_ctx.state_switch_time_ms = hmi_ctx.uptime_ms;
+            hmi_ctx.state = HMI_STATE_SW_VERSION;
         }
         break;
     case HMI_STATE_SW_VERSION:
         // Check delay.
         if (hmi_ctx.uptime_ms >= (hmi_ctx.state_switch_time_ms + HMI_SW_VERSION_PRINT_DURATION_MS)) {
 #ifdef PSFE_SIGFOX_MONITORING
-           // Print SW version.
-          _HMI_print_sigfox_ep_id();
-          // Update state.
-          hmi_ctx.state_switch_time_ms = hmi_ctx.uptime_ms;
-          hmi_ctx.state = HMI_STATE_SIGFOX_EP_ID;
+            // Print SW version.
+            _HMI_print_sigfox_ep_id();
+            // Update state.
+            hmi_ctx.state_switch_time_ms = hmi_ctx.uptime_ms;
+            hmi_ctx.state = HMI_STATE_SIGFOX_EP_ID;
 #else
-          hmi_ctx.state = HMI_STATE_ANALOG_DATA;
+            hmi_ctx.state = HMI_STATE_ANALOG_DATA;
 #endif
-       }
-       break;
+        }
+        break;
 #ifdef PSFE_SIGFOX_MONITORING
     case HMI_STATE_SIGFOX_EP_ID:
         // Check delay.

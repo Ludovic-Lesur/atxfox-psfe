@@ -51,11 +51,11 @@ errors:
 /*******************************************************************/
 TRCS_status_t TRCS_HW_de_init(void) {
     // Local variables.
-   TRCS_status_t status = TRCS_SUCCESS;
-   TIM_status_t tim_status = TIM_SUCCESS;
-   // Release sampling timer.
-   tim_status = TIM_STD_de_init(TRCS_HW_TIMER_INSTANCE);
-   TIM_exit_error(TRCS_ERROR_BASE_TIMER);
+    TRCS_status_t status = TRCS_SUCCESS;
+    TIM_status_t tim_status = TIM_SUCCESS;
+    // Release sampling timer.
+    tim_status = TIM_STD_de_init(TRCS_HW_TIMER_INSTANCE);
+    TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;
 }

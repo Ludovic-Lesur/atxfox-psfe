@@ -49,9 +49,9 @@
 /*******************************************************************/
 typedef union {
     struct {
-        unsigned trcs_started : 1;
-        unsigned trcs_enable : 1;
-        unsigned trcs_bypass : 1;
+        unsigned trcs_started :1;
+        unsigned trcs_enable :1;
+        unsigned trcs_bypass :1;
     };
     uint8_t all;
 } ANALOG_flags_t;

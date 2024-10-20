@@ -33,7 +33,7 @@ TD1208_status_t TD1208_HW_init(TD1208_HW_configuration_t* configuration) {
     USART_status_t usart_status = USART_SUCCESS;
     USART_configuration_t usart_config;
     // Init USART.
-    usart_config.baud_rate = (configuration->uart_baud_rate) ;
+    usart_config.baud_rate = (configuration->uart_baud_rate);
     usart_config.nvic_priority = NVIC_PRIORITY_TD1208_UART;
     usart_config.rxne_callback = (configuration->rx_irq_callback);
     usart_status = USART_init(TD1208_HW_USART_INSTANCE, &GPIO_TD1208_USART, &usart_config);
