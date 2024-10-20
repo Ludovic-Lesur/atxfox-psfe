@@ -8,8 +8,11 @@
 #ifndef __HMI_H__
 #define __HMI_H__
 
+#include "analog.h"
+#include "sigfox.h"
 #include "st7066u.h"
 #include "string.h"
+#include "tim.h"
 #include "types.h"
 
 /*** HMI structures ***/
@@ -21,12 +24,16 @@
 typedef enum {
     // Driver errors.
     HMI_SUCCESS = 0,
+    HMI_ERROR_STATE,
     HMI_ERROR_UNIT_SIZE_OVERFLOW,
     // Low level drivers errors.
-    HMI_ERROR_BASE_STRING = 0x0100,
+    HMI_ERROR_BASE_TIM = 0x0100,
+    HMI_ERROR_BASE_STRING = (HMI_ERROR_BASE_TIM + TIM_ERROR_BASE_LAST),
     HMI_ERROR_BASE_ST7066U = (HMI_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
+    HMI_ERROR_BASE_SIGFOX = (HMI_ERROR_BASE_ST7066U + ST7066U_ERROR_BASE_LAST),
+    HMI_ERROR_BASE_ANALOG = (HMI_ERROR_BASE_SIGFOX + SIGFOX_ERROR_BASE_LAST),
     // Last base value.
-    HMI_ERROR_BASE_LAST = (HMI_ERROR_BASE_ST7066U + ST7066U_ERROR_BASE_LAST)
+    HMI_ERROR_BASE_LAST = (HMI_ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST)
 } HMI_status_t;
 
 /*** HMI functions ***/
@@ -50,36 +57,22 @@ HMI_status_t HMI_init(void);
 HMI_status_t HMI_de_init(void);
 
 /*!******************************************************************
- * \fn HMI_status_t HMI_clear(void)
- * \brief Clear LCD screen.
+ * \fn HMI_status_t HMI_start(void)
+ * \brief Start HMI.
  * \param[in]   none
  * \param[out]  none
  * \retval      Function execution status.
  *******************************************************************/
-HMI_status_t HMI_clear(void);
+HMI_status_t HMI_start(void);
 
 /*!******************************************************************
- * \fn HMI_status_t HMI_print_string(uint8_t row, uint8_t column, char_t* str)
- * \brief Print a string on LCD screen.
- * \param[in]   row: Row where to print.
- * \param[in]   column: Column where to print.
- * \param[in]   str: String to print.
+ * \fn HMI_status_t HMI_stop(void)
+ * \brief Stop HMI.
+ * \param[in]   none
  * \param[out]  none
  * \retval      Function execution status.
  *******************************************************************/
-HMI_status_t HMI_print_string(uint8_t row, uint8_t column, char_t* str);
-
-/*!******************************************************************
- * \fn HMI_status_t HMI_print_value(uint8_t row, int32_t value, uint8_t divider_exponent, char_t* unit)
- * \brief Print a value with unit on LCD screen.
- * \param[in]   row: Row where to print.
- * \param[in]   value: Value to print.
- * \param[in]   divider_exponent: Input value will be divider by 10^(divider_exponent) before being represented.
- * \param[in]   unit: Unit to display after value (can be NULL).
- * \param[out]  none
- * \retval      Function execution status.
- *******************************************************************/
-HMI_status_t HMI_print_value(uint8_t row, int32_t value, uint8_t divider_exponent, char_t* unit);
+HMI_status_t HMI_stop(void);
 
 /*******************************************************************/
 #define HMI_exit_error(base) { ERROR_check_exit(hmi_status, HMI_SUCCESS, base) }

@@ -20,12 +20,13 @@ typedef enum {
     NVIC_PRIORITY_RTC = 3,
     // TD1208.
     NVIC_PRIORITY_TD1208_UART = 0,
-    // ADC sampling.
-    NVIC_PRIORITY_ADC_SAMPLING_TIMER = 1,
-    // TRCS bypass switch.
-    NVIC_PRIORITY_TRCS_BYPASS = 2,
+    // Analog measurements
+    NVIC_PRIORITY_TRCS_TIMER = 1,
+    NVIC_PRIORITY_ANALOG_TIMER = 2,
+    // HMI.
+    NVIC_PRIORITY_HMI_TIMER = 3,
     // Log interface
-    NVIC_PRIORITY_LOG = 3,
+    NVIC_PRIORITY_SERIAL = 3,
 } NVIC_priority_list_t;
 
 #endif /* __NVIC_PRIORITY_H__ */

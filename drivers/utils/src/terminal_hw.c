@@ -19,7 +19,7 @@
 
 /*** TERMINAL HW local macros ***/
 
-#define TERMINAL_LOG_BAUD_RATE  9600
+#define TERMINAL_BAUD_RATE  9600
 
 /*** TERMINAL HW functions ***/
 
@@ -29,16 +29,14 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_HW_rx_irq_cb_t rx_
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#ifdef DEBUG
-    UNUSED(rx_irq_callback);
-#else
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     LPUART_configuration_t lpuart_config;
     // Init print interface.
-    lpuart_config.baud_rate = TERMINAL_LOG_BAUD_RATE;
-    lpuart_config.nvic_priority = NVIC_PRIORITY_LOG;
+    lpuart_config.baud_rate = TERMINAL_BAUD_RATE;
+    lpuart_config.nvic_priority = NVIC_PRIORITY_SERIAL;
     lpuart_config.rxne_callback = rx_irq_callback;
-    lpuart_status = LPUART_init(&GPIO_LOG_LPUART, &lpuart_config);
+    lpuart_status = LPUART_init(&GPIO_SERIAL_LPUART, &lpuart_config);
     LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
     // Start reception if needed.
     if (rx_irq_callback != NULL) {
@@ -46,6 +44,8 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_HW_rx_irq_cb_t rx_
         LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
     }
 errors:
+#else
+    UNUSED(rx_irq_callback);
 #endif
     return status;
 }
@@ -56,10 +56,10 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#ifndef DEBUG
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release print interface.
-    lpuart_status = LPUART_de_init(&GPIO_LOG_LPUART);
+    lpuart_status = LPUART_de_init(&GPIO_SERIAL_LPUART);
     LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
 errors:
 #endif
@@ -72,7 +72,7 @@ TERMINAL_status_t TERMINAL_HW_write(uint8_t instance, uint8_t* data, uint32_t da
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#ifndef DEBUG
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Write data.
     lpuart_status = LPUART_write(data, data_size_bytes);

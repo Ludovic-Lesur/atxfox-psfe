@@ -11,6 +11,7 @@
 #include "adc.h"
 #include "gpio.h"
 #include "lpuart.h"
+#include "mode.h"
 #include "usart.h"
 
 /*** GPIO MAPPING structures ***/
@@ -46,9 +47,13 @@ extern const GPIO_pin_t GPIO_TRCS_BYPASS;
 extern const GPIO_pin_t GPIO_TRCS_RANGE_LOW;
 extern const GPIO_pin_t GPIO_TRCS_RANGE_MIDDLE;
 extern const GPIO_pin_t GPIO_TRCS_RANGE_HIGH;
+#ifdef PSFE_SERIAL_MONITORING
+// Serial interface.
+extern const LPUART_gpio_t GPIO_SERIAL_LPUART;
+#endif
+#ifdef PSFE_SIGFOX_MONITORING
 // TD1208.
 extern const USART_gpio_t GPIO_TD1208_USART;
-// Log interface.
-extern const LPUART_gpio_t GPIO_LOG_LPUART;
+#endif
 
 #endif /* __GPIO_MAPPING_H__ */

@@ -30,6 +30,8 @@
 // Middleware.
 #include "analog.h"
 #include "hmi.h"
+#include "serial.h"
+#include "sigfox.h"
 
 /*** ERROR structures ***/
 
@@ -62,8 +64,10 @@ typedef enum {
 	// Middleware.
     ERROR_BASE_ANALOG = (ERROR_BASE_TRCS + TRCS_ERROR_BASE_LAST),
     ERROR_BASE_HMI = (ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST),
+    ERROR_BASE_SERIAL = (ERROR_BASE_HMI + HMI_ERROR_BASE_LAST),
+    ERROR_BASE_SIGFOX = (ERROR_BASE_SERIAL + SERIAL_ERROR_BASE_LAST),
 	// Last base value.
-	ERROR_BASE_LAST = (ERROR_BASE_HMI + HMI_ERROR_BASE_LAST)
+	ERROR_BASE_LAST = (ERROR_BASE_SIGFOX + SIGFOX_ERROR_BASE_LAST)
 } ERROR_base_t;
 
 #endif /* __ERROR_BASE_H__ */
