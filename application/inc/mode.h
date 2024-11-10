@@ -11,6 +11,7 @@
 /*** Board modes ***/
 
 //#define DEBUG
+
 /*** Board options ***/
 
 #define PSFE_BOARD_NUMBER       1 // 1.0.x

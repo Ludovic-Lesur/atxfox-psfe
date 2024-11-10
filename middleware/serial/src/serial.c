@@ -12,14 +12,14 @@
 #include "mode.h"
 #include "rtc.h"
 #include "terminal.h"
+#include "terminal_instance.h"
 #include "types.h"
 
 #ifdef PSFE_SERIAL_MONITORING
 
 /*** SERIAL local macros ***/
 
-#define SERIAL_TERMINAL_INSTANCE    0
-#define SERIAL_PERIOD_SECONDS       1
+#define SERIAL_PERIOD_SECONDS   1
 
 /*** SERIAL local structures ***/
 
@@ -44,7 +44,7 @@ SERIAL_status_t SERIAL_init(void) {
     serial_ctx.enable = 0;
     serial_ctx.next_transmission_time_seconds = 0;
     // Open terminal.
-    terminal_status = TERMINAL_open(SERIAL_TERMINAL_INSTANCE, NULL);
+    terminal_status = TERMINAL_open(TERMINAL_INSTANCE_SERIAL, NULL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -56,7 +56,7 @@ SERIAL_status_t SERIAL_de_init(void) {
     SERIAL_status_t status = SERIAL_SUCCESS;
     TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
     // Close terminal.
-    terminal_status = TERMINAL_close(SERIAL_TERMINAL_INSTANCE);
+    terminal_status = TERMINAL_close(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -70,7 +70,11 @@ SERIAL_status_t SERIAL_start(void) {
     // Update local flag.
     serial_ctx.enable = 1;
     // Print start message.
-    terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "SERIAL monitoring start\r\n");
+    terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "SERIAL monitoring start\r\n");
+    TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+    terminal_status = TERMINAL_print_buffer(TERMINAL_INSTANCE_SERIAL);
+    TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+    terminal_status = TERMINAL_flush_buffer(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -84,7 +88,11 @@ SERIAL_status_t SERIAL_stop(void) {
     // Update local flag.
     serial_ctx.enable = 0;
     // Print stop message.
-    terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "SERIAL monitoring stop\r\n");
+    terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "SERIAL monitoring stop\r\n");
+    TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+    terminal_status = TERMINAL_print_buffer(TERMINAL_INSTANCE_SERIAL);
+    TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+    terminal_status = TERMINAL_flush_buffer(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -108,29 +116,34 @@ SERIAL_status_t SERIAL_process(void) {
         analog_status = ANALOG_read_channel(ANALOG_CHANNEL_IOUT_UA, &iout_ua);
         ANALOG_exit_error(SERIAL_ERROR_BASE_ANALOG);
         // Print output voltage.
-        terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "Vout=");
+        terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "Vout=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_print_integer(SERIAL_TERMINAL_INSTANCE, vout_mv, STRING_FORMAT_DECIMAL, 0);
+        terminal_status = TERMINAL_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, vout_mv, STRING_FORMAT_DECIMAL, 0);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "mV Iout=");
+        terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "mV Iout=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         // Print output current.
         if (ANALOG_get_bypass_switch_state() == 0) {
-            terminal_status = TERMINAL_print_integer(SERIAL_TERMINAL_INSTANCE, iout_ua, STRING_FORMAT_DECIMAL, 0);
+            terminal_status = TERMINAL_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, iout_ua, STRING_FORMAT_DECIMAL, 0);
             TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-            terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "uA ");
+            terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "uA ");
             TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         }
         else {
-            terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "N/A ");
+            terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "N/A ");
             TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         }
         // Print range.
-        terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "Range=");
+        terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "Range=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_print_integer(SERIAL_TERMINAL_INSTANCE, (int32_t) ANALOG_get_iout_range(), STRING_FORMAT_DECIMAL, 0);
+        terminal_status = TERMINAL_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, (int32_t) ANALOG_get_iout_range(), STRING_FORMAT_DECIMAL, 0);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_print_string(SERIAL_TERMINAL_INSTANCE, "\r\n");
+        terminal_status = TERMINAL_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "\r\n");
+        TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+        // Send serial message.
+        terminal_status = TERMINAL_print_buffer(TERMINAL_INSTANCE_SERIAL);
+        TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
+        terminal_status = TERMINAL_flush_buffer(TERMINAL_INSTANCE_SERIAL);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
     }
 errors:

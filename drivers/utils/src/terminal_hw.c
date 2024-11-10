@@ -24,7 +24,7 @@
 /*** TERMINAL HW functions ***/
 
 /*******************************************************************/
-TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_HW_rx_irq_cb_t rx_irq_callback) {
+TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_rx_irq_cb_t rx_irq_callback) {
     // Local variables.
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
