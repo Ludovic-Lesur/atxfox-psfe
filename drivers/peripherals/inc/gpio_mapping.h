@@ -11,7 +11,7 @@
 #include "adc.h"
 #include "gpio.h"
 #include "lpuart.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "usart.h"
 
 /*** GPIO MAPPING structures ***/

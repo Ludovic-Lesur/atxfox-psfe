@@ -11,7 +11,7 @@
 #include "error.h"
 #include "iwdg.h"
 #include "math.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "rcc_reg.h"
 #include "rtc.h"
 #include "td1208.h"

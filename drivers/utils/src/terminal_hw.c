@@ -13,9 +13,11 @@
 #include "error.h"
 #include "gpio_mapping.h"
 #include "lpuart.h"
-#include "mode.h"
 #include "nvic_priority.h"
+#include "psfe_flags.h"
 #include "types.h"
+
+#if (!(defined EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE) && (EMBEDDED_UTILS_TERMINAL_INSTANCES_NUMBER > 0))
 
 /*** TERMINAL HW local macros ***/
 
@@ -29,7 +31,7 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_rx_irq_cb_t rx_irq
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     LPUART_configuration_t lpuart_config;
     // Init print interface.
@@ -56,7 +58,7 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release print interface.
     lpuart_status = LPUART_de_init(&GPIO_SERIAL_LPUART);
@@ -72,7 +74,7 @@ TERMINAL_status_t TERMINAL_HW_write(uint8_t instance, uint8_t* data, uint32_t da
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
     UNUSED(instance);
-#if ((defined PSFE_SERIAL_MONITORING) && !(defined DEBUG))
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Write data.
     lpuart_status = LPUART_write(data, data_size_bytes);
@@ -84,3 +86,5 @@ errors:
 #endif
     return status;
 }
+
+#endif /* EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE */

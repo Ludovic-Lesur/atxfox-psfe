@@ -9,7 +9,6 @@
 #define __ANALOG_H__
 
 #include "adc.h"
-#include "mode.h"
 #include "tim.h"
 #include "trcs.h"
 #include "types.h"

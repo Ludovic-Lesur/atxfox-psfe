@@ -10,7 +10,7 @@
 
 #include "analog.h"
 #include "math.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "td1208.h"
 
 /*** SIGFOX structures ***/

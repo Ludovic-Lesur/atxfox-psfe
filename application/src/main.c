@@ -10,7 +10,6 @@
 #include "gpio.h"
 #include "iwdg.h"
 #include "lptim.h"
-#include "mode.h"
 #include "nvic_priority.h"
 #include "pwr.h"
 #include "rcc.h"
@@ -24,7 +23,7 @@
 #include "sigfox.h"
 // Applicative.
 #include "error_base.h"
-#include "mode.h"
+#include "psfe_flags.h"
 
 /*** MAIN local macros ***/
 
@@ -40,7 +39,7 @@ static void _PSFE_init_hw(void) {
     RTC_status_t rtc_status = RTC_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     HMI_status_t hmi_status = HMI_SUCCESS;
-#ifndef DEBUG
+#ifndef PSFE_MODE_DEBUG
     IWDG_status_t iwdg_status = IWDG_SUCCESS;
 #endif
 #ifdef PSFE_SERIAL_MONITORING
@@ -58,7 +57,7 @@ static void _PSFE_init_hw(void) {
     // Init GPIOs.
     GPIO_init();
     EXTI_init();
-#ifndef DEBUG
+#ifndef PSFE_MODE_DEBUG
     // Start independent watchdog.
     iwdg_status = IWDG_init();
     IWDG_stack_error(ERROR_BASE_IWDG);

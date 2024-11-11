@@ -9,7 +9,7 @@
 #define __TD1208_DRIVER_FLAGS_H__
 
 #include "lptim.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "usart.h"
 
 /*** TD1208 driver compilation flags ***/

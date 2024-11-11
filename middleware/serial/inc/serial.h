@@ -9,7 +9,7 @@
 #define __SERIAL_H__
 
 #include "analog.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "terminal.h"
 #include "types.h"
 

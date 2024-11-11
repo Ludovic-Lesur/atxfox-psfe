@@ -1,20 +1,19 @@
 /*
- * mode.h
+ * psfe_flags.h
  *
  *  Created on: 04 dec. 2021
  *      Author: Ludo
  */
 
-#ifndef __MODE_H__
-#define __MODE_H__
+#ifndef __PSFE_FLAGS_H__
+#define __PSFE_FLAGS_H__
 
 /*** Board modes ***/
 
-//#define DEBUG
+#define PSFE_BOARD_NUMBER       1 // 1.0.x
+//#define PSFE_MODE_DEBUG
 
 /*** Board options ***/
-
-#define PSFE_BOARD_NUMBER       1 // 1.0.x
 
 //#define PSFE_SERIAL_MONITORING
 //#define PSFE_SIGFOX_MONITORING
@@ -30,4 +29,4 @@
 #error "PSFE board number error."
 #endif
 
-#endif /* __MODE_H__ */
+#endif /* __PSFE_FLAGS_H__ */

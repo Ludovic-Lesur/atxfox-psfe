@@ -11,7 +11,7 @@
 #include "gpio.h"
 #include "gpio_reg.h"
 #include "lpuart.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "usart.h"
 
 /*** GPIO MAPPING local global variables ***/

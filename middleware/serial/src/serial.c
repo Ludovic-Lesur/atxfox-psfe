@@ -9,7 +9,7 @@
 
 #include "analog.h"
 #include "error.h"
-#include "mode.h"
+#include "psfe_flags.h"
 #include "rtc.h"
 #include "terminal.h"
 #include "terminal_instance.h"
