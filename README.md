@@ -37,4 +37,9 @@ The project is organized as follow:
     * `peripherals` : internal MCU **peripherals** drivers.
     * `components` : external **components** drivers.
     * `utils` : **utility** functions.
+* `middleware` :
+    * `analog` : High level **analog measurements** driver.
+    * `hmi` : **HMI** driver.
+    * `serial` : **Serial monitoring** driver.
+    * `sigfox` : **Sigfox monitoring** driver.
 * `application` : Main **application**.

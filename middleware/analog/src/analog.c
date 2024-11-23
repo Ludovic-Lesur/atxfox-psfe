@@ -24,6 +24,10 @@
 #define ANALOG_TIMER_INSTANCE                   TIM_INSTANCE_TIM21
 #define ANALOG_TIMER_PERIOD_MS                  100
 
+#define ANALOG_ADC_CHANNEL_REF191               ADC_CHANNEL_IN9
+#define ANALOG_ADC_CHANNEL_VOUT                 ADC_CHANNEL_IN8
+#define ANALOG_ADC_CHANNEL_IOUT                 ADC_CHANNEL_IN0
+
 #define ANALOG_REF191_VOLTAGE_MV                2048
 
 #if ((PSFE_BOARD_NUMBER == 1) || (PSFE_BOARD_NUMBER == 2) || (PSFE_BOARD_NUMBER == 5) || (PSFE_BOARD_NUMBER == 6) || (PSFE_BOARD_NUMBER == 7) || (PSFE_BOARD_NUMBER == 10))
@@ -35,10 +39,6 @@
 #define ANALOG_VOUT_DIVIDER_RATIO_DEN           100
 #define ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE  599000
 #endif
-
-#define ANALOG_ADC_CHANNEL_REF191               ADC_CHANNEL_IN9
-#define ANALOG_ADC_CHANNEL_VOUT                 ADC_CHANNEL_IN8
-#define ANALOG_ADC_CHANNEL_IOUT                 ADC_CHANNEL_IN0
 
 #define ANALOG_CALIBRATION_PERIOD_SECONDS       300
 
@@ -66,7 +66,9 @@ typedef struct {
 
 /*** ANALOG local global variables ***/
 
-static ANALOG_context_t analog_ctx;
+static ANALOG_context_t analog_ctx = {
+    .ref191_data_12bits = ANALOG_ERROR_VALUE
+};
 
 /*** ANALOG local functions ***/
 
@@ -106,7 +108,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
         adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_VOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        analog_data = ((int32_t) adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO_NUM) / ((int32_t) analog_ctx.ref191_data_12bits * ANALOG_VOUT_DIVIDER_RATIO_DEN);
+        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO_NUM) / (analog_ctx.ref191_data_12bits * ANALOG_VOUT_DIVIDER_RATIO_DEN);
         break;
     case ANALOG_CHANNEL_IOUT_MV:
         // Check calibration.
@@ -118,7 +120,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
         adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_IOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        analog_data = ((int32_t) adc_data_12bits * ANALOG_REF191_VOLTAGE_MV) / ((int32_t) analog_ctx.ref191_data_12bits);
+        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV) / (analog_ctx.ref191_data_12bits);
         break;
     case ANALOG_CHANNEL_IOUT_UA:
         // Check bypass switch.
