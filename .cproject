@@ -73,8 +73,6 @@
 									<listOptionValue builtIn="false" value="__START=main"/>
 									<listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
-									<listOptionValue builtIn="false" value="MCU_CATEGORY_2"/>
-									<listOptionValue builtIn="false" value="MATH_USE_FLOAT"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input.571890269" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.assembler.input"/>
 							</tool>
@@ -101,8 +99,6 @@
 									<listOptionValue builtIn="false" value="__START=main"/>
 									<listOptionValue builtIn="false" value="__NO_SYSTEM_INIT"/>
 									<listOptionValue builtIn="false" value="__STARTUP_CLEAR_BSS"/>
-									<listOptionValue builtIn="false" value="MCU_CATEGORY_2"/>
-									<listOptionValue builtIn="false" value="MATH_USE_FLOAT"/>
 								</option>
 								<inputType id="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input.1981868159" superClass="ilg.gnuarmeclipse.managedbuild.cross.tool.c.compiler.input"/>
 							</tool>
