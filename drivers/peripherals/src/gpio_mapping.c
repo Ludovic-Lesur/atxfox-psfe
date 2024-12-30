@@ -14,6 +14,19 @@
 #include "psfe_flags.h"
 #include "usart.h"
 
+/*** GPIO MAPPING local structures ***/
+
+/*!******************************************************************
+ * \enum GPIO_adc_channel_t
+ * \brief GPIO ADC channels list.
+ *******************************************************************/
+typedef enum {
+    GPIO_ADC_CHANNEL_INDEX_BANDGAP_MEASURE = 0,
+    GPIO_ADC_CHANNEL_INDEX_VOUT_MEASURE,
+    GPIO_ADC_CHANNEL_INDEX_IOUT_MEASURE,
+    GPIO_ADC_CHANNEL_INDEX_LAST
+} GPIO_adc_channel_index_t;
+
 /*** GPIO MAPPING local global variables ***/
 
 // Analog inputs.
@@ -21,7 +34,7 @@ static const GPIO_pin_t GPIO_ADC_BANDGAP_MEASURE = { GPIOB, 1, 1, 0 };
 static const GPIO_pin_t GPIO_ADC_VOUT_MEASURE = { GPIOB, 1, 0, 0 };
 static const GPIO_pin_t GPIO_ADC_IOUT_MEASURE = { GPIOA, 0, 0, 0 };
 // Analog inputs list.
-static const GPIO_pin_t* GPIO_ADC_PINS_LIST[GPIO_ADC_CHANNEL_LAST] = { &GPIO_ADC_BANDGAP_MEASURE, &GPIO_ADC_VOUT_MEASURE, &GPIO_ADC_IOUT_MEASURE };
+static const GPIO_pin_t* GPIO_ADC_PINS_LIST[GPIO_ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_BANDGAP_MEASURE, &GPIO_ADC_VOUT_MEASURE, &GPIO_ADC_IOUT_MEASURE };
 #ifdef PSFE_SERIAL_MONITORING
 // LPUART.
 static const GPIO_pin_t GPIO_LPUART1_TX = { GPIOA, 0, 14, 6 };
@@ -36,7 +49,7 @@ static const GPIO_pin_t GPIO_USART2_RX = { GPIOA, 0, 10, 4 };
 /*** GPIO MAPPING global variables ***/
 
 // Analog inputs.
-const ADC_gpio_t GPIO_ADC_GPIO = { (const GPIO_pin_t**) &GPIO_ADC_PINS_LIST, GPIO_ADC_CHANNEL_LAST };
+const ADC_gpio_t GPIO_ADC_GPIO = { (const GPIO_pin_t**) &GPIO_ADC_PINS_LIST, GPIO_ADC_CHANNEL_INDEX_LAST };
 // LCD.
 const GPIO_pin_t GPIO_LCD_E = { GPIOC, 3, 15, 0 };
 const GPIO_pin_t GPIO_LCD_RS = { GPIOC, 3, 14, 0 };

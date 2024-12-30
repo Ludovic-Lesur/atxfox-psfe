@@ -14,19 +14,6 @@
 #include "psfe_flags.h"
 #include "usart.h"
 
-/*** GPIO MAPPING structures ***/
-
-/*!******************************************************************
- * \enum GPIO_adc_channel_t
- * \brief GPIO ADC channels list.
- *******************************************************************/
-typedef enum {
-    GPIO_ADC_CHANNEL_BANDGAP_MEASURE = 0,
-    GPIO_ADC_CHANNEL_VOUT_MEASURE,
-    GPIO_ADC_CHANNEL_IOUT_MEASURE,
-    GPIO_ADC_CHANNEL_LAST
-} GPIO_adc_channel_t;
-
 /*** GPIO MAPPING global variables ***/
 
 // Analog inputs.
