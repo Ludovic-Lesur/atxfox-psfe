@@ -19,14 +19,10 @@
 
 #if (!(defined EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE) && (EMBEDDED_UTILS_TERMINAL_INSTANCES_NUMBER > 0))
 
-/*** TERMINAL HW local macros ***/
-
-#define TERMINAL_BAUD_RATE  9600
-
 /*** TERMINAL HW functions ***/
 
 /*******************************************************************/
-TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_rx_irq_cb_t rx_irq_callback) {
+TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, uint32_t baud_rate, TERMINAL_rx_irq_cb_t rx_irq_callback) {
     // Local variables.
     TERMINAL_status_t status = TERMINAL_SUCCESS;
     // Unused parameter.
@@ -35,7 +31,7 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_rx_irq_cb_t rx_irq
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     LPUART_configuration_t lpuart_config;
     // Init print interface.
-    lpuart_config.baud_rate = TERMINAL_BAUD_RATE;
+    lpuart_config.baud_rate = baud_rate;
     lpuart_config.nvic_priority = NVIC_PRIORITY_SERIAL;
     lpuart_config.rxne_callback = rx_irq_callback;
     lpuart_status = LPUART_init(&GPIO_SERIAL_LPUART, &lpuart_config);
@@ -47,6 +43,7 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, TERMINAL_rx_irq_cb_t rx_irq
     }
 errors:
 #else
+    UNUSED(baud_rate);
     UNUSED(rx_irq_callback);
 #endif
     return status;

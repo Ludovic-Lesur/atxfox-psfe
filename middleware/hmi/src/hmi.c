@@ -64,9 +64,14 @@ static HMI_status_t _HMI_print_value(uint8_t row, int32_t value, uint8_t divider
     HMI_status_t status = HMI_SUCCESS;
     ST7066U_status_t st7066u_status = ST7066U_SUCCESS;
     STRING_status_t string_status = STRING_SUCCESS;
-    char_t lcd_string[ST7066U_DRIVER_SCREEN_WIDTH] = { STRING_CHAR_NULL };
+    char_t lcd_string[ST7066U_DRIVER_SCREEN_WIDTH];
     uint8_t number_of_digits = 0;
     uint32_t str_size = 0;
+    uint8_t idx = 0;
+    // Init string.
+    for (idx = 0; idx < ST7066U_DRIVER_SCREEN_WIDTH; idx++) {
+        lcd_string[idx] = STRING_CHAR_NULL;
+    }
     // Check if unit is provided.
     if (unit != NULL) {
         // Get unit size.
