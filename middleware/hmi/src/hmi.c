@@ -261,11 +261,11 @@ static HMI_status_t _HMI_process(void) {
             ANALOG_exit_error(HMI_ERROR_BASE_ANALOG);
             // Print output current.
             if (analog_data < 1000) {
-                status = _HMI_print_value(1, analog_data, 0, "ua");
+                status = _HMI_print_value(1, analog_data, 0, "uA");
                 if (status != HMI_SUCCESS) goto errors;
             }
             else {
-                status = _HMI_print_value(1, analog_data, 3, "ma");
+                status = _HMI_print_value(1, analog_data, 3, "mA");
                 if (status != HMI_SUCCESS) goto errors;
             }
         }
