@@ -31,12 +31,10 @@
 #define ANALOG_REF191_VOLTAGE_MV                2048
 
 #if ((PSFE_BOARD_NUMBER == 1) || (PSFE_BOARD_NUMBER == 2) || (PSFE_BOARD_NUMBER == 5) || (PSFE_BOARD_NUMBER == 6) || (PSFE_BOARD_NUMBER == 7) || (PSFE_BOARD_NUMBER == 10))
-#define ANALOG_VOUT_DIVIDER_RATIO_NUM           2
-#define ANALOG_VOUT_DIVIDER_RATIO_DEN           1
+#define ANALOG_VOUT_DIVIDER_RATIO               2
 #define ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE  998000
 #else
-#define ANALOG_VOUT_DIVIDER_RATIO_NUM           599
-#define ANALOG_VOUT_DIVIDER_RATIO_DEN           100
+#define ANALOG_VOUT_DIVIDER_RATIO               6
 #define ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE  599000
 #endif
 
@@ -108,7 +106,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
         adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_VOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO_NUM) / (analog_ctx.ref191_data_12bits * ANALOG_VOUT_DIVIDER_RATIO_DEN);
+        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO) / (analog_ctx.ref191_data_12bits);
         break;
     case ANALOG_CHANNEL_IOUT_MV:
         // Check calibration.
