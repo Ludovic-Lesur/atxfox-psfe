@@ -30,9 +30,8 @@ The PSFE board is based on the **STM32L031G6U6** microcontroller of the STMicroe
 
 The project is organized as follow:
 
-* `startup` : MCU **startup** code (from ARM).
-* `linker` : MCU **linker** script (from ARM).
 * `drivers` :
+    * `device` : MCU **startup** code and **linker** script.
     * `registers` : MCU **registers** address definition.
     * `peripherals` : internal MCU **peripherals** drivers.
     * `components` : external **components** drivers.
