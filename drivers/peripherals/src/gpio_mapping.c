@@ -9,7 +9,7 @@
 
 #include "adc.h"
 #include "gpio.h"
-#include "gpio_reg.h"
+#include "gpio_registers.h"
 #include "lpuart.h"
 #include "psfe_flags.h"
 #include "usart.h"

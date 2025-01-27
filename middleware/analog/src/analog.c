@@ -218,7 +218,7 @@ ANALOG_status_t ANALOG_init(void) {
     status = _ANALOG_calibrate();
     if (status != ANALOG_SUCCESS) goto errors;
     // Start sampling timer.
-    tim_status = TIM_STD_start(ANALOG_TIMER_INSTANCE, (ANALOG_TIMER_PERIOD_MS * MATH_POWER_10[6]), &_ANALOG_timer_irq_callback);
+    tim_status = TIM_STD_start(ANALOG_TIMER_INSTANCE, ANALOG_TIMER_PERIOD_MS, TIM_UNIT_MS, &_ANALOG_timer_irq_callback);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;

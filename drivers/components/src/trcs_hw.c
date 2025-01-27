@@ -66,7 +66,7 @@ TRCS_status_t TRCS_HW_timer_start(uint32_t period_ms, TRCS_HW_timer_irq_cb_t irq
     TRCS_status_t status = TRCS_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Start sampling timer.
-    tim_status = TIM_STD_start(TRCS_HW_TIMER_INSTANCE, (period_ms * MATH_POWER_10[6]), irq_callback);
+    tim_status = TIM_STD_start(TRCS_HW_TIMER_INSTANCE, period_ms, TIM_UNIT_MS, irq_callback);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;

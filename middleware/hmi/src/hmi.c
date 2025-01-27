@@ -339,7 +339,7 @@ HMI_status_t HMI_start(void) {
     // Update state.
     hmi_ctx.state = HMI_STATE_INIT;
     // Start timer.
-    tim_status = TIM_STD_start(HMI_TIMER_INSTANCE, (HMI_DISPLAY_PERIOD_MS * MATH_POWER_10[6]), &_HMI_timer_irq_callback);
+    tim_status = TIM_STD_start(HMI_TIMER_INSTANCE, HMI_DISPLAY_PERIOD_MS, TIM_UNIT_MS, &_HMI_timer_irq_callback);
     TIM_exit_error(HMI_ERROR_BASE_TIM);
 errors:
     return status;

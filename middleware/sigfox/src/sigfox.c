@@ -12,7 +12,7 @@
 #include "iwdg.h"
 #include "math.h"
 #include "psfe_flags.h"
-#include "rcc_reg.h"
+#include "pwr.h"
 #include "rtc.h"
 #include "td1208.h"
 #include "types.h"
@@ -171,7 +171,7 @@ SIGFOX_status_t SIGFOX_process(void) {
             // Set flag.
             sigfox_ctx.flags.startup_frame_sent = 1;
             // Build startup frame.
-            startup_frame.reset_reason = ((RCC->CSR) >> 24) & 0xFF;
+            startup_frame.reset_reason = PWR_get_reset_flags();
             startup_frame.major_version = GIT_MAJOR_VERSION;
             startup_frame.minor_version = GIT_MINOR_VERSION;
             startup_frame.commit_index = GIT_COMMIT_INDEX;
