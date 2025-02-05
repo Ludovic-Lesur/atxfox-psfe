@@ -8,10 +8,6 @@
 #ifndef __STM32L0XX_DEVICE_FLAGS_H__
 #define __STM32L0XX_DEVICE_FLAGS_H__
 
-#ifndef STM32L0XX_REGISTERS_DISABLE_FLAGS_FILE
-#include "stm32l0xx_registers_flags.h"
-#endif
-
 /*** STM32L0XX device compilation flags ***/
 
 #define STM32L0XX_DEVICE_STACK_SIZE     0x00000400
