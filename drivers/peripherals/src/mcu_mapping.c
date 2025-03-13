@@ -21,7 +21,7 @@ static const GPIO_pin_t GPIO_ADC_REF191 = { GPIOB, 1, 1, 0 };
 static const GPIO_pin_t GPIO_ADC_VOUT = { GPIOB, 1, 0, 0 };
 static const GPIO_pin_t GPIO_ADC_IOUT = { GPIOA, 0, 0, 0 };
 // Analog inputs list.
-static const GPIO_pin_t* GPIO_ADC_PINS_LIST[ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_REF191, &GPIO_ADC_VOUT, &GPIO_ADC_IOUT };
+static const GPIO_pin_t* const GPIO_ADC_PINS_LIST[ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_REF191, &GPIO_ADC_VOUT, &GPIO_ADC_IOUT };
 #ifdef PSFE_SERIAL_MONITORING
 // LPUART.
 static const GPIO_pin_t GPIO_LPUART1_TX = { GPIOA, 0, 14, 6 };

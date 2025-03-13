@@ -23,7 +23,7 @@
 
 /*** TRCS HW local global variables ***/
 
-static const GPIO_pin_t* TRCS_HW_GPIO_RANGE[TRCS_RANGE_LAST] = { &GPIO_TRCS_RANGE_LOW, &GPIO_TRCS_RANGE_MIDDLE, &GPIO_TRCS_RANGE_HIGH };
+static const GPIO_pin_t* const TRCS_HW_GPIO_RANGE[TRCS_RANGE_LAST] = { &GPIO_TRCS_RANGE_LOW, &GPIO_TRCS_RANGE_MIDDLE, &GPIO_TRCS_RANGE_HIGH };
 
 /*** TRCS HW functions ***/
 

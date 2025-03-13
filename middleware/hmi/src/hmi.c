@@ -54,7 +54,11 @@ typedef struct {
 
 /*** HMI local global variables ***/
 
-static HMI_context_t hmi_ctx;
+static HMI_context_t hmi_ctx = {
+    .state = HMI_STATE_OFF,
+    .uptime_ms = 0,
+    .state_switch_time_ms = 0
+};
 
 /*** HMI local functions ***/
 

@@ -60,7 +60,10 @@ typedef struct {
 /*** ANALOG local global variables ***/
 
 static ANALOG_context_t analog_ctx = {
-    .ref191_data_12bits = ANALOG_ERROR_VALUE
+    .flags.all = 0,
+    .data = { [0 ... (ANALOG_CHANNEL_LAST - 1)] = 0 },
+    .ref191_data_12bits = ANALOG_ERROR_VALUE,
+    .calibration_next_time_seconds = 0
 };
 
 /*** ANALOG local functions ***/

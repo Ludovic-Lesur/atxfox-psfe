@@ -21,7 +21,7 @@
 
 /*** ST7066U HW local global variables ***/
 
-static const GPIO_pin_t* ST7066_HW_GPIO[ST7066U_HW_GPIO_LAST] = { &GPIO_LCD_RS, NULL, &GPIO_LCD_E };
+static const GPIO_pin_t* const ST7066_HW_GPIO[ST7066U_HW_GPIO_LAST] = { &GPIO_LCD_RS, NULL, &GPIO_LCD_E };
 
 /*** ST7066U HW functions ***/
 

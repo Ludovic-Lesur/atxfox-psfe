@@ -76,7 +76,11 @@ typedef struct {
 
 /*** SIGFOX local global variables ***/
 
-static SIGFOX_context_t sigfox_ctx = { .flags.all = 0 };
+static SIGFOX_context_t sigfox_ctx = {
+    .flags.all = 0,
+    .next_transmission_time_seconds = 0,
+    .ep_id = { [0 ... (TD1208_SIGFOX_EP_ID_SIZE_BYTES - 1)] = 0x00 }
+};
 
 /*** SIGFOX functions ***/
 

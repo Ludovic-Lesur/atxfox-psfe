@@ -32,7 +32,10 @@ typedef struct {
 
 /*** SERIAL local global variables ***/
 
-static SERIAL_context_t serial_ctx;
+static SERIAL_context_t serial_ctx = {
+    .enable = 0,
+    .next_transmission_time_seconds = 0
+};
 
 /*** SERIAL functions ***/
 
