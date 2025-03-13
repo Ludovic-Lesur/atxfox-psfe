@@ -11,7 +11,7 @@
 #include "error.h"
 #include "error_base.h"
 #include "gpio.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "nvic_priority.h"
 #include "psfe_flags.h"
 #include "rtc.h"
@@ -21,12 +21,7 @@
 
 /*** ANALOG local macros ***/
 
-#define ANALOG_TIMER_INSTANCE                   TIM_INSTANCE_TIM21
 #define ANALOG_TIMER_PERIOD_MS                  100
-
-#define ANALOG_ADC_CHANNEL_REF191               ADC_CHANNEL_IN9
-#define ANALOG_ADC_CHANNEL_VOUT                 ADC_CHANNEL_IN8
-#define ANALOG_ADC_CHANNEL_IOUT                 ADC_CHANNEL_IN0
 
 #define ANALOG_REF191_VOLTAGE_MV                2048
 
@@ -103,7 +98,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
             goto errors;
         }
         // Output voltage.
-        adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_VOUT, &adc_data_12bits);
+        adc_status = ADC_convert_channel(ADC_CHANNEL_VOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
         analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO) / (analog_ctx.ref191_data_12bits);
@@ -115,7 +110,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
             goto errors;
         }
         // Output current.
-        adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_IOUT, &adc_data_12bits);
+        adc_status = ADC_convert_channel(ADC_CHANNEL_IOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
         analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV) / (analog_ctx.ref191_data_12bits);
@@ -177,7 +172,7 @@ static ANALOG_status_t _ANALOG_calibrate(void) {
     ADC_status_t adc_status = ADC_SUCCESS;
     int32_t adc_data_12bits = 0;
     // Convert external voltage reference.
-    adc_status = ADC_convert_channel(ANALOG_ADC_CHANNEL_REF191, &adc_data_12bits);
+    adc_status = ADC_convert_channel(ADC_CHANNEL_REF191, &adc_data_12bits);
     ADC_exit_error(ANALOG_ERROR_BASE_ADC);
     // Update local calibration value.
     analog_ctx.ref191_data_12bits = adc_data_12bits;
@@ -209,7 +204,7 @@ ANALOG_status_t ANALOG_init(void) {
     adc_status = ADC_init(&GPIO_ADC_GPIO);
     ADC_exit_error(ANALOG_ERROR_BASE_ADC);
     // Init sampling timer.
-    tim_status = TIM_STD_init(ANALOG_TIMER_INSTANCE, NVIC_PRIORITY_ANALOG_TIMER);
+    tim_status = TIM_STD_init(TIM_INSTANCE_ANALOG, NVIC_PRIORITY_ANALOG_TIMER);
     TIM_exit_error(ANALOG_ERROR_BASE_TIM);
     // Init TRCS board.
     trcs_status = TRCS_init();
@@ -218,7 +213,7 @@ ANALOG_status_t ANALOG_init(void) {
     status = _ANALOG_calibrate();
     if (status != ANALOG_SUCCESS) goto errors;
     // Start sampling timer.
-    tim_status = TIM_STD_start(ANALOG_TIMER_INSTANCE, ANALOG_TIMER_PERIOD_MS, TIM_UNIT_MS, &_ANALOG_timer_irq_callback);
+    tim_status = TIM_STD_start(TIM_INSTANCE_ANALOG, ANALOG_TIMER_PERIOD_MS, TIM_UNIT_MS, &_ANALOG_timer_irq_callback);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;
@@ -234,7 +229,7 @@ ANALOG_status_t ANALOG_de_init(void) {
     // Erase calibration value.
     analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
     // Stop sampling timer.
-    tim_status = TIM_STD_stop(ANALOG_TIMER_INSTANCE);
+    tim_status = TIM_STD_stop(TIM_INSTANCE_ANALOG);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
     // Init TRCS board.
     trcs_status = TRCS_de_init();
@@ -243,7 +238,7 @@ ANALOG_status_t ANALOG_de_init(void) {
     adc_status = ADC_de_init();
     ADC_exit_error(ANALOG_ERROR_BASE_ADC);
     // Release sampling timer.
-    tim_status = TIM_STD_de_init(ANALOG_TIMER_INSTANCE);
+    tim_status = TIM_STD_de_init(TIM_INSTANCE_ANALOG);
     TIM_exit_error(ANALOG_ERROR_BASE_TIM);
 errors:
     return status;

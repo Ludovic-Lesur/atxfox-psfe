@@ -11,18 +11,14 @@
 #include "td1208_driver_flags.h"
 #endif
 #include "error.h"
-#include "gpio_mapping.h"
 #include "lptim.h"
+#include "mcu_mapping.h"
 #include "nvic_priority.h"
 #include "td1208.h"
 #include "types.h"
 #include "usart.h"
 
 #ifndef TD1208_DRIVER_DISABLE
-
-/*** TD1208 HW local macros ***/
-
-#define TD1208_HW_USART_INSTANCE    USART_INSTANCE_USART2
 
 /*** TD1208 HW functions ***/
 
@@ -36,9 +32,9 @@ TD1208_status_t TD1208_HW_init(TD1208_HW_configuration_t* configuration) {
     usart_config.baud_rate = (configuration->uart_baud_rate);
     usart_config.nvic_priority = NVIC_PRIORITY_TD1208_UART;
     usart_config.rxne_callback = (configuration->rx_irq_callback);
-    usart_status = USART_init(TD1208_HW_USART_INSTANCE, &GPIO_TD1208_USART, &usart_config);
+    usart_status = USART_init(USART_INSTANCE_TD1208, &USART_GPIO_TD1208, &usart_config);
     USART_exit_error(TD1208_ERROR_BASE_UART);
-    usart_status = USART_enable_rx(TD1208_HW_USART_INSTANCE);
+    usart_status = USART_enable_rx(USART_INSTANCE_TD1208);
     USART_exit_error(TD1208_ERROR_BASE_UART);
 errors:
     return status;
@@ -50,7 +46,7 @@ TD1208_status_t TD1208_HW_de_init(void) {
     TD1208_status_t status = TD1208_SUCCESS;
     USART_status_t usart_status = USART_SUCCESS;
     // Release USART.
-    usart_status = USART_de_init(TD1208_HW_USART_INSTANCE, &GPIO_TD1208_USART);
+    usart_status = USART_de_init(USART_INSTANCE_TD1208, &USART_GPIO_TD1208);
     USART_exit_error(TD1208_ERROR_BASE_UART);
 errors:
     return status;
@@ -62,7 +58,7 @@ TD1208_status_t TD1208_HW_uart_write(uint8_t* data, uint32_t data_size_bytes) {
     TD1208_status_t status = TD1208_SUCCESS;
     USART_status_t usart_status = USART_SUCCESS;
     // Release USART.
-    usart_status = USART_write(TD1208_HW_USART_INSTANCE, data, data_size_bytes);
+    usart_status = USART_write(USART_INSTANCE_TD1208, data, data_size_bytes);
     USART_exit_error(TD1208_ERROR_BASE_UART);
 errors:
     return status;

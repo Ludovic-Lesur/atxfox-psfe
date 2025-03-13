@@ -13,17 +13,13 @@
 #include "analog.h"
 #include "error.h"
 #include "gpio.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "math.h"
 #include "nvic_priority.h"
 #include "tim.h"
 #include "trcs.h"
 
 #ifndef TRCS_DRIVER_DISABLE
-
-/*** TRCS HW local macros ***/
-
-#define TRCS_HW_TIMER_INSTANCE  TIM_INSTANCE_TIM22
 
 /*** TRCS HW local global variables ***/
 
@@ -42,7 +38,7 @@ TRCS_status_t TRCS_HW_init(void) {
         GPIO_configure(TRCS_HW_GPIO_RANGE[idx], GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
     }
     // Init sampling timer.
-    tim_status = TIM_STD_init(TRCS_HW_TIMER_INSTANCE, NVIC_PRIORITY_TRCS_TIMER);
+    tim_status = TIM_STD_init(TIM_INSTANCE_TRCS, NVIC_PRIORITY_TRCS_TIMER);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;
@@ -54,7 +50,7 @@ TRCS_status_t TRCS_HW_de_init(void) {
     TRCS_status_t status = TRCS_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Release sampling timer.
-    tim_status = TIM_STD_de_init(TRCS_HW_TIMER_INSTANCE);
+    tim_status = TIM_STD_de_init(TIM_INSTANCE_TRCS);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;
@@ -66,7 +62,7 @@ TRCS_status_t TRCS_HW_timer_start(uint32_t period_ms, TRCS_HW_timer_irq_cb_t irq
     TRCS_status_t status = TRCS_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Start sampling timer.
-    tim_status = TIM_STD_start(TRCS_HW_TIMER_INSTANCE, period_ms, TIM_UNIT_MS, irq_callback);
+    tim_status = TIM_STD_start(TIM_INSTANCE_TRCS, period_ms, TIM_UNIT_MS, irq_callback);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;
@@ -78,7 +74,7 @@ TRCS_status_t TRCS_HW_timer_stop(void) {
     TRCS_status_t status = TRCS_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Stop sampling timer.
-    tim_status = TIM_STD_stop(TRCS_HW_TIMER_INSTANCE);
+    tim_status = TIM_STD_stop(TIM_INSTANCE_TRCS);
     TIM_exit_error(TRCS_ERROR_BASE_TIMER);
 errors:
     return status;

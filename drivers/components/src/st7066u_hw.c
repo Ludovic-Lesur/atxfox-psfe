@@ -11,9 +11,9 @@
 #include "st7066u_driver_flags.h"
 #endif
 #include "gpio.h"
-#include "gpio_mapping.h"
 #include "gpio_registers.h"
 #include "error.h"
+#include "mcu_mapping.h"
 #include "st7066u.h"
 #include "types.h"
 

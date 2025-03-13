@@ -11,6 +11,7 @@
 #include "error.h"
 #include "error_base.h"
 #include "math.h"
+#include "mcu_mapping.h"
 #include "nvic_priority.h"
 #include "psfe_flags.h"
 #include "st7066u.h"
@@ -21,7 +22,6 @@
 
 /*** HMI local macros ***/
 
-#define HMI_TIMER_INSTANCE                  TIM_INSTANCE_TIM2
 #define HMI_DISPLAY_PERIOD_MS               300
 
 #define HMI_HW_VERSION_PRINT_DURATION_MS    2000
@@ -309,7 +309,7 @@ HMI_status_t HMI_init(void) {
     st7066u_status = ST7066U_init();
     ST7066U_exit_error(HMI_ERROR_BASE_ST7066U);
     // Init display timer.
-    tim_status = TIM_STD_init(HMI_TIMER_INSTANCE, NVIC_PRIORITY_HMI_TIMER);
+    tim_status = TIM_STD_init(TIM_INSTANCE_HMI, NVIC_PRIORITY_HMI_TIMER);
     TIM_exit_error(HMI_ERROR_BASE_TIM);
 errors:
     return status;
@@ -322,7 +322,7 @@ HMI_status_t HMI_de_init(void) {
     ST7066U_status_t st7066u_status = ST7066U_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     // Release display timer.
-    tim_status = TIM_STD_de_init(HMI_TIMER_INSTANCE);
+    tim_status = TIM_STD_de_init(TIM_INSTANCE_HMI);
     TIM_exit_error(HMI_ERROR_BASE_TIM);
     // Release LCD driver.
     st7066u_status = ST7066U_de_init();
@@ -339,7 +339,7 @@ HMI_status_t HMI_start(void) {
     // Update state.
     hmi_ctx.state = HMI_STATE_INIT;
     // Start timer.
-    tim_status = TIM_STD_start(HMI_TIMER_INSTANCE, HMI_DISPLAY_PERIOD_MS, TIM_UNIT_MS, &_HMI_timer_irq_callback);
+    tim_status = TIM_STD_start(TIM_INSTANCE_HMI, HMI_DISPLAY_PERIOD_MS, TIM_UNIT_MS, &_HMI_timer_irq_callback);
     TIM_exit_error(HMI_ERROR_BASE_TIM);
 errors:
     return status;
@@ -354,7 +354,7 @@ HMI_status_t HMI_stop(void) {
     // Update state.
     hmi_ctx.state = HMI_STATE_OFF;
     // Stop timer.
-    tim_status = TIM_STD_stop(HMI_TIMER_INSTANCE);
+    tim_status = TIM_STD_stop(TIM_INSTANCE_HMI);
     TIM_exit_error(HMI_ERROR_BASE_TIM);
     // Clear screen.
     st7066u_status = ST7066U_clear();

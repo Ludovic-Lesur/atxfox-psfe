@@ -1,11 +1,11 @@
 /*
- * gpio_mapping.c
+ * mcu_mapping.c
  *
  *  Created on: 06 oct. 2024
  *      Author: Ludo
  */
 
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 
 #include "adc.h"
 #include "gpio.h"
@@ -14,27 +14,14 @@
 #include "psfe_flags.h"
 #include "usart.h"
 
-/*** GPIO MAPPING local structures ***/
-
-/*!******************************************************************
- * \enum GPIO_adc_channel_t
- * \brief GPIO ADC channels list.
- *******************************************************************/
-typedef enum {
-    GPIO_ADC_CHANNEL_INDEX_BANDGAP_MEASURE = 0,
-    GPIO_ADC_CHANNEL_INDEX_VOUT_MEASURE,
-    GPIO_ADC_CHANNEL_INDEX_IOUT_MEASURE,
-    GPIO_ADC_CHANNEL_INDEX_LAST
-} GPIO_adc_channel_index_t;
-
-/*** GPIO MAPPING local global variables ***/
+/*** MCU MAPPING local global variables ***/
 
 // Analog inputs.
-static const GPIO_pin_t GPIO_ADC_BANDGAP_MEASURE = { GPIOB, 1, 1, 0 };
-static const GPIO_pin_t GPIO_ADC_VOUT_MEASURE = { GPIOB, 1, 0, 0 };
-static const GPIO_pin_t GPIO_ADC_IOUT_MEASURE = { GPIOA, 0, 0, 0 };
+static const GPIO_pin_t GPIO_ADC_REF191 = { GPIOB, 1, 1, 0 };
+static const GPIO_pin_t GPIO_ADC_VOUT = { GPIOB, 1, 0, 0 };
+static const GPIO_pin_t GPIO_ADC_IOUT = { GPIOA, 0, 0, 0 };
 // Analog inputs list.
-static const GPIO_pin_t* GPIO_ADC_PINS_LIST[GPIO_ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_BANDGAP_MEASURE, &GPIO_ADC_VOUT_MEASURE, &GPIO_ADC_IOUT_MEASURE };
+static const GPIO_pin_t* GPIO_ADC_PINS_LIST[ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_REF191, &GPIO_ADC_VOUT, &GPIO_ADC_IOUT };
 #ifdef PSFE_SERIAL_MONITORING
 // LPUART.
 static const GPIO_pin_t GPIO_LPUART1_TX = { GPIOA, 0, 14, 6 };
@@ -46,10 +33,10 @@ static const GPIO_pin_t GPIO_USART2_TX = { GPIOA, 0, 9, 4 };
 static const GPIO_pin_t GPIO_USART2_RX = { GPIOA, 0, 10, 4 };
 #endif
 
-/*** GPIO MAPPING global variables ***/
+/*** MCU MAPPING global variables ***/
 
 // Analog inputs.
-const ADC_gpio_t GPIO_ADC_GPIO = { (const GPIO_pin_t**) &GPIO_ADC_PINS_LIST, GPIO_ADC_CHANNEL_INDEX_LAST };
+const ADC_gpio_t GPIO_ADC_GPIO = { (const GPIO_pin_t**) &GPIO_ADC_PINS_LIST, ADC_CHANNEL_INDEX_LAST };
 // LCD.
 const GPIO_pin_t GPIO_LCD_E = { GPIOC, 3, 15, 0 };
 const GPIO_pin_t GPIO_LCD_RS = { GPIOC, 3, 14, 0 };
@@ -68,9 +55,9 @@ const GPIO_pin_t GPIO_TRCS_RANGE_MIDDLE = { GPIOB, 1, 3, 0 };
 const GPIO_pin_t GPIO_TRCS_RANGE_HIGH = { GPIOA, 0, 15, 0 };
 #ifdef PSFE_SERIAL_MONITORING
 // Serial interface.
-const LPUART_gpio_t GPIO_SERIAL_LPUART = { &GPIO_LPUART1_TX, &GPIO_LPUART1_RX };
+const LPUART_gpio_t LPUART_GPIO_SERIAL = { &GPIO_LPUART1_TX, &GPIO_LPUART1_RX };
 #endif
 #ifdef PSFE_SIGFOX_MONITORING
 // TD1208.
-const USART_gpio_t GPIO_TD1208_USART = { &GPIO_USART2_TX, &GPIO_USART2_RX };
+const USART_gpio_t USART_GPIO_TD1208 = { &GPIO_USART2_TX, &GPIO_USART2_RX };
 #endif

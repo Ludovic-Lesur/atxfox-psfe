@@ -11,7 +11,7 @@
 #include "embedded_utils_flags.h"
 #endif
 #include "error.h"
-#include "gpio_mapping.h"
+#include "mcu_mapping.h"
 #include "lpuart.h"
 #include "nvic_priority.h"
 #include "psfe_flags.h"
@@ -34,7 +34,7 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, uint32_t baud_rate, TERMINA
     lpuart_config.baud_rate = baud_rate;
     lpuart_config.nvic_priority = NVIC_PRIORITY_SERIAL;
     lpuart_config.rxne_callback = rx_irq_callback;
-    lpuart_status = LPUART_init(&GPIO_SERIAL_LPUART, &lpuart_config);
+    lpuart_status = LPUART_init(&LPUART_GPIO_SERIAL, &lpuart_config);
     LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
     // Start reception if needed.
     if (rx_irq_callback != NULL) {
@@ -58,7 +58,7 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
 #if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release print interface.
-    lpuart_status = LPUART_de_init(&GPIO_SERIAL_LPUART);
+    lpuart_status = LPUART_de_init(&LPUART_GPIO_SERIAL);
     LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
 errors:
 #endif
