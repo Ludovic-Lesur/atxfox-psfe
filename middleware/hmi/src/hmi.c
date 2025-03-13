@@ -172,7 +172,7 @@ static HMI_status_t _HMI_print_sigfox_ep_id(void) {
     uint8_t idx = 0;
     // Read EP-ID.
     sigfox_status = SIGFOX_get_ep_id((uint8_t*) sigfox_ep_id);
-    SIGFOX_stack_error(ERROR_BASE_SIGFOX);
+    SIGFOX_stack_error(ERROR_BASE_HMI + HMI_ERROR_BASE_SIGFOX);
     // Build corresponding string.
     for (idx = 0; idx < TD1208_SIGFOX_EP_ID_SIZE_BYTES; idx++) {
         string_status = STRING_integer_to_string(sigfox_ep_id[idx], STRING_FORMAT_HEXADECIMAL, 0, &(sigfox_ep_id_str[2 * idx]));

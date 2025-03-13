@@ -165,7 +165,7 @@ static void _ANALOG_trcs_process_callback(void) {
     TRCS_status_t trcs_status = TRCS_SUCCESS;
     // Process TRCS board.
     trcs_status = TRCS_process();
-    TRCS_stack_error(ERROR_BASE_TRCS);
+    TRCS_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_TRCS);
 }
 
 /*******************************************************************/
