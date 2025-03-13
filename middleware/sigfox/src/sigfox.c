@@ -177,6 +177,8 @@ SIGFOX_status_t SIGFOX_process(void) {
             startup_frame.commit_index = GIT_COMMIT_INDEX;
             startup_frame.commit_id = GIT_COMMIT_ID;
             startup_frame.dirty_flag = GIT_DIRTY_FLAG;
+            // Clear reset flags.
+            PWR_clear_reset_flags();
             // Send startup message through Sigfox.
             td1208_status = TD1208_send_frame(startup_frame.frame, SIGFOX_STARTUP_DATA_LENGTH);
             TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);
