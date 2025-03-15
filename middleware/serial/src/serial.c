@@ -9,6 +9,7 @@
 
 #include "analog.h"
 #include "error.h"
+#include "error_base.h"
 #include "psfe_flags.h"
 #include "rtc.h"
 #include "terminal.h"
@@ -61,8 +62,7 @@ SERIAL_status_t SERIAL_de_init(void) {
     TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
     // Close terminal.
     terminal_status = TERMINAL_close(TERMINAL_INSTANCE_SERIAL);
-    TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-errors:
+    TERMINAL_stack_error(ERROR_BASE_SERIAL + SERIAL_ERROR_BASE_TERMINAL);
     return status;
 }
 

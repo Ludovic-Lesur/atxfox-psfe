@@ -9,6 +9,7 @@
 
 #include "analog.h"
 #include "error.h"
+#include "error_base.h"
 #include "iwdg.h"
 #include "math.h"
 #include "psfe_flags.h"
@@ -112,8 +113,7 @@ SIGFOX_status_t SIGFOX_de_init(void) {
     TD1208_status_t td1208_status = TD1208_SUCCESS;
     // Init TD1208.
     td1208_status = TD1208_de_init();
-    TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);
-errors:
+    TD1208_stack_error(ERROR_BASE_SIGFOX + SIGFOX_ERROR_BASE_TD1208);
     return status;
 }
 

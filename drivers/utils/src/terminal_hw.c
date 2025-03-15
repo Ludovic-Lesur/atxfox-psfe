@@ -11,6 +11,7 @@
 #include "embedded_utils_flags.h"
 #endif
 #include "error.h"
+#include "error_base.h"
 #include "mcu_mapping.h"
 #include "lpuart.h"
 #include "nvic_priority.h"
@@ -59,8 +60,7 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
     LPUART_status_t lpuart_status = LPUART_SUCCESS;
     // Release print interface.
     lpuart_status = LPUART_de_init(&LPUART_GPIO_SERIAL);
-    LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
-errors:
+    LPUART_stack_error(ERROR_BASE_TERMINAL_SERIAL + TERMINAL_ERROR_BASE_HW_INTERFACE);
 #endif
     return status;
 }

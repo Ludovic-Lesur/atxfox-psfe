@@ -12,6 +12,7 @@
 #endif
 #include "analog.h"
 #include "error.h"
+#include "error_base.h"
 #include "gpio.h"
 #include "mcu_mapping.h"
 #include "math.h"
@@ -51,8 +52,7 @@ TRCS_status_t TRCS_HW_de_init(void) {
     TIM_status_t tim_status = TIM_SUCCESS;
     // Release sampling timer.
     tim_status = TIM_STD_de_init(TIM_INSTANCE_TRCS);
-    TIM_exit_error(TRCS_ERROR_BASE_TIMER);
-errors:
+    TIM_stack_error(ERROR_BASE_TRCS + TRCS_ERROR_BASE_TIMER);
     return status;
 }
 

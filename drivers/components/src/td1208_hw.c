@@ -11,6 +11,7 @@
 #include "td1208_driver_flags.h"
 #endif
 #include "error.h"
+#include "error_base.h"
 #include "lptim.h"
 #include "mcu_mapping.h"
 #include "nvic_priority.h"
@@ -47,8 +48,7 @@ TD1208_status_t TD1208_HW_de_init(void) {
     USART_status_t usart_status = USART_SUCCESS;
     // Release USART.
     usart_status = USART_de_init(USART_INSTANCE_TD1208, &USART_GPIO_TD1208);
-    USART_exit_error(TD1208_ERROR_BASE_UART);
-errors:
+    USART_stack_error(ERROR_BASE_TD1208 + TD1208_ERROR_BASE_UART);
     return status;
 }
 

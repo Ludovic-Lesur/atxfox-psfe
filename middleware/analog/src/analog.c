@@ -233,17 +233,16 @@ ANALOG_status_t ANALOG_de_init(void) {
     analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
     // Stop sampling timer.
     tim_status = TIM_STD_stop(TIM_INSTANCE_ANALOG);
-    TIM_exit_error(TRCS_ERROR_BASE_TIMER);
+    TIM_stack_error(ERROR_BASE_ANALOG + TRCS_ERROR_BASE_TIMER);
     // Init TRCS board.
     trcs_status = TRCS_de_init();
-    TRCS_exit_error(ANALOG_ERROR_BASE_TRCS);
+    TRCS_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_TRCS);
     // Release internal ADC.
     adc_status = ADC_de_init();
-    ADC_exit_error(ANALOG_ERROR_BASE_ADC);
+    ADC_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_ADC);
     // Release sampling timer.
     tim_status = TIM_STD_de_init(TIM_INSTANCE_ANALOG);
-    TIM_exit_error(ANALOG_ERROR_BASE_TIM);
-errors:
+    TIM_stack_error(ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_TIM);
     return status;
 }
 

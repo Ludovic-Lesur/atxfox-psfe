@@ -327,11 +327,10 @@ HMI_status_t HMI_de_init(void) {
     TIM_status_t tim_status = TIM_SUCCESS;
     // Release display timer.
     tim_status = TIM_STD_de_init(TIM_INSTANCE_HMI);
-    TIM_exit_error(HMI_ERROR_BASE_TIM);
+    TIM_stack_error(ERROR_BASE_HMI + HMI_ERROR_BASE_TIM);
     // Release LCD driver.
     st7066u_status = ST7066U_de_init();
-    ST7066U_exit_error(HMI_ERROR_BASE_ST7066U);
-errors:
+    ST7066U_stack_error(ERROR_BASE_HMI + HMI_ERROR_BASE_ST7066U);
     return status;
 }
 
@@ -359,10 +358,9 @@ HMI_status_t HMI_stop(void) {
     hmi_ctx.state = HMI_STATE_OFF;
     // Stop timer.
     tim_status = TIM_STD_stop(TIM_INSTANCE_HMI);
-    TIM_exit_error(HMI_ERROR_BASE_TIM);
+    TIM_stack_error(ERROR_BASE_HMI + HMI_ERROR_BASE_TIM);
     // Clear screen.
     st7066u_status = ST7066U_clear();
-    ST7066U_exit_error(HMI_ERROR_BASE_ST7066U);
-errors:
+    ST7066U_stack_error(ERROR_BASE_HMI + HMI_ERROR_BASE_ST7066U);
     return status;
 }

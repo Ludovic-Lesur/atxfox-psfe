@@ -15,8 +15,8 @@
 
 /*** Board options ***/
 
-//#define PSFE_SERIAL_MONITORING
-//#define PSFE_SIGFOX_MONITORING
+#define PSFE_SERIAL_MONITORING
+#define PSFE_SIGFOX_MONITORING
 
 /*** Board flags definition ***/
 
