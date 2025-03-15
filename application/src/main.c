@@ -37,6 +37,7 @@ static void _PSFE_init_hw(void) {
     // Local variables.
     RCC_status_t rcc_status = RCC_SUCCESS;
     RTC_status_t rtc_status = RTC_SUCCESS;
+    LPTIM_status_t lptim_status = LPTIM_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     HMI_status_t hmi_status = HMI_SUCCESS;
 #ifndef PSFE_MODE_DEBUG
@@ -72,7 +73,8 @@ static void _PSFE_init_hw(void) {
     rtc_status = RTC_init(NULL, NVIC_PRIORITY_RTC);
     RTC_stack_error(ERROR_BASE_RTC);
     // Init delay timer.
-    LPTIM_init(NVIC_PRIORITY_DELAY);
+    lptim_status = LPTIM_init(NVIC_PRIORITY_DELAY);
+    LPTIM_stack_error(ERROR_BASE_LPTIM);
     // Init middleware modules.
     analog_status = ANALOG_init();
     ANALOG_stack_error(ERROR_BASE_ANALOG);

@@ -9,7 +9,7 @@
 #define __SIGFOX_H__
 
 #include "analog.h"
-#include "math.h"
+#include "maths.h"
 #include "psfe_flags.h"
 #include "td1208.h"
 

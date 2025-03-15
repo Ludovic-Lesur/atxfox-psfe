@@ -11,7 +11,7 @@
 #include "error.h"
 #include "error_base.h"
 #include "iwdg.h"
-#include "math.h"
+#include "maths.h"
 #include "psfe_flags.h"
 #include "pwr.h"
 #include "rtc.h"

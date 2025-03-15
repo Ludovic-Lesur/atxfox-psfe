@@ -15,7 +15,6 @@
 #include "error_base.h"
 #include "gpio.h"
 #include "mcu_mapping.h"
-#include "math.h"
 #include "nvic_priority.h"
 #include "tim.h"
 #include "trcs.h"

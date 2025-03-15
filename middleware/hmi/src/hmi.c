@@ -10,7 +10,7 @@
 #include "analog.h"
 #include "error.h"
 #include "error_base.h"
-#include "math.h"
+#include "maths.h"
 #include "mcu_mapping.h"
 #include "nvic_priority.h"
 #include "psfe_flags.h"
