@@ -9,6 +9,7 @@
 #define __SERIAL_H__
 
 #include "analog.h"
+#include "error.h"
 #include "psfe_flags.h"
 #include "terminal.h"
 #include "types.h"
@@ -23,7 +24,7 @@ typedef enum {
     // Driver errors.
     SERIAL_SUCCESS = 0,
     // Low level drivers errors.
-    SERIAL_ERROR_BASE_TERMINAL = 0x0100,
+    SERIAL_ERROR_BASE_TERMINAL = ERROR_BASE_STEP,
     SERIAL_ERROR_BASE_ANALOG = (SERIAL_ERROR_BASE_TERMINAL + TERMINAL_ERROR_BASE_LAST),
     // Last base value.
     SERIAL_ERROR_BASE_LAST = (SERIAL_ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST)

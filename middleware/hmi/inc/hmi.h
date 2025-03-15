@@ -9,6 +9,7 @@
 #define __HMI_H__
 
 #include "analog.h"
+#include "error.h"
 #include "sigfox.h"
 #include "st7066u.h"
 #include "string.h"
@@ -27,7 +28,7 @@ typedef enum {
     HMI_ERROR_STATE,
     HMI_ERROR_UNIT_SIZE_OVERFLOW,
     // Low level drivers errors.
-    HMI_ERROR_BASE_TIM = 0x0100,
+    HMI_ERROR_BASE_TIM = ERROR_BASE_STEP,
     HMI_ERROR_BASE_STRING = (HMI_ERROR_BASE_TIM + TIM_ERROR_BASE_LAST),
     HMI_ERROR_BASE_ST7066U = (HMI_ERROR_BASE_STRING + STRING_ERROR_BASE_LAST),
     HMI_ERROR_BASE_SIGFOX = (HMI_ERROR_BASE_ST7066U + ST7066U_ERROR_BASE_LAST),

@@ -9,6 +9,7 @@
 #define __SIGFOX_H__
 
 #include "analog.h"
+#include "error.h"
 #include "maths.h"
 #include "psfe_flags.h"
 #include "td1208.h"
@@ -25,7 +26,7 @@ typedef enum {
     SIGFOX_ERROR_NULL_PARAMETER,
     SIGFOX_ERROR_EP_ID_NOT_READ,
     // Low level drivers errors.
-    SIGFOX_ERROR_BASE_TD1208 = 0x0100,
+    SIGFOX_ERROR_BASE_TD1208 = ERROR_BASE_STEP,
     SIGFOX_ERROR_BASE_ANALOG = (SIGFOX_ERROR_BASE_TD1208 + TD1208_ERROR_BASE_LAST),
     SIGFOX_ERROR_BASE_MATH = (SIGFOX_ERROR_BASE_ANALOG + ANALOG_ERROR_BASE_LAST),
     // Last base value.
