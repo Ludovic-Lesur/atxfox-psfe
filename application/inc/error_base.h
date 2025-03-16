@@ -14,6 +14,7 @@
 #include "rcc.h"
 #include "rtc.h"
 // Utils.
+#include "error.h"
 #include "terminal.h"
 // Components.
 #include "td1208.h"

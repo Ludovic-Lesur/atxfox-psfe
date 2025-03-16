@@ -29,8 +29,8 @@
 /*** MCU MAPPING structures ***/
 
 /*!******************************************************************
- * \enum GPIO_adc_channel_t
- * \brief GPIO ADC channels list.
+ * \enum ADC_channel_index_t
+ * \brief ADC channels index.
  *******************************************************************/
 typedef enum {
     ADC_CHANNEL_INDEX_REF191 = 0,
