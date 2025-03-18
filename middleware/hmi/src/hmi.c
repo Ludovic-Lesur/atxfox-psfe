@@ -15,7 +15,7 @@
 #include "nvic_priority.h"
 #include "psfe_flags.h"
 #include "st7066u.h"
-#include "string.h"
+#include "strings.h"
 #include "tim.h"
 #include "types.h"
 #include "version.h"

@@ -12,7 +12,7 @@
 #include "error.h"
 #include "sigfox.h"
 #include "st7066u.h"
-#include "string.h"
+#include "strings.h"
 #include "tim.h"
 #include "types.h"
 
