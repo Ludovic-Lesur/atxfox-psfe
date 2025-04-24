@@ -37,11 +37,6 @@ TERMINAL_status_t TERMINAL_HW_init(uint8_t instance, uint32_t baud_rate, TERMINA
     lpuart_config.rxne_irq_callback = rx_irq_callback;
     lpuart_status = LPUART_init(&LPUART_GPIO_SERIAL, &lpuart_config);
     LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
-    // Start reception if needed.
-    if (rx_irq_callback != NULL) {
-        lpuart_status = LPUART_enable_rx();
-        LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
-    }
 errors:
 #else
     UNUSED(baud_rate);
@@ -66,6 +61,38 @@ TERMINAL_status_t TERMINAL_HW_de_init(uint8_t instance) {
 }
 
 /*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_enable_rx(uint8_t instance) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    // Unused parameter.
+    UNUSED(instance);
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
+    LPUART_status_t lpuart_status = LPUART_SUCCESS;
+    // Start receiver.
+    lpuart_status = LPUART_enable_rx();
+    LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
+errors:
+#endif
+    return status;
+}
+
+/*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_disable_rx(uint8_t instance) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    // Unused parameter.
+    UNUSED(instance);
+#if ((defined PSFE_SERIAL_MONITORING) && !(defined PSFE_MODE_DEBUG))
+    LPUART_status_t lpuart_status = LPUART_SUCCESS;
+    // Start receiver.
+    lpuart_status = LPUART_disable_rx();
+    LPUART_exit_error(TERMINAL_ERROR_BASE_HW_INTERFACE);
+errors:
+#endif
+    return status;
+}
+
+/*******************************************************************/
 TERMINAL_status_t TERMINAL_HW_write(uint8_t instance, uint8_t* data, uint32_t data_size_bytes) {
     // Local variables.
     TERMINAL_status_t status = TERMINAL_SUCCESS;
@@ -83,5 +110,17 @@ errors:
 #endif
     return status;
 }
+
+#ifdef EMBEDDED_UTILS_TERMINAL_MODE_BUS
+/*******************************************************************/
+TERMINAL_status_t TERMINAL_HW_set_destination_address(uint8_t instance, uint8_t destination_address) {
+    // Local variables.
+    TERMINAL_status_t status = TERMINAL_SUCCESS;
+    /* To be implemented */
+    UNUSED(instance);
+    UNUSED(destination_address);
+    return status;
+}
+#endif
 
 #endif /* EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE */
