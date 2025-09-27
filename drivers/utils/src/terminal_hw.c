@@ -16,6 +16,7 @@
 #include "lpuart.h"
 #include "nvic_priority.h"
 #include "psfe_flags.h"
+#include "terminal.h"
 #include "types.h"
 
 #if (!(defined EMBEDDED_UTILS_TERMINAL_DRIVER_DISABLE) && (EMBEDDED_UTILS_TERMINAL_INSTANCES_NUMBER > 0))

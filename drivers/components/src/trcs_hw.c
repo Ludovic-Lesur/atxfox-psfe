@@ -18,6 +18,7 @@
 #include "nvic_priority.h"
 #include "tim.h"
 #include "trcs.h"
+#include "types.h"
 
 #ifndef TRCS_DRIVER_DISABLE
 
