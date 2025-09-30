@@ -41,31 +41,30 @@ typedef union {
         unsigned commit_index :8;
         unsigned commit_id :28;
         unsigned dirty_flag :4;
-    } __attribute__((scalar_storage_order("big-endian")))__attribute__((packed));
+    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SIGFOX_startup_data_t;
 
 /*******************************************************************/
-typedef struct {
-    union {
-        uint8_t frame[SIGFOX_MONITORING_DATA_LENGTH];
-        struct {
-            unsigned vout_mv :16;
-            unsigned iout_range :8;
-            unsigned iout_ua :24;
-            unsigned vmcu_mv :16;
-            unsigned tmcu_degrees :8;
-        } __attribute__((scalar_storage_order("big-endian")))__attribute__((packed));
-    };
+typedef union {
+    uint8_t frame[SIGFOX_MONITORING_DATA_LENGTH];
+    struct {
+        unsigned vout_mv :16;
+        unsigned iout_range :8;
+        unsigned iout_ua :24;
+        unsigned vmcu_mv :16;
+        unsigned tmcu_degrees :8;
+    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SIGFOX_monitoring_data_t;
 
 /*******************************************************************/
 typedef union {
+    uint8_t all;
     struct {
+        unsigned unused :5;
         unsigned ep_id_read :1;
         unsigned startup_frame_sent :1;
         unsigned enable :1;
-    };
-    uint8_t all;
+    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SIGFOX_flags_t;
 
 /*******************************************************************/

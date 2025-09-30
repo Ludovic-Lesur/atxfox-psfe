@@ -41,12 +41,13 @@
 
 /*******************************************************************/
 typedef union {
+    uint8_t all;
     struct {
+        unsigned unused :5;
         unsigned trcs_started :1;
         unsigned trcs_enable :1;
         unsigned trcs_bypass :1;
-    };
-    uint8_t all;
+    } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } ANALOG_flags_t;
 
 /*******************************************************************/
