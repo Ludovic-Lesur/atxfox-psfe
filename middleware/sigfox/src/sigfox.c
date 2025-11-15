@@ -23,17 +23,17 @@
 
 /*** SIGFOX local macros ***/
 
-#define SIGFOX_PERIOD_SECONDS           300
+#define SIGFOX_PERIOD_SECONDS               300
 
-#define SIGFOX_STARTUP_DATA_LENGTH      8
-#define SIGFOX_MONITORING_DATA_LENGTH   9
-#define SIGFOX_ERROR_STACK_DATA_LENGTH  12
+#define SIGFOX_UL_PAYLOAD_SIZE_STARTUP      8
+#define SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK  12
+#define SIGFOX_UL_PAYLOAD_SIZE_MONITORING   9
 
 /*** SIGFOX local structures ***/
 
 /*******************************************************************/
 typedef union {
-    uint8_t frame[SIGFOX_STARTUP_DATA_LENGTH];
+    uint8_t frame[SIGFOX_UL_PAYLOAD_SIZE_STARTUP];
     struct {
         unsigned reset_reason :8;
         unsigned major_version :8;
@@ -42,11 +42,11 @@ typedef union {
         unsigned commit_id :28;
         unsigned dirty_flag :4;
     } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
-} SIGFOX_startup_data_t;
+} SIGFOX_ul_payload_startup_t;
 
 /*******************************************************************/
 typedef union {
-    uint8_t frame[SIGFOX_MONITORING_DATA_LENGTH];
+    uint8_t frame[SIGFOX_UL_PAYLOAD_SIZE_MONITORING];
     struct {
         unsigned vout_mv :16;
         unsigned iout_range :8;
@@ -54,7 +54,7 @@ typedef union {
         unsigned vmcu_mv :16;
         unsigned tmcu_degrees :8;
     } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
-} SIGFOX_monitoring_data_t;
+} SIGFOX_ul_payload_monitoring_t;
 
 /*******************************************************************/
 typedef union {
@@ -62,7 +62,7 @@ typedef union {
     struct {
         unsigned unused :5;
         unsigned ep_id_read :1;
-        unsigned startup_frame_sent :1;
+        unsigned sigfox_ul_payload_startup_sent :1;
         unsigned enable :1;
     } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SIGFOX_flags_t;
@@ -155,9 +155,9 @@ SIGFOX_status_t SIGFOX_process(void) {
     TD1208_status_t td1208_status = TD1208_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     MATH_status_t math_status = MATH_SUCCESS;
-    SIGFOX_startup_data_t startup_frame;
-    SIGFOX_monitoring_data_t monitoring_frame;
-    uint8_t error_stack_frame[SIGFOX_ERROR_STACK_DATA_LENGTH];
+    SIGFOX_ul_payload_startup_t sigfox_ul_payload_startup;
+    SIGFOX_ul_payload_monitoring_t sigfox_ul_payload_monitoring;
+    uint8_t error_stack_frame[SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK];
     int32_t vout_mv = 0;
     int32_t iout_ua = 0;
     int32_t vmcu_mv = 0;
@@ -170,20 +170,20 @@ SIGFOX_status_t SIGFOX_process(void) {
         // Update next transmission time.
         sigfox_ctx.next_transmission_time_seconds = (RTC_get_uptime_seconds() + SIGFOX_PERIOD_SECONDS);
         // Send startup frame is needed.
-        if (sigfox_ctx.flags.startup_frame_sent == 0) {
+        if (sigfox_ctx.flags.sigfox_ul_payload_startup_sent == 0) {
             // Set flag.
-            sigfox_ctx.flags.startup_frame_sent = 1;
+            sigfox_ctx.flags.sigfox_ul_payload_startup_sent = 1;
             // Build startup frame.
-            startup_frame.reset_reason = PWR_get_reset_flags();
-            startup_frame.major_version = GIT_MAJOR_VERSION;
-            startup_frame.minor_version = GIT_MINOR_VERSION;
-            startup_frame.commit_index = GIT_COMMIT_INDEX;
-            startup_frame.commit_id = GIT_COMMIT_ID;
-            startup_frame.dirty_flag = GIT_DIRTY_FLAG;
+            sigfox_ul_payload_startup.reset_reason = PWR_get_reset_flags();
+            sigfox_ul_payload_startup.major_version = GIT_MAJOR_VERSION;
+            sigfox_ul_payload_startup.minor_version = GIT_MINOR_VERSION;
+            sigfox_ul_payload_startup.commit_index = GIT_COMMIT_INDEX;
+            sigfox_ul_payload_startup.commit_id = GIT_COMMIT_ID;
+            sigfox_ul_payload_startup.dirty_flag = GIT_DIRTY_FLAG;
             // Clear reset flags.
             PWR_clear_reset_flags();
             // Send startup message through Sigfox.
-            td1208_status = TD1208_send_frame(startup_frame.frame, SIGFOX_STARTUP_DATA_LENGTH);
+            td1208_status = TD1208_send_frame(sigfox_ul_payload_startup.frame, SIGFOX_UL_PAYLOAD_SIZE_STARTUP);
             TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);
             // Reload watchdog.
             IWDG_reload();
@@ -201,26 +201,26 @@ SIGFOX_status_t SIGFOX_process(void) {
         math_status = MATH_integer_to_signed_magnitude(tmcu_degrees, (MATH_S32_SIZE_BITS - 1), &tmcu_degrees_signed_magnitude);
         MATH_exit_error(SIGFOX_ERROR_BASE_MATH);
         // Build monitoring frame.
-        monitoring_frame.vout_mv = vout_mv;
-        monitoring_frame.iout_ua = iout_ua;
-        monitoring_frame.iout_range = ANALOG_get_iout_range();
-        monitoring_frame.vmcu_mv = vmcu_mv;
-        monitoring_frame.tmcu_degrees = tmcu_degrees_signed_magnitude;
+        sigfox_ul_payload_monitoring.vout_mv = vout_mv;
+        sigfox_ul_payload_monitoring.iout_ua = iout_ua;
+        sigfox_ul_payload_monitoring.iout_range = ANALOG_get_iout_range();
+        sigfox_ul_payload_monitoring.vmcu_mv = vmcu_mv;
+        sigfox_ul_payload_monitoring.tmcu_degrees = tmcu_degrees_signed_magnitude;
         // Send monitoring data.
-        td1208_status = TD1208_send_frame(monitoring_frame.frame, SIGFOX_MONITORING_DATA_LENGTH);
+        td1208_status = TD1208_send_frame(sigfox_ul_payload_monitoring.frame, SIGFOX_UL_PAYLOAD_SIZE_MONITORING);
         TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);
         // Reload watchdog.
         IWDG_reload();
         // Check stack.
         if (ERROR_stack_is_empty() == 0) {
             // Read error stack.
-            for (idx = 0; idx < (SIGFOX_ERROR_STACK_DATA_LENGTH >> 1); idx++) {
+            for (idx = 0; idx < (SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK >> 1); idx++) {
                 error_code = ERROR_stack_read();
                 error_stack_frame[(idx << 1) + 0] = (uint8_t) ((error_code >> 8) & 0x00FF);
                 error_stack_frame[(idx << 1) + 1] = (uint8_t) ((error_code >> 0) & 0x00FF);
             }
             // Send error stack data.
-            td1208_status = TD1208_send_frame(error_stack_frame, SIGFOX_ERROR_STACK_DATA_LENGTH);
+            td1208_status = TD1208_send_frame(error_stack_frame, SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK);
             TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);
             // Reload watchdog.
             IWDG_reload();
