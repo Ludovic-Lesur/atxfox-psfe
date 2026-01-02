@@ -8,10 +8,10 @@ Each voltage output of the ATX has its own front-end, formed by a **PSFE** and *
 
 The boards were designed on **Circuit Maker V1.3**. Below is the list of hardware revisions:
 
-| Hardware revision | Description | Status |
-|:---:|:---:|:---:|
-| [PSFE HW1.0](https://365.altium.com/files/C6DA5B00-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
-| [TRCS HW1.0](https://365.altium.com/files/C4EB9CA3-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | :white_check_mark: |
+| Hardware revision | Description | `cmake_hw_version` | Status |
+|:---:|:---:|:---:|:---:|
+| [PSFE HW1.0](https://365.altium.com/files/C6DA5B00-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | `HW1_0` | :white_check_mark: |
+| [TRCS HW1.0](https://365.altium.com/files/C4EB9CA3-C92D-11EB-A2F6-0A0ABF5AFC1B) | Initial version. | | :white_check_mark: |
 
 # Embedded software
 
@@ -42,3 +42,19 @@ The project is organized as follow:
     * `serial` : **Serial monitoring** driver.
     * `sigfox` : **Sigfox monitoring** driver.
 * `application` : Main **application**.
+
+## Build
+
+The project can be compiled by command line with `cmake`.
+
+```bash
+mkdir build
+cd build
+cmake -DCMAKE_TOOLCHAIN_FILE="script/cmake-arm-none-eabi/toolchain.cmake" \
+      -DTOOLCHAIN_PATH="<arm_none_eabi_gcc_path>" \
+      -DPSFE_HW_VERSION="<cmake_hw_version>" \
+      -DPSFE_SERIAL_MONITORING=OFF \
+      -DPSFE_SIGFOX_MONITORING=OFF \
+      -G "Unix Makefiles" ..
+make all
+```

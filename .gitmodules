@@ -19,3 +19,6 @@
 [submodule "trcs-driver"]
     path = drivers/components/trcs-driver
     url = https://github.com/Ludovic-Lesur/trcs-driver.git
+[submodule "cmake-arm-none-eabi"]
+    path = script/cmake-arm-none-eabi
+    url = https://github.com/Ludovic-Lesur/cmake-arm-none-eabi.git

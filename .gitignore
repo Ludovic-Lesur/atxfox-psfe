@@ -1,3 +1,4 @@
 .settings/
 application/inc/version.h
 hw1-0/
+*build*/
