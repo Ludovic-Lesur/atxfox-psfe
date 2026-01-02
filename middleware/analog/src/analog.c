@@ -13,6 +13,8 @@
 #include "gpio.h"
 #include "mcu_mapping.h"
 #include "nvic_priority.h"
+#include "nvm.h"
+#include "nvm_address.h"
 #include "psfe_flags.h"
 #include "rtc.h"
 #include "tim.h"
@@ -24,14 +26,6 @@
 #define ANALOG_TIMER_PERIOD_MS                  100
 
 #define ANALOG_REF191_VOLTAGE_MV                2048
-
-#if ((PSFE_BOARD_NUMBER == 1) || (PSFE_BOARD_NUMBER == 2) || (PSFE_BOARD_NUMBER == 5) || (PSFE_BOARD_NUMBER == 6) || (PSFE_BOARD_NUMBER == 7) || (PSFE_BOARD_NUMBER == 10))
-#define ANALOG_VOUT_DIVIDER_RATIO               2
-#define ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE  998000
-#else
-#define ANALOG_VOUT_DIVIDER_RATIO               6
-#define ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE  599000
-#endif
 
 #define ANALOG_CALIBRATION_PERIOD_SECONDS       300
 
@@ -52,6 +46,8 @@ typedef union {
 
 /*******************************************************************/
 typedef struct {
+    int32_t vout_divider_ratio;
+    int32_t vout_divider_resistance_ohms;
     volatile ANALOG_flags_t flags;
     int32_t data[ANALOG_CHANNEL_LAST];
     int32_t ref191_data_12bits;
@@ -105,7 +101,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
         adc_status = ADC_convert_channel(ADC_CHANNEL_VOUT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * ANALOG_VOUT_DIVIDER_RATIO) / (analog_ctx.ref191_data_12bits);
+        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * analog_ctx.vout_divider_ratio) / (analog_ctx.ref191_data_12bits);
         break;
     case ANALOG_CHANNEL_IOUT_MV:
         // Check calibration.
@@ -125,7 +121,7 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
             // Read from TRCS board
             analog_data = TRCS_get_iout();
             // Compute output voltage divider current.
-            vout_voltage_divider_current_ua = (analog_ctx.data[ANALOG_CHANNEL_VOUT_MV] * 1000) / (ANALOG_VOUT_VOLTAGE_DIVIDER_RESISTANCE);
+            vout_voltage_divider_current_ua = (analog_ctx.data[ANALOG_CHANNEL_VOUT_MV] * 1000) / (analog_ctx.vout_divider_resistance_ohms);
             // Remove offset current.
             if (analog_data > vout_voltage_divider_current_ua) {
                 analog_data -= vout_voltage_divider_current_ua;
@@ -190,17 +186,46 @@ errors:
 ANALOG_status_t ANALOG_init(void) {
     // Local variables.
     ANALOG_status_t status = ANALOG_SUCCESS;
+    NVM_status_t nvm_status = NVM_SUCCESS;
     ADC_status_t adc_status = ADC_SUCCESS;
     TIM_status_t tim_status = TIM_SUCCESS;
     TRCS_status_t trcs_status = TRCS_SUCCESS;
+    uint8_t board_number = 0;
     uint8_t idx = 0;
     // Init context.
+    analog_ctx.vout_divider_ratio = 0;
+    analog_ctx.vout_divider_resistance_ohms = 1;
     analog_ctx.flags.all = 0;
     analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
     analog_ctx.calibration_next_time_seconds = 0;
     // Init data.
     for (idx = 0; idx < ANALOG_CHANNEL_LAST; idx++) {
         analog_ctx.data[idx] = 0;
+    }
+    // Read board number.
+    nvm_status = NVM_read_byte(NVM_ADDRESS_BOARD_NUMBER, &board_number);
+    NVM_exit_error(ANALOG_ERROR_BASE_NVM);
+    // Init context.
+    switch (board_number) {
+    case 1:
+    case 2:
+    case 5:
+    case 6:
+    case 7:
+    case 10:
+        analog_ctx.vout_divider_ratio = 2;
+        analog_ctx.vout_divider_resistance_ohms = 998000;
+        break;
+    case 3:
+    case 4:
+    case 8:
+    case 9:
+        analog_ctx.vout_divider_ratio = 6;
+        analog_ctx.vout_divider_resistance_ohms = 599000;
+        break;
+    default:
+        status = ANALOG_ERROR_BOARD_NUMBER;
+        goto errors;
     }
     // Init bypass detect.
     GPIO_configure(&GPIO_TRCS_BYPASS, GPIO_MODE_INPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_LOW, GPIO_PULL_NONE);
