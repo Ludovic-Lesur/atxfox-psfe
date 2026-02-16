@@ -198,7 +198,7 @@ SIGFOX_status_t SIGFOX_process(void) {
         analog_status = ANALOG_read_channel(ANALOG_CHANNEL_TMCU_DEGREES, &tmcu_degrees);
         ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
         // Convert to signed magnitude
-        math_status = MATH_integer_to_signed_magnitude(tmcu_degrees, (MATH_S32_SIZE_BITS - 1), &tmcu_degrees_signed_magnitude);
+        math_status = MATH_integer_to_signed_magnitude(tmcu_degrees, (MATH_U8_SIZE_BITS - 1), &tmcu_degrees_signed_magnitude);
         MATH_exit_error(SIGFOX_ERROR_BASE_MATH);
         // Build monitoring frame.
         sigfox_ul_payload_monitoring.vout_mv = vout_mv;
