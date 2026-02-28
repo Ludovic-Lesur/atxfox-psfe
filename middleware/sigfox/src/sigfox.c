@@ -48,11 +48,11 @@ typedef union {
 typedef union {
     uint8_t frame[SIGFOX_UL_PAYLOAD_SIZE_MONITORING];
     struct {
-        unsigned vout_mv :16;
-        unsigned iout_range :8;
-        unsigned iout_ua :24;
-        unsigned vmcu_mv :16;
-        unsigned tmcu_degrees :8;
+        unsigned output_voltage_mv :16;
+        unsigned output_current_range :8;
+        unsigned output_current_ua :24;
+        unsigned mcu_voltage_mv :16;
+        unsigned mcu_temperature_degrees :8;
     } __attribute__((scalar_storage_order("big-endian"))) __attribute__((packed));
 } SIGFOX_ul_payload_monitoring_t;
 
@@ -158,11 +158,12 @@ SIGFOX_status_t SIGFOX_process(void) {
     SIGFOX_ul_payload_startup_t sigfox_ul_payload_startup;
     SIGFOX_ul_payload_monitoring_t sigfox_ul_payload_monitoring;
     uint8_t error_stack_frame[SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK];
-    int32_t vout_mv = 0;
-    int32_t iout_ua = 0;
-    int32_t vmcu_mv = 0;
-    int32_t tmcu_degrees = 0;
-    uint32_t tmcu_degrees_signed_magnitude = 0;
+    int32_t output_voltage_mv = 0;
+    int32_t output_current_ua = 0;
+    ANALOG_output_current_range_t output_current_range = ANALOG_OUTPUT_CURRENT_RANGE_NONE;
+    int32_t mcu_voltage_mv = 0;
+    int32_t mcu_temperature_degrees = 0;
+    uint32_t mcu_temperature_degrees_signed_magnitude = 0;
     ERROR_code_t error_code;
     uint8_t idx = 0;
     // Check period.
@@ -188,24 +189,26 @@ SIGFOX_status_t SIGFOX_process(void) {
             // Reload watchdog.
             IWDG_reload();
         }
-        // Read analog data.
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_VOUT_MV, &vout_mv);
+        // Read analog data and measurement range.
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV, &output_voltage_mv);
         ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_IOUT_UA, &iout_ua);
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_CURRENT_UA, &output_current_ua);
         ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_VMCU_MV, &vmcu_mv);
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_MCU_VOLTAGE_MV, &mcu_voltage_mv);
         ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_TMCU_DEGREES, &tmcu_degrees);
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_MCU_TEMPERATURE_DEGREES, &mcu_temperature_degrees);
+        ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
+        analog_status = ANALOG_get_output_current_range(&output_current_range);
         ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
         // Convert to signed magnitude
-        math_status = MATH_integer_to_signed_magnitude(tmcu_degrees, (MATH_U8_SIZE_BITS - 1), &tmcu_degrees_signed_magnitude);
+        math_status = MATH_integer_to_signed_magnitude(mcu_temperature_degrees, (MATH_U8_SIZE_BITS - 1), &mcu_temperature_degrees_signed_magnitude);
         MATH_exit_error(SIGFOX_ERROR_BASE_MATH);
         // Build monitoring frame.
-        sigfox_ul_payload_monitoring.vout_mv = vout_mv;
-        sigfox_ul_payload_monitoring.iout_ua = iout_ua;
-        sigfox_ul_payload_monitoring.iout_range = ANALOG_get_iout_range();
-        sigfox_ul_payload_monitoring.vmcu_mv = vmcu_mv;
-        sigfox_ul_payload_monitoring.tmcu_degrees = tmcu_degrees_signed_magnitude;
+        sigfox_ul_payload_monitoring.output_voltage_mv = output_voltage_mv;
+        sigfox_ul_payload_monitoring.output_current_ua = output_current_ua;
+        sigfox_ul_payload_monitoring.output_current_range = output_current_range;
+        sigfox_ul_payload_monitoring.mcu_voltage_mv = mcu_voltage_mv;
+        sigfox_ul_payload_monitoring.mcu_temperature_degrees = mcu_temperature_degrees_signed_magnitude;
         // Send monitoring data.
         td1208_status = TD1208_send_frame(sigfox_ul_payload_monitoring.frame, SIGFOX_UL_PAYLOAD_SIZE_MONITORING);
         TD1208_exit_error(SIGFOX_ERROR_BASE_TD1208);

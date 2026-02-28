@@ -22,13 +22,13 @@
 
 /*** HMI local macros ***/
 
-#define HMI_DISPLAY_PERIOD_MS               300
+#define HMI_DISPLAY_PERIOD_MS                   300
 
-#define HMI_HW_VERSION_PRINT_DURATION_MS    2000
-#define HMI_SW_VERSION_PRINT_DURATION_MS    2000
-#define HMI_SIGFOX_EP_ID_PRINT_DURATION_MS  2000
+#define HMI_HW_VERSION_PRINT_DURATION_MS        2000
+#define HMI_SW_VERSION_PRINT_DURATION_MS        2000
+#define HMI_SIGFOX_EP_ID_PRINT_DURATION_MS      2000
 
-#define HMI_VOUT_ERROR_THRESHOLD_MV         100
+#define HMI_OUTPUT_VOLTAGE_ERROR_THRESHOLD_MV   100
 
 /*** HMI local structures ***/
 
@@ -200,6 +200,7 @@ static HMI_status_t _HMI_process(void) {
     ST7066U_status_t st7066u_status = ST7066U_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     int32_t analog_data = 0;
+    uint8_t bypass_switch_state = 0;
     // State machine.
     switch (hmi_ctx.state) {
     case HMI_STATE_OFF:
@@ -246,11 +247,13 @@ static HMI_status_t _HMI_process(void) {
         break;
 #endif
     case HMI_STATE_ANALOG_DATA:
-        // Read output voltage.
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_VOUT_MV, &analog_data);
+        // Read output voltage and bypass state.
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV, &analog_data);
+        ANALOG_exit_error(HMI_ERROR_BASE_ANALOG);
+        analog_status = ANALOG_get_bypass_switch_state(&bypass_switch_state);
         ANALOG_exit_error(HMI_ERROR_BASE_ANALOG);
         // Print output voltage.
-        if (analog_data > HMI_VOUT_ERROR_THRESHOLD_MV) {
+        if (analog_data > HMI_OUTPUT_VOLTAGE_ERROR_THRESHOLD_MV) {
             status = _HMI_print_value(0, analog_data, 3, "V");
             if (status != HMI_SUCCESS) goto errors;
         }
@@ -259,9 +262,9 @@ static HMI_status_t _HMI_process(void) {
             ST7066U_exit_error(HMI_ERROR_BASE_ST7066U);
         }
         // Check bypass switch state.
-        if (ANALOG_get_bypass_switch_state() == 0) {
+        if (bypass_switch_state == 0) {
             // Read output current.
-            analog_status = ANALOG_read_channel(ANALOG_CHANNEL_IOUT_UA, &analog_data);
+            analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_CURRENT_UA, &analog_data);
             ANALOG_exit_error(HMI_ERROR_BASE_ANALOG);
             // Print output current.
             if (analog_data < 1000) {

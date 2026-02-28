@@ -46,8 +46,8 @@ typedef union {
 
 /*******************************************************************/
 typedef struct {
-    int32_t vout_divider_ratio;
-    int32_t vout_divider_resistance_ohms;
+    int32_t output_voltage_divider_ratio;
+    int32_t output_voltage_divider_resistance_ohms;
     volatile ANALOG_flags_t flags;
     int32_t data[ANALOG_CHANNEL_LAST];
     int32_t ref191_data_12bits;
@@ -70,61 +70,63 @@ static ANALOG_status_t _ANALOG_convert_channel(ANALOG_channel_t channel) {
     // Local variables.
     ANALOG_status_t status = ANALOG_SUCCESS;
     ADC_status_t adc_status = ADC_SUCCESS;
+    TRCS_status_t trcs_status = TRCS_SUCCESS;
     int32_t adc_data_12bits = 0;
     int32_t analog_data = 0;
-    int32_t vout_voltage_divider_current_ua = 0;
+    int32_t output_voltage_voltage_divider_current_ua = 0;
     // Check channel.
     switch (channel) {
-    case ANALOG_CHANNEL_VMCU_MV:
+    case ANALOG_CHANNEL_MCU_VOLTAGE_MV:
         // MCU voltage.
         adc_status = ADC_convert_channel(ADC_CHANNEL_VREFINT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        adc_status = ADC_compute_vmcu(adc_data_12bits, ADC_get_vrefint_voltage_mv(), &analog_data);
+        adc_status = ADC_compute_mcu_voltage(adc_data_12bits, ADC_get_vrefint_voltage_mv(), &analog_data);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         break;
-    case ANALOG_CHANNEL_TMCU_DEGREES:
+    case ANALOG_CHANNEL_MCU_TEMPERATURE_DEGREES:
         // MCU temperature.
         adc_status = ADC_convert_channel(ADC_CHANNEL_TEMPERATURE_SENSOR, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to degrees.
-        adc_status = ADC_compute_tmcu(analog_ctx.data[ANALOG_CHANNEL_VMCU_MV], adc_data_12bits, &analog_data);
+        adc_status = ADC_compute_mcu_temperature(analog_ctx.data[ANALOG_CHANNEL_MCU_VOLTAGE_MV], adc_data_12bits, &analog_data);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         break;
-    case ANALOG_CHANNEL_VOUT_MV:
+    case ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV:
         // Check calibration.
         if (analog_ctx.ref191_data_12bits == ANALOG_ERROR_VALUE) {
             status = ANALOG_ERROR_CALIBRATION_MISSING;
             goto errors;
         }
         // Output voltage.
-        adc_status = ADC_convert_channel(ADC_CHANNEL_VOUT, &adc_data_12bits);
+        adc_status = ADC_convert_channel(ADC_CHANNEL_OUTPUT_VOLTAGE, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
-        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * analog_ctx.vout_divider_ratio) / (analog_ctx.ref191_data_12bits);
+        analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV * analog_ctx.output_voltage_divider_ratio) / (analog_ctx.ref191_data_12bits);
         break;
-    case ANALOG_CHANNEL_IOUT_MV:
+    case ANALOG_CHANNEL_OUTPUT_CURRENT_MV:
         // Check calibration.
         if (analog_ctx.ref191_data_12bits == ANALOG_ERROR_VALUE) {
             status = ANALOG_ERROR_CALIBRATION_MISSING;
             goto errors;
         }
         // Output current.
-        adc_status = ADC_convert_channel(ADC_CHANNEL_IOUT, &adc_data_12bits);
+        adc_status = ADC_convert_channel(ADC_CHANNEL_OUTPUT_CURRENT, &adc_data_12bits);
         ADC_exit_error(ANALOG_ERROR_BASE_ADC);
         // Convert to mV.
         analog_data = (adc_data_12bits * ANALOG_REF191_VOLTAGE_MV) / (analog_ctx.ref191_data_12bits);
         break;
-    case ANALOG_CHANNEL_IOUT_UA:
+    case ANALOG_CHANNEL_OUTPUT_CURRENT_UA:
         // Check bypass switch.
         if (analog_ctx.flags.trcs_bypass == 0) {
-            // Read from TRCS board
-            analog_data = TRCS_get_iout();
+            // Read from TRCS board.
+            trcs_status = TRCS_get_output_current(&analog_data);
+            TRCS_exit_error(ANALOG_ERROR_BASE_TRCS);
             // Compute output voltage divider current.
-            vout_voltage_divider_current_ua = (analog_ctx.data[ANALOG_CHANNEL_VOUT_MV] * 1000) / (analog_ctx.vout_divider_resistance_ohms);
+            output_voltage_voltage_divider_current_ua = (analog_ctx.data[ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV] * 1000) / (analog_ctx.output_voltage_divider_resistance_ohms);
             // Remove offset current.
-            if (analog_data > vout_voltage_divider_current_ua) {
-                analog_data -= vout_voltage_divider_current_ua;
+            if (analog_data > output_voltage_voltage_divider_current_ua) {
+                analog_data -= output_voltage_voltage_divider_current_ua;
             }
             else {
                 analog_data = 0;
@@ -193,8 +195,8 @@ ANALOG_status_t ANALOG_init(void) {
     uint8_t board_number = 0;
     uint8_t idx = 0;
     // Init context.
-    analog_ctx.vout_divider_ratio = 0;
-    analog_ctx.vout_divider_resistance_ohms = 1;
+    analog_ctx.output_voltage_divider_ratio = 0;
+    analog_ctx.output_voltage_divider_resistance_ohms = 1;
     analog_ctx.flags.all = 0;
     analog_ctx.ref191_data_12bits = ANALOG_ERROR_VALUE;
     analog_ctx.calibration_next_time_seconds = 0;
@@ -213,15 +215,15 @@ ANALOG_status_t ANALOG_init(void) {
     case 6:
     case 7:
     case 10:
-        analog_ctx.vout_divider_ratio = 2;
-        analog_ctx.vout_divider_resistance_ohms = 998000;
+        analog_ctx.output_voltage_divider_ratio = 2;
+        analog_ctx.output_voltage_divider_resistance_ohms = 998000;
         break;
     case 3:
     case 4:
     case 8:
     case 9:
-        analog_ctx.vout_divider_ratio = 6;
-        analog_ctx.vout_divider_resistance_ohms = 599000;
+        analog_ctx.output_voltage_divider_ratio = 6;
+        analog_ctx.output_voltage_divider_resistance_ohms = 599000;
         break;
     default:
         status = ANALOG_ERROR_BOARD_NUMBER;
@@ -346,13 +348,40 @@ errors:
 }
 
 /*******************************************************************/
-uint8_t ANALOG_get_bypass_switch_state(void) {
-    return (analog_ctx.flags.trcs_bypass);
+ANALOG_status_t ANALOG_get_bypass_switch_state(uint8_t* bypass_switch_state) {
+    // Local variables.
+    ANALOG_status_t status = ANALOG_SUCCESS;
+    // Check parameter.
+    if (bypass_switch_state == NULL) {
+        status = ANALOG_ERROR_NULL_PARAMETER;
+        goto errors;
+    }
+    (*bypass_switch_state) = analog_ctx.flags.trcs_bypass;
+errors:
+    return status;
 }
 
 /*******************************************************************/
-ANALOG_iout_range_t ANALOG_get_iout_range(void) {
+ANALOG_status_t ANALOG_get_output_current_range(ANALOG_output_current_range_t* output_current_range) {
     // Local variables.
-    ANALOG_iout_range_t iout_range = ((analog_ctx.flags.trcs_bypass != 0) ? ANALOG_IOUT_RANGE_BYPASS : ((ANALOG_iout_range_t) TRCS_get_range_state()));
-    return iout_range;
+    ANALOG_status_t status = ANALOG_SUCCESS;
+    TRCS_status_t trcs_status = TRCS_SUCCESS;
+    ANALOG_output_current_range_t analog_output_current_range = ANALOG_OUTPUT_CURRENT_RANGE_BYPASS;
+    TRCS_output_current_range_state_t trcs_output_current_range = TRCS_OUTPUT_CURRENT_RANGE_STATE_NONE;
+    // Check parameter.
+    if (output_current_range == NULL) {
+        status = ANALOG_ERROR_NULL_PARAMETER;
+        goto errors;
+    }
+    // Check bypass flag.
+    if (analog_ctx.flags.trcs_bypass == 0) {
+        // Read TRCS board state.
+        trcs_status = TRCS_get_output_current_range_state(&trcs_output_current_range);
+        TRCS_exit_error(ANALOG_ERROR_BASE_TRCS);
+        // Update output.
+        analog_output_current_range = (ANALOG_output_current_range_t) trcs_output_current_range;
+    }
+    (*output_current_range) = analog_output_current_range;
+errors:
+    return status;
 }

@@ -108,27 +108,33 @@ SERIAL_status_t SERIAL_process(void) {
     SERIAL_status_t status = SERIAL_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     TERMINAL_status_t terminal_status = TERMINAL_SUCCESS;
-    int32_t vout_mv = 0;
-    int32_t iout_ua = 0;
+    int32_t output_voltage_mv = 0;
+    int32_t output_current_ua = 0;
+    uint8_t bypass_switch_state = 0;
+    ANALOG_output_current_range_t output_current_range = ANALOG_OUTPUT_CURRENT_RANGE_NONE;
     // Check period.
     if ((serial_ctx.enable != 0) && (RTC_get_uptime_seconds() >= serial_ctx.next_transmission_time_seconds)) {
         // Update next transmission time.
         serial_ctx.next_transmission_time_seconds = (RTC_get_uptime_seconds() + SERIAL_PERIOD_SECONDS);
-        // Read analog data.
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_VOUT_MV, &vout_mv);
+        // Read analog data and state.
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV, &output_voltage_mv);
         ANALOG_exit_error(SERIAL_ERROR_BASE_ANALOG);
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_IOUT_UA, &iout_ua);
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_CURRENT_UA, &output_current_ua);
         ANALOG_exit_error(SERIAL_ERROR_BASE_ANALOG);
+        analog_status = ANALOG_get_bypass_switch_state(&bypass_switch_state);
+        ANALOG_exit_error(HMI_ERROR_BASE_ANALOG);
+        analog_status = ANALOG_get_output_current_range(&output_current_range);
+        ANALOG_exit_error(SIGFOX_ERROR_BASE_ANALOG);
         // Print output voltage.
-        terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "Vout=");
+        terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "output_voltage=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, vout_mv, STRING_FORMAT_DECIMAL, 0);
+        terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, output_voltage_mv, STRING_FORMAT_DECIMAL, 0);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "mV Iout=");
+        terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "mV output_current=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         // Print output current.
-        if (ANALOG_get_bypass_switch_state() == 0) {
-            terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, iout_ua, STRING_FORMAT_DECIMAL, 0);
+        if (bypass_switch_state == 0) {
+            terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, output_current_ua, STRING_FORMAT_DECIMAL, 0);
             TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
             terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "uA ");
             TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
@@ -140,7 +146,7 @@ SERIAL_status_t SERIAL_process(void) {
         // Print range.
         terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "Range=");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, (int32_t) ANALOG_get_iout_range(), STRING_FORMAT_DECIMAL, 0);
+        terminal_status = TERMINAL_tx_buffer_add_integer(TERMINAL_INSTANCE_SERIAL, (int32_t) output_current_range, STRING_FORMAT_DECIMAL, 0);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "\r\n");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);

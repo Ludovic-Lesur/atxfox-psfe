@@ -18,10 +18,10 @@
 
 // Analog inputs.
 static const GPIO_pin_t GPIO_ADC_REF191 = { GPIOB, 1, 1, 0 };
-static const GPIO_pin_t GPIO_ADC_VOUT = { GPIOB, 1, 0, 0 };
-static const GPIO_pin_t GPIO_ADC_IOUT = { GPIOA, 0, 0, 0 };
+static const GPIO_pin_t GPIO_ADC_OUTPUT_VOLTAGE = { GPIOB, 1, 0, 0 };
+static const GPIO_pin_t GPIO_ADC_OUTPUT_CURRENT = { GPIOA, 0, 0, 0 };
 // Analog inputs list.
-static const GPIO_pin_t* const GPIO_ADC_PINS_LIST[ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_REF191, &GPIO_ADC_VOUT, &GPIO_ADC_IOUT };
+static const GPIO_pin_t* const GPIO_ADC_PINS_LIST[ADC_CHANNEL_INDEX_LAST] = { &GPIO_ADC_REF191, &GPIO_ADC_OUTPUT_VOLTAGE, &GPIO_ADC_OUTPUT_CURRENT };
 #ifdef PSFE_SERIAL_MONITORING
 // LPUART.
 static const GPIO_pin_t GPIO_LPUART1_TX = { GPIOA, 0, 14, 6 };
@@ -50,9 +50,9 @@ const GPIO_pin_t GPIO_LCD_DB6 = { GPIOA, 0, 7, 0 };
 const GPIO_pin_t GPIO_LCD_DB7 = { GPIOA, 0, 8, 0 };
 // Current range (TRCS board control).
 const GPIO_pin_t GPIO_TRCS_BYPASS = { GPIOB, 1, 7, 0 };
-const GPIO_pin_t GPIO_TRCS_RANGE_LOW = { GPIOB, 1, 6, 0 };
-const GPIO_pin_t GPIO_TRCS_RANGE_MIDDLE = { GPIOB, 1, 3, 0 };
-const GPIO_pin_t GPIO_TRCS_RANGE_HIGH = { GPIOA, 0, 15, 0 };
+const GPIO_pin_t GPIO_TRCS_OUTPUT_CURRENT_RANGE_LOW = { GPIOB, 1, 6, 0 };
+const GPIO_pin_t GPIO_TRCS_OUTPUT_CURRENT_RANGE_MIDDLE = { GPIOB, 1, 3, 0 };
+const GPIO_pin_t GPIO_TRCS_OUTPUT_CURRENT_RANGE_HIGH = { GPIOA, 0, 15, 0 };
 #ifdef PSFE_SERIAL_MONITORING
 // Serial interface.
 const LPUART_gpio_t LPUART_GPIO_SERIAL = { &GPIO_LPUART1_TX, &GPIO_LPUART1_RX };

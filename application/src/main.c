@@ -27,8 +27,8 @@
 
 /*** MAIN local macros ***/
 
-#define PSFE_VMCU_THRESHOLD_ON_MV       3300
-#define PSFE_VMCU_THRESHOLD_OFF_MV      3100
+#define PSFE_MCU_VOLTAGE_THRESHOLD_ON_MV    3300
+#define PSFE_MCU_VOLTAGE_THRESHOLD_OFF_MV   3100
 
 /*** MAIN local functions ***/
 
@@ -104,7 +104,7 @@ int main(void) {
     SIGFOX_status_t sigfox_status = SIGFOX_SUCCESS;
 #endif
     uint8_t board_state = 0;
-    int32_t vmcu_mv = 0;
+    int32_t mcu_voltage_mv = 0;
     // Init board.
     _PSFE_init_hw();
     // Main loop.
@@ -123,10 +123,10 @@ int main(void) {
         SIGFOX_stack_error(ERROR_BASE_SIGFOX);
 #endif
         // Check board power supply.
-        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_VMCU_MV, &vmcu_mv);
+        analog_status = ANALOG_read_channel(ANALOG_CHANNEL_MCU_VOLTAGE_MV, &mcu_voltage_mv);
         ANALOG_stack_error(ERROR_BASE_ANALOG);
         // Manage modules state.
-        if ((vmcu_mv < PSFE_VMCU_THRESHOLD_OFF_MV) && (board_state != 0)) {
+        if ((mcu_voltage_mv < PSFE_MCU_VOLTAGE_THRESHOLD_OFF_MV) && (board_state != 0)) {
             // Stop TRCS board.
             analog_status = ANALOG_stop_trcs();
             ANALOG_stack_error(ERROR_BASE_ANALOG);
@@ -144,7 +144,7 @@ int main(void) {
             // Update state.
             board_state = 0;
         }
-        if ((vmcu_mv > PSFE_VMCU_THRESHOLD_ON_MV) && (board_state == 0)) {
+        if ((mcu_voltage_mv > PSFE_MCU_VOLTAGE_THRESHOLD_ON_MV) && (board_state == 0)) {
             // Stop TRCS board.
             analog_status = ANALOG_start_trcs();
             ANALOG_stack_error(ERROR_BASE_ANALOG);

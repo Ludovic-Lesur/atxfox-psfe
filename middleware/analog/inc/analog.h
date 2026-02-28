@@ -42,26 +42,26 @@ typedef enum {
  * \brief ANALOG channels list.
  *******************************************************************/
 typedef enum {
-    ANALOG_CHANNEL_VMCU_MV = 0,
-    ANALOG_CHANNEL_TMCU_DEGREES,
-    ANALOG_CHANNEL_VOUT_MV,
-    ANALOG_CHANNEL_IOUT_MV,
-    ANALOG_CHANNEL_IOUT_UA,
+    ANALOG_CHANNEL_MCU_VOLTAGE_MV = 0,
+    ANALOG_CHANNEL_MCU_TEMPERATURE_DEGREES,
+    ANALOG_CHANNEL_OUTPUT_VOLTAGE_MV,
+    ANALOG_CHANNEL_OUTPUT_CURRENT_MV,
+    ANALOG_CHANNEL_OUTPUT_CURRENT_UA,
     ANALOG_CHANNEL_LAST
 } ANALOG_channel_t;
 
 /*!******************************************************************
- * \enum ANALOG_iout_range_t
+ * \enum ANALOG_output_current_range_t
  * \brief Current measurement ranges list.
  *******************************************************************/
 typedef enum {
-    ANALOG_IOUT_RANGE_NONE = 0,
-    ANALOG_IOUT_RANGE_LOW,
-    ANALOG_IOUT_RANGE_MIDDLE,
-    ANALOG_IOUT_RANGE_HIGH,
-    ANALOG_IOUT_RANGE_BYPASS,
-    ANALOG_IOUT_RANGE_LAST
-} ANALOG_iout_range_t;
+    ANALOG_OUTPUT_CURRENT_RANGE_NONE = 0,
+    ANALOG_OUTPUT_CURRENT_RANGE_LOW,
+    ANALOG_OUTPUT_CURRENT_RANGE_MIDDLE,
+    ANALOG_OUTPUT_CURRENT_RANGE_HIGH,
+    ANALOG_OUTPUT_CURRENT_RANGE_BYPASS,
+    ANALOG_OUTPUT_CURRENT_RANGE_LAST
+} ANALOG_output_current_range_t;
 
 /*** ANALOG functions ***/
 
@@ -120,22 +120,22 @@ ANALOG_status_t ANALOG_process(void);
 ANALOG_status_t ANALOG_read_channel(ANALOG_channel_t channel, int32_t* analog_data);
 
 /*!******************************************************************
- * \fn uint8_t ANALOG_get_bypass_switch_state(void)
+ * \fn ANALOG_status_t ANALOG_get_bypass_switch_state(uint8_t* bypass_switch_state)
  * \brief Get the bypass switch state.
  * \param[in]   none
- * \param[out]  none
- * \retval      Bypass switch state.
+ * \param[out]  bypass_switch_state: Pointer to the bypass switch state.
+ * \retval      Function execution status.
  *******************************************************************/
-uint8_t ANALOG_get_bypass_switch_state(void);
+ANALOG_status_t ANALOG_get_bypass_switch_state(uint8_t* bypass_switch_state);
 
 /*!******************************************************************
- * \fn ANALOG_iout_range_t ANALOG_get_iout_range(void)
+ * \fn ANALOG_status_t ANALOG_get_output_current_range(ANALOG_output_current_range_t* output_current_range)
  * \brief Get the current measurement range.
  * \param[in]   none
- * \param[out]  none
- * \retval      Active current measurement range.
+ * \param[out]  output_current_range: Pointer to the active current measurement range.
+ * \retval      Function execution status.
  *******************************************************************/
-ANALOG_iout_range_t ANALOG_get_iout_range(void);
+ANALOG_status_t ANALOG_get_output_current_range(ANALOG_output_current_range_t* output_current_range);
 
 /*******************************************************************/
 #define ANALOG_exit_error(base) { ERROR_check_exit(analog_status, ANALOG_SUCCESS, base) }

@@ -24,7 +24,11 @@
 
 /*** TRCS HW local global variables ***/
 
-static const GPIO_pin_t* const TRCS_HW_GPIO_RANGE[TRCS_RANGE_LAST] = { &GPIO_TRCS_RANGE_LOW, &GPIO_TRCS_RANGE_MIDDLE, &GPIO_TRCS_RANGE_HIGH };
+static const GPIO_pin_t* const TRCS_HW_GPIO_RANGE[TRCS_OUTPUT_CURRENT_RANGE_LAST] = {
+    &GPIO_TRCS_OUTPUT_CURRENT_RANGE_LOW,
+    &GPIO_TRCS_OUTPUT_CURRENT_RANGE_MIDDLE,
+    &GPIO_TRCS_OUTPUT_CURRENT_RANGE_HIGH
+};
 
 /*** TRCS HW functions ***/
 
@@ -35,7 +39,7 @@ TRCS_status_t TRCS_HW_init(void) {
     TIM_status_t tim_status = TIM_SUCCESS;
     uint8_t idx = 0;
     // Init GPIOs.
-    for (idx = 0; idx < TRCS_RANGE_LAST; idx++) {
+    for (idx = 0; idx < TRCS_OUTPUT_CURRENT_RANGE_LAST; idx++) {
         GPIO_configure(TRCS_HW_GPIO_RANGE[idx], GPIO_MODE_OUTPUT, GPIO_TYPE_PUSH_PULL, GPIO_SPEED_HIGH, GPIO_PULL_NONE);
     }
     // Init sampling timer.
@@ -81,27 +85,27 @@ errors:
 }
 
 /*******************************************************************/
-TRCS_status_t TRCS_HW_set_range_state(TRCS_range_t range, uint8_t state) {
+TRCS_status_t TRCS_HW_set_output_current_range_state(TRCS_output_current_range_t output_current_range, uint8_t state){
     // Local variables.
     TRCS_status_t status = TRCS_SUCCESS;
     // Check parameter.
-    if (range >= TRCS_RANGE_LAST) {
+    if (output_current_range >= TRCS_OUTPUT_CURRENT_RANGE_LAST) {
         status = TRCS_ERROR_RANGE;
         goto errors;
     }
     // Set GPIO.
-    GPIO_write(TRCS_HW_GPIO_RANGE[range], state);
+    GPIO_write(TRCS_HW_GPIO_RANGE[output_current_range], state);
 errors:
     return status;
 }
 
 /*******************************************************************/
-TRCS_status_t TRCS_HW_adc_get_iout(int32_t* iout_mv) {
+TRCS_status_t TRCS_HW_adc_get_output_current(int32_t* output_current_mv) {
     // Local variables.
     TRCS_status_t status = TRCS_SUCCESS;
     ANALOG_status_t analog_status = ANALOG_SUCCESS;
     // Read data.
-    analog_status = ANALOG_read_channel(ANALOG_CHANNEL_IOUT_MV, iout_mv);
+    analog_status = ANALOG_read_channel(ANALOG_CHANNEL_OUTPUT_CURRENT_MV, output_current_mv);
     ANALOG_exit_error(TRCS_ERROR_BASE_ADC);
 errors:
     return status;
