@@ -7,29 +7,29 @@
             "sw_configuration_list": [
                 {
                     "sw_flags": {
-                        "PSFE_SERIAL_MONITORING" : "OFF",
-                        "PSFE_SIGFOX_MONITORING" : "OFF"
+                        "PSFE_SERIAL_MONITORING": "OFF",
+                        "PSFE_SIGFOX_MONITORING": "OFF"
                     }
                 },
                 {
                     "name": "serial",
                     "sw_flags": {
-                        "PSFE_SERIAL_MONITORING" : "ON",
-                        "PSFE_SIGFOX_MONITORING" : "OFF"
+                        "PSFE_SERIAL_MONITORING": "ON",
+                        "PSFE_SIGFOX_MONITORING": "OFF"
                     }
                 },
                 {
                     "name": "sigfox",
                     "sw_flags": {
-                        "PSFE_SERIAL_MONITORING" : "OFF",
-                        "PSFE_SIGFOX_MONITORING" : "ON"
+                        "PSFE_SERIAL_MONITORING": "OFF",
+                        "PSFE_SIGFOX_MONITORING": "ON"
                     }
                 },
                 {
                     "name": "serial-sigfox",
                     "sw_flags": {
-                        "PSFE_SERIAL_MONITORING" : "ON",
-                        "PSFE_SIGFOX_MONITORING" : "ON"
+                        "PSFE_SERIAL_MONITORING": "ON",
+                        "PSFE_SIGFOX_MONITORING": "ON"
                     }
                 }
             ]
