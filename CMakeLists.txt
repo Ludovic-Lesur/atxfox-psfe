@@ -33,13 +33,13 @@ add_compilation_flag(PSFE_SIGFOX_MONITORING "Enable Sigfox monitoring." OFF)
 # PSFE HW1.0.
 if(PSFE_HW_VERSION STREQUAL "HW1_0")   
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m0plus -O1")
-    set(SPSWS_MCU "stm32l0xx")
+    set(PSFE_MCU "stm32l0xx")
     set(PROJECT_LINKER_SCRIPT "stm32l031x6xx.ld")
 # Unknown version.
 else()
     message(FATAL_ERROR "Invalid hardware version.")
 endif()
-set(PROJECT_LINKER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/drivers/device/${SPSWS_MCU}-device/linker")
+set(PROJECT_LINKER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/drivers/device/${PSFE_MCU}-device/linker")
 
 # Add hardware compilation flags.
 add_compile_definitions(
@@ -80,9 +80,9 @@ include_directories(${PROJECT_NAME}
     PRIVATE
         drivers/device/inc
         drivers/registers/inc
-        drivers/registers/${SPSWS_MCU}-registers/inc
+        drivers/registers/${PSFE_MCU}-registers/inc
         drivers/peripherals/inc
-        drivers/peripherals/${SPSWS_MCU}-drivers/inc
+        drivers/peripherals/${PSFE_MCU}-drivers/inc
         drivers/utils/inc
         drivers/utils/embedded-utils/inc
         drivers/components/inc
@@ -97,8 +97,8 @@ include_directories(${PROJECT_NAME}
 )
 
 # Add submodules sources files.
-add_subdirectory(drivers/device/${SPSWS_MCU}-device EXCLUDE_FROM_ALL)
-add_subdirectory(drivers/peripherals/${SPSWS_MCU}-drivers EXCLUDE_FROM_ALL)
+add_subdirectory(drivers/device/${PSFE_MCU}-device EXCLUDE_FROM_ALL)
+add_subdirectory(drivers/peripherals/${PSFE_MCU}-drivers EXCLUDE_FROM_ALL)
 add_subdirectory(drivers/utils/embedded-utils EXCLUDE_FROM_ALL)
 add_subdirectory(drivers/components/st7066u-driver EXCLUDE_FROM_ALL)
 add_subdirectory(drivers/components/td1208-driver EXCLUDE_FROM_ALL)
@@ -107,8 +107,8 @@ add_subdirectory(drivers/components/trcs-driver EXCLUDE_FROM_ALL)
 # Link libraries.
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
-        ${SPSWS_MCU}-device
-        ${SPSWS_MCU}-drivers
+        ${PSFE_MCU}-device
+        ${PSFE_MCU}-drivers
         embedded-utils
         st7066u-driver
         td1208-driver
