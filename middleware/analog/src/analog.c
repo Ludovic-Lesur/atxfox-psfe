@@ -205,7 +205,7 @@ ANALOG_status_t ANALOG_init(void) {
         analog_ctx.data[idx] = 0;
     }
     // Read board number.
-    nvm_status = NVM_read_byte(NVM_ADDRESS_BOARD_NUMBER, &board_number);
+    nvm_status = NVM_read(NVM_ADDRESS_BOARD_NUMBER, &board_number, 1, NVM_DATA_TYPE_BYTE);
     NVM_exit_error(ANALOG_ERROR_BASE_NVM);
     // Init context.
     switch (board_number) {

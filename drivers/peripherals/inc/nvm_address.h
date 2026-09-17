@@ -13,7 +13,7 @@
  * \brief NVM address mapping.
  *******************************************************************/
 typedef enum {
-    // Sigfox library.
+    // PSFE board number.
     NVM_ADDRESS_BOARD_NUMBER = 0,
 } NVM_address_t;
 

@@ -76,9 +76,9 @@ SERIAL_status_t SERIAL_start(void) {
     // Print start message.
     terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "SERIAL monitoring start\r\n");
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-    terminal_status = TERMINAL_send_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+    terminal_status = TERMINAL_tx_buffer_send(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-    terminal_status = TERMINAL_flush_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+    terminal_status = TERMINAL_tx_buffer_flush(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -94,9 +94,9 @@ SERIAL_status_t SERIAL_stop(void) {
     // Print stop message.
     terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "SERIAL monitoring stop\r\n");
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-    terminal_status = TERMINAL_send_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+    terminal_status = TERMINAL_tx_buffer_send(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-    terminal_status = TERMINAL_flush_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+    terminal_status = TERMINAL_tx_buffer_flush(TERMINAL_INSTANCE_SERIAL);
     TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
 errors:
     return status;
@@ -151,9 +151,9 @@ SERIAL_status_t SERIAL_process(void) {
         terminal_status = TERMINAL_tx_buffer_add_string(TERMINAL_INSTANCE_SERIAL, "\r\n");
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
         // Send serial message.
-        terminal_status = TERMINAL_send_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+        terminal_status = TERMINAL_tx_buffer_send(TERMINAL_INSTANCE_SERIAL);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
-        terminal_status = TERMINAL_flush_tx_buffer(TERMINAL_INSTANCE_SERIAL);
+        terminal_status = TERMINAL_tx_buffer_flush(TERMINAL_INSTANCE_SERIAL);
         TERMINAL_exit_error(SERIAL_ERROR_BASE_TERMINAL);
     }
 errors:
