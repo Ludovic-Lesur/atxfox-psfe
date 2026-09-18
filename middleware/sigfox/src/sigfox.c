@@ -23,7 +23,7 @@
 
 /*** SIGFOX local macros ***/
 
-#define SIGFOX_PERIOD_SECONDS               300
+#define SIGFOX_PERIOD_SECONDS               (5 * MATH_SECONDS_PER_MINUTE)
 
 #define SIGFOX_UL_PAYLOAD_SIZE_STARTUP      8
 #define SIGFOX_UL_PAYLOAD_SIZE_ERROR_STACK  12
